@@ -30,6 +30,7 @@ It is also highly inspired by formalization of SystemFSub bt Charguéraud: https
 Set Implicit Arguments.
 Require Import TLC.LibLN.
 Require Import TLC.LibList.
+Require Import TLC.LibTactics.
 
 Notation "[ ]" := nil (format "[ ]") : liblist_scope.
 Notation "[ x ]" := (cons x nil) : liblist_scope.
@@ -55,7 +56,7 @@ Inductive typ : Set :=
 | typ_unit   : typ
 | typ_tuple  : typ -> typ -> typ
 | typ_arrow  : typ -> typ -> typ
-| typ_tabs  : typ -> typ
+| typ_all  : typ -> typ
 | typ_gadt  : (list typ) -> GADTName -> typ (* putting env here is a bit risky, TODO make sure its ok, but env is a list alias after all... *)
 .
 
@@ -120,7 +121,7 @@ Fixpoint typ_size (t : typ) : nat :=
   | typ_unit => 1
   | typ_tuple t1 t2 => 1 + typ_size t1 + typ_size t2
   | typ_arrow t1 t2 => 1 + typ_size t1 + typ_size t2
-  | typ_tabs t1 => 1 + typ_size t1
+  | typ_all t1 => 1 + typ_size t1
   | typ_gadt tparams name => 1 + typlist_size tparams
   end
 .
@@ -134,6 +135,7 @@ Fixpoint typlist_size (ts : list typ) : nat :=
 
 (* I'm a bit worried if this definition with the list-map will not be too complex for proofs... *)
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
+  (* TODO this helper definition is needed here for Coq to be able to deduce that the main recursion is structural, it is then defined at the outside again, having these two definitions is not too great as it may complicate some proofs, so it would be good to somehow make it a simple mutual recursion *)
 let fix open_ttlist_rec k u (ts : list typ) : list typ := (* map (open_tt_rec k u) *)
     match ts with
     | cons h t => cons (open_tt_rec k u h) (open_ttlist_rec k u t)
@@ -145,7 +147,7 @@ let fix open_ttlist_rec k u (ts : list typ) : list typ := (* map (open_tt_rec k 
   | typ_unit => typ_unit
   | typ_tuple t1 t2 => typ_tuple (open_tt_rec k u t1) (open_tt_rec k u t2)
   | typ_arrow t1 t2 => typ_arrow (open_tt_rec k u t1) (open_tt_rec k u t2)
-  | typ_tabs t1 => typ_tabs (open_tt_rec (S k) u t1)
+  | typ_all t1 => typ_all (open_tt_rec (S k) u t1)
   | typ_gadt tparams name => typ_gadt (open_ttlist_rec k u tparams) name
 end.
 
@@ -172,6 +174,7 @@ Fixpoint open_typlist_rec k u (ts : list typ) : list typ := (* map (open_rectyp 
 (* end. *)
 (* Next Obligation. exact typ. Qed. *)
 (* Next Obligation. exact typ. Qed. *)
+(* some strange obligations comes up that cannot be unfolded to some reasonable type, so I'm unable to prove it (it just has a name...) *)
 (* Admit Obligations. *)
 (* Print open_rectyplist. *)
 
@@ -255,7 +258,7 @@ Notation "T 'open_tt_var' X" := (open_tt T (typ_fvar X)) (at level 67).
 Notation "t 'open_te_var' X" := (open_te t (typ_fvar X)) (at level 67).
 Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
 
-Lemma open_tt_test : open_tt (typ_tabs (typ_bvar 1)) (typ_unit) = typ_tabs typ_unit.
+Lemma open_tt_test : open_tt (typ_all (typ_bvar 1)) (typ_unit) = typ_all typ_unit.
   cbv. case_if*.
 Qed.
 
@@ -266,3 +269,118 @@ Qed.
 Lemma open_ee_test : open_ee (trm_abs (typ_bvar 0) (trm_bvar 1)) (trm_unit) = trm_abs (typ_bvar 0) (trm_unit).
   cbv. case_if*.
 Qed.
+
+(** Types as locally closed pre-types *)
+
+Inductive type : typ -> Prop :=
+  | type_var : forall X,
+      type (typ_fvar X)
+  | type_unit :
+      type typ_unit
+  | type_tuple : forall T1 T2,
+      type T1 ->
+      type T2 ->
+      type (typ_tuple T1 T2)
+  | type_arrow : forall T1 T2,
+      type T1 ->
+      type T2 ->
+      type (typ_arrow T1 T2)
+  | type_all : forall L T2,
+      (forall X, X \notin L -> type (T2 open_tt_var X)) ->
+      type (typ_all T2)
+  | type_gadt : forall Tparams Name,
+      (forall Tparam, mem Tparam Tparams -> type Tparam) ->
+      type (typ_gadt Tparams Name)
+.
+
+Inductive term : trm -> Prop :=
+| term_var : forall x,
+    term (trm_fvar x)
+| term_constructor : forall Tparams Name e1,
+    term e1 ->
+    (forall Tparam, mem Tparam Tparams -> type Tparam) ->
+    term (trm_constructor Tparams Name e1)
+| term_unit : term trm_unit
+| term_tuple : forall e1 e2,
+    term e1 ->
+    term e2 ->
+    term (trm_tuple e1 e2)
+| term_fst : forall e1,
+    term e1 ->
+    term (trm_fst e1)
+| term_snd : forall e1,
+    term e1 ->
+    term (trm_snd e1)
+| term_abs : forall L V e1,
+    type V ->
+    (forall x, x \notin L -> term (e1 open_ee_var x)) ->
+    term (trm_abs V e1)
+| term_app : forall e1 e2,
+    term e1 ->
+    term e2 ->
+    term (trm_app e1 e2)
+| term_tabs : forall L e1,
+    (forall X, X \notin L -> term (e1 open_te_var X)) ->
+    term (trm_tabs e1)
+| term_tapp : forall e1 V,
+    term e1 ->
+    type V ->
+    term (trm_tapp e1 V)
+| term_fix : forall T e1,
+    type T ->
+    term e1 ->
+    term (trm_fix T e1)
+| term_let : forall L e1 e2,
+    term e1 ->
+    (forall x, x \notin L -> term (e2 open_ee_var x)) ->
+    term (trm_let e1 e2)
+| term_matchgadt : forall e1 clauses,
+    term e1 ->
+    (forall cname ce, mem (clause cname ce) clauses -> term ce) ->
+    term (trm_matchgadt e1 clauses)
+.
+
+(* TODO translate from Fsub *)
+(* Definition ctx := env typ. *)
+(* Inductive wft : env -> typ -> Prop := *)
+(*   | wft_unit : forall E, *)
+(*       wft E typ_unit *)
+(*   | wft_var : forall U E X, *)
+(*       binds X (bind_sub U) E -> *)
+(*       wft E (typ_fvar X) *)
+(*   | wft_arrow : forall E T1 T2, *)
+(*       wft E T1 -> *)
+(*       wft E T2 -> *)
+(*       wft E (typ_arrow T1 T2) *)
+(*   | wft_all : forall L E T1 T2, *)
+(*       wft E T1 -> *)
+(*       (forall X, X \notin L -> *)
+(*         wft (E & X ~<: T1) (T2 open_tt_var X)) -> *)
+(*       wft E (typ_all T1 T2). *)
+
+(* This env is the signature of the available GADT types, it is Σ in the paper *)
+Require Import TLC.LibMap.
+
+(* Warning: this is a very early draft of handling the environment *)
+
+Inductive GADTConstructorDef : Set :=
+  (* a constructor of type ∀(α...). τ → (β...) T)
+     arity specifies how many type parameters (α) there are, they are referred to inside the types by DeBruijn indices
+     τ is the type of argument (one arg only, use tuples for more; it can refer to α)
+     β are the instantiated type parameters of the returned GADT type (they can refer to α)
+     T is the base GADT type name that is returned by this constructor
+*)
+  GADTconstr (arity : nat) (argtype : typ) (rettype : typ).
+(* TODO maybe rettype could be deconstructed to ensure syntactically it's a type application? or e separate well-formedness Prop could be defined *)
+
+Definition GADTEnv := map GADTName (list GADTConstructor).
+
+(*
+Some raw ideas:
+- we will need to easily find the constructor signature by name
+- GADT type name is contained (implicitly) in the signature
+
+- we could refactor the syntax definition so that everywhere we use a constructor name c, we instead refer to it by T.c where T is the GADT name, this will make checking exhaustivity easier
+-- then we could rename constructors of a type T to just numbers, so that first constructor is called T.0, second T.1 etc. this will make things even simpler
+--- we could then even require the pattern match to preserve order of constructors (not sure if this helps with anything though, but probably with exhaustivity)
+*)
