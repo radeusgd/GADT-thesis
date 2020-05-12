@@ -57,8 +57,45 @@ Inductive typ : Set :=
 | typ_tuple  : typ -> typ -> typ
 | typ_arrow  : typ -> typ -> typ
 | typ_all  : typ -> typ
-| typ_gadt  : (list typ) -> GADTName -> typ (* putting env here is a bit risky, TODO make sure its ok, but env is a list alias after all... *)
+| typ_gadt  : (list typ) -> GADTName -> typ
 .
+
+Section typ_ind'.
+  Variable P : typ -> Prop.
+  Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n).
+  Hypothesis typ_fvar_case : forall (x : var), P (typ_fvar x).
+  Hypothesis typ_unit_case : P (typ_unit).
+  Hypothesis typ_tuple_case : forall (t1 t2 : typ),
+      P t1 -> P t2 -> P (typ_tuple t1 t2).
+  Hypothesis typ_arrow_case : forall (t1 t2 : typ),
+      P t1 -> P t2 -> P (typ_arrow t1 t2).
+  Hypothesis typ_all_case : forall (t1 : typ),
+      P t1 -> P (typ_all t1).
+  Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName),
+      Forall P ls -> P (typ_gadt ls n).
+  Print Forall_cons.
+
+  Fixpoint typ_ind' (t : typ) : P t :=
+    let fix list_typ_ind (ls : list typ) : Forall P ls :=
+        match ls return (Forall P ls) with
+        | nil => Forall_nil P
+        | cons t' rest =>
+          let Pt : P t' := typ_ind' t' in
+          let LPt : Forall P rest := list_typ_ind rest in
+          (Forall_cons t' Pt LPt)
+        end in
+    match t with
+    | typ_bvar i => typ_bvar_case i
+    | typ_fvar x => typ_fvar_case x
+    | typ_unit => typ_unit_case
+    | typ_tuple t1 t2 => typ_tuple_case (typ_ind' t1) (typ_ind' t2)
+    | typ_arrow t1 t2 => typ_arrow_case (typ_ind' t1) (typ_ind' t2)
+    | typ_all t1 => typ_all_case (typ_ind' t1)
+    | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams)
+    end.
+
+End typ_ind'.
+Print typ_ind'.
 
 (* pre-terms *)
 Inductive trm : Set :=
@@ -108,13 +145,19 @@ Clause : Set :=
     There is no need to worry about variable capture because bound
     variables are indices.
  *)
+Fixpoint sum (ls : list nat) : nat :=
+  match ls with
+    | nil => O
+    | cons h t => plus h (sum t)
+  end.
 
+Require Import List. (* I import StdLib version of List here because the TLC versions of higher order functions (like map) are ??too complex?? (StdLib.map is just a match fixpoint, but TLC.map uses fold_right) and Coq can't prove the recursion is terminating *)
 Fixpoint typ_size (t : typ) : nat :=
-  let fix typlist_size (ts : list typ) : nat :=
-    match ts with
-    | nil => 0
-    | cons h t => typ_size h + typlist_size t
-    end in
+  (* let fix typlist_size (ts : list typ) : nat := *)
+  (*   match ts with *)
+  (*   | nil => 0 *)
+  (*   | cons h t => typ_size h + typlist_size t *)
+  (*   end in *)
   match t with
   | typ_bvar i => 1
   | typ_fvar x => 1
@@ -122,25 +165,18 @@ Fixpoint typ_size (t : typ) : nat :=
   | typ_tuple t1 t2 => 1 + typ_size t1 + typ_size t2
   | typ_arrow t1 t2 => 1 + typ_size t1 + typ_size t2
   | typ_all t1 => 1 + typ_size t1
-  | typ_gadt tparams name => 1 + typlist_size tparams
+  | typ_gadt tparams name => 1 + (sum (map typ_size tparams)) (* this works with StdLib map but not TLC map... *)
+    (*)1 + typlist_size tparams*)
   end
 .
 
-Fixpoint typlist_size (ts : list typ) : nat :=
-  match ts with
-  | nil => 0
-  | cons h t => typ_size h + typlist_size t
-  end.
+(* Fixpoint typlist_size (ts : list typ) : nat := *)
+(*   match ts with *)
+(*   | nil => 0 *)
+(*   | cons h t => typ_size h + typlist_size t *)
+(*   end. *)
 
-
-(* I'm a bit worried if this definition with the list-map will not be too complex for proofs... *)
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
-  (* TODO this helper definition is needed here for Coq to be able to deduce that the main recursion is structural, it is then defined at the outside again, having these two definitions is not too great as it may complicate some proofs, so it would be good to somehow make it a simple mutual recursion *)
-let fix open_ttlist_rec k u (ts : list typ) : list typ := (* map (open_tt_rec k u) *)
-    match ts with
-    | cons h t => cons (open_tt_rec k u h) (open_ttlist_rec k u t)
-    | nil => nil
-    end in
   match t with
   | typ_bvar i => If k = i then u else (typ_bvar i)
   | typ_fvar x => typ_fvar x
@@ -148,35 +184,11 @@ let fix open_ttlist_rec k u (ts : list typ) : list typ := (* map (open_tt_rec k 
   | typ_tuple t1 t2 => typ_tuple (open_tt_rec k u t1) (open_tt_rec k u t2)
   | typ_arrow t1 t2 => typ_arrow (open_tt_rec k u t1) (open_tt_rec k u t2)
   | typ_all t1 => typ_all (open_tt_rec (S k) u t1)
-  | typ_gadt tparams name => typ_gadt (open_ttlist_rec k u tparams) name
+  | typ_gadt tparams name => typ_gadt (map (open_tt_rec k u) tparams) name
 end.
 
-Fixpoint open_typlist_rec k u (ts : list typ) : list typ := (* map (open_rectyp k u) *)
-    match ts with
-    | cons h t => cons (open_tt_rec k u h) (open_typlist_rec k u t)
-    | nil => nil
-    end.
-(* Require Import Program. *)
-(* Program Fixpoint open_rectyplist k u (ts : list typ) {typlist_size ts} : list typ := (* map (open_rectyp k u) *) *)
-(*     match ts with *)
-(*     | cons h t => cons (open_rectyp k u h) (open_rectyplist k u t) *)
-(*     | nil => nil *)
-(*     end *)
-(*       with open_rectyp (k : nat) (u : typ) (t : typ) {typ_size t} : typ := *)
-(*   match t with *)
-(*   | typ_bvar i => If k = i then u else (typ_bvar i) *)
-(*   | typ_fvar x => typ_fvar x *)
-(*   | typ_unit => typ_unit *)
-(*   | typ_tuple t1 t2 => typ_tuple (open_rectyp k u t1) (open_rectyp k u t2) *)
-(*   | typ_arrow t1 t2 => typ_arrow (open_rectyp k u t1) (open_rectyp k u t2) *)
-(*   | typ_tabs t1 => typ_tabs (open_rectyp (S k) u t1) *)
-(*   | typ_gadt tparams name => typ_gadt (open_rectyplist k u tparams) name *)
-(* end. *)
-(* Next Obligation. exact typ. Qed. *)
-(* Next Obligation. exact typ. Qed. *)
-(* some strange obligations comes up that cannot be unfolded to some reasonable type, so I'm unable to prove it (it just has a name...) *)
-(* Admit Obligations. *)
-(* Print open_rectyplist. *)
+Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k u) ts.
+
 
 Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   let fix open_te_clauses k u (cs : list Clause) : list Clause :=
@@ -374,7 +386,7 @@ Inductive GADTConstructorDef : Set :=
 (* TODO maybe rettype could be deconstructed to ensure syntactically it's a type application? or e separate well-formedness Prop could be defined *)
 
 Definition GADTEnv := map GADTName (list GADTConstructor).
-
+Compute GADTEnv.
 (*
 Some raw ideas:
 - we will need to easily find the constructor signature by name
