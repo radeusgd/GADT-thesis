@@ -18,3 +18,11 @@ This is my private repo where I put Work In Progress works on my master's thesis
 ## Useful reference materials
 - [Nested Inductive types](http://adam.chlipala.net/cpdt/html/InductiveTypes.html#lab32) - how to define recursion/induction schemes for more complex inductive types
 - [Quoted Pattern Matching proof](https://github.com/radeusgd/QuotedPatternMatchingProof) - my proof of the Quoted Pattern Matching calculus safety, for reference
+
+## My local links
+- [TLC sources](~/.opam/system/lib/coq/user-contrib/TLC/) - quick access to TLC documentation
+  + [TLC LibEnv](~/.opam/system/lib/coq/user-contrib/TLC/LibEnv.v)
+  + [TLC LibLN](~/.opam/system/lib/coq/user-contrib/TLC/LibLN.v)
+- [pDOT proof](../dot-calculus/src/extensions/paths/) - quick access to the pDOT proof
+  + [pDOT Definitions](../dot-calculus/src/extensions/paths/Definitions.v)
+
