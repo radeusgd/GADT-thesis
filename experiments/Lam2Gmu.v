@@ -29,20 +29,26 @@ It is also highly inspired by formalization of SystemFSub bt Charguéraud: https
 
 Set Implicit Arguments.
 Require Import TLC.LibLN.
-Require Import TLC.LibList.
 Require Import TLC.LibTactics.
-
-Notation "[ ]" := nil (format "[ ]") : liblist_scope.
-Notation "[ x ]" := (cons x nil) : liblist_scope.
-Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)) : liblist_scope.
+Require Import List.
+Notation "[ ]" := nil (format "[ ]").
+Notation "[ x ]" := (cons x nil).
+Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)).
 
 (** * Definitions *)
 
 (* ********************************************************************** *)
 (** ** Grammars *)
 
-Parameter GADTName : Set. (* GADTs will use a separate name set *)
-Definition GADTConstructor := GADTName. (* TODO do we want to have names separate *)
+Definition GADTName : Set := var.
+(* I think it's ok to use the same name set for GADT types,
+they are always in a distinct syntactic form, so we can distinguish the two uses and softswe don't even have to care if a varaible and GADT type names overlap because they are syntactically distinguished *)
+
+(* See definition below.
+We define a GADT in the env as a type with a list of constructors
+Each constructor is thus identified by its base typename and its index on that list
+*)
+Definition GADTConstructor : Set := (GADTName * nat).
 
 (* We will maintain a separate set of DeBruijn indices - one for type variables and one for term variables
 So a term Λa. λx: ∀α. Unit. x[a] will be translated to
@@ -151,7 +157,6 @@ Fixpoint sum (ls : list nat) : nat :=
     | cons h t => plus h (sum t)
   end.
 
-Require Import List. (* I import StdLib version of List here because the TLC versions of higher order functions (like map) are ??too complex?? (StdLib.map is just a match fixpoint, but TLC.map uses fold_right) and Coq can't prove the recursion is terminating *)
 Fixpoint typ_size (t : typ) : nat :=
   (* let fix typlist_size (ts : list typ) : nat := *)
   (*   match ts with *)
@@ -301,7 +306,7 @@ Inductive type : typ -> Prop :=
       (forall X, X \notin L -> type (T2 open_tt_var X)) ->
       type (typ_all T2)
   | type_gadt : forall Tparams Name,
-      (forall Tparam, mem Tparam Tparams -> type Tparam) ->
+      (forall Tparam, In Tparam Tparams -> type Tparam) ->
       type (typ_gadt Tparams Name)
 .
 
@@ -310,7 +315,7 @@ Inductive term : trm -> Prop :=
     term (trm_fvar x)
 | term_constructor : forall Tparams Name e1,
     term e1 ->
-    (forall Tparam, mem Tparam Tparams -> type Tparam) ->
+    (forall Tparam, In Tparam Tparams -> type Tparam) ->
     term (trm_constructor Tparams Name e1)
 | term_unit : term trm_unit
 | term_tuple : forall e1 e2,
@@ -348,30 +353,10 @@ Inductive term : trm -> Prop :=
     term (trm_let e1 e2)
 | term_matchgadt : forall e1 clauses,
     term e1 ->
-    (forall cname ce, mem (clause cname ce) clauses -> term ce) ->
+    (forall cname ce, In (clause cname ce) clauses -> term ce) ->
     term (trm_matchgadt e1 clauses)
 .
 
-(* TODO translate from Fsub *)
-(* Definition ctx := env typ. *)
-(* Inductive wft : env -> typ -> Prop := *)
-(*   | wft_unit : forall E, *)
-(*       wft E typ_unit *)
-(*   | wft_var : forall U E X, *)
-(*       binds X (bind_sub U) E -> *)
-(*       wft E (typ_fvar X) *)
-(*   | wft_arrow : forall E T1 T2, *)
-(*       wft E T1 -> *)
-(*       wft E T2 -> *)
-(*       wft E (typ_arrow T1 T2) *)
-(*   | wft_all : forall L E T1 T2, *)
-(*       wft E T1 -> *)
-(*       (forall X, X \notin L -> *)
-(*         wft (E & X ~<: T1) (T2 open_tt_var X)) -> *)
-(*       wft E (typ_all T1 T2). *)
-
-(* This env is the signature of the available GADT types, it is Σ in the paper *)
-Require Import TLC.LibMap.
 
 (* Warning: this is a very early draft of handling the environment *)
 
@@ -385,7 +370,8 @@ Inductive GADTConstructorDef : Set :=
   GADTconstr (arity : nat) (argtype : typ) (rettype : typ).
 (* TODO maybe rettype could be deconstructed to ensure syntactically it's a type application? or e separate well-formedness Prop could be defined *)
 
-Definition GADTEnv := map GADTName (list GADTConstructor).
+(* This env is the signature of the available GADT types, it is Σ in the paper *)
+Definition GADTEnv := env (list GADTConstructorDef).
 Compute GADTEnv.
 (*
 Some raw ideas:
@@ -396,3 +382,64 @@ Some raw ideas:
 -- then we could rename constructors of a type T to just numbers, so that first constructor is called T.0, second T.1 etc. this will make things even simpler
 --- we could then even require the pattern match to preserve order of constructors (not sure if this helps with anything though, but probably with exhaustivity)
 *)
+
+(* TODO translate from Fsub *)
+
+Inductive bind : Set :=
+| bind_typ : bind
+| bind_var : typ -> bind.
+
+Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity).
+Notation "x ~: T" := (x ~ bind_var T) (at level 31, left associativity).
+
+Definition ctx := env bind.
+About binds.
+Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
+| wft_unit : forall Σ E,
+    wft Σ E typ_unit
+| wft_var : forall Σ E X,
+    binds X (bind_typ) E ->
+    wft Σ E (typ_fvar X)
+| wft_arrow : forall Σ E T1 T2,
+    wft Σ E T1 ->
+    wft Σ E T2 ->
+    wft Σ E (typ_arrow T1 T2)
+| wft_tuple : forall Σ E T1 T2,
+    wft Σ E T1 ->
+    wft Σ E T2 ->
+    wft Σ E (typ_tuple T1 T2)
+| wft_all : forall Σ L E T2,
+    (forall X, X \notin L ->
+          wft Σ (E & withtyp X) (T2 open_tt_var X)) ->
+    wft Σ E (typ_all T2)
+| wft_gadt : forall Σ E Tparams Name Def,
+    (forall T, In T Tparams -> wft Σ E T) ->
+    binds Name Def Σ ->
+    wft Σ E (typ_gadt Tparams Name)
+.
+
+Inductive okDef : GADTConstructorDef -> Prop :=
+  (* TODO are these conditions enough? *)
+| ok_def : forall arity argT retT,
+    wft empty empty argT -> (* TODO Σ should allow mutually recursive definitions so empty is not right here *)
+    wft empty empty retT -> (* TODO extended with arity type args, HOW? *)
+    okDef (GADTconstr arity argT retT).
+
+
+Inductive okGadt : GADTEnv -> Prop :=
+| okg_empty : okGadt empty
+| okg_push : forall Σ Defs Name,
+    okGadt Σ ->
+    Name # Σ ->
+    (forall Def, In Def Defs -> okDef Def) ->
+    okGadt (Σ & Name ~ Defs)
+.
+
+Inductive okt : GADTEnv -> ctx -> Prop :=
+| okt_empty : forall Σ,
+    okGadt Σ ->
+    okt Σ empty
+| okt_sub : forall Σ E X,
+    okt Σ E -> X # E -> okt Σ (E & withtyp X)
+| okt_typ : forall Σ E x T,
+    okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & (x ~: T)).
