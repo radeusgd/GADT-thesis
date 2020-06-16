@@ -66,6 +66,9 @@ Inductive typ : Set :=
 | typ_gadt  : (list typ) -> GADTName -> typ
 .
 
+Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49).
+Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
+
 Section typ_ind'.
   Variable P : typ -> Prop.
   Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n).
@@ -358,6 +361,7 @@ Inductive term : trm -> Prop :=
 .
 
 
+
 (* Warning: this is a very early draft of handling the environment *)
 
 Inductive GADTConstructorDef : Set :=
@@ -418,12 +422,13 @@ Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
     wft Σ E (typ_gadt Tparams Name)
 .
 
-Inductive okDef : GADTConstructorDef -> Prop :=
+Inductive okDef : GADTEnv -> GADTConstructorDef -> Prop :=
   (* TODO are these conditions enough? *)
-| ok_def : forall arity argT retT,
-    wft empty empty argT -> (* TODO Σ should allow mutually recursive definitions so empty is not right here *)
-    wft empty empty retT -> (* TODO extended with arity type args, HOW? *)
-    okDef (GADTconstr arity argT retT).
+| ok_def : forall arity argT retT Σ,
+    wft Σ empty argT ->
+    wft Σ empty retT -> (* TODO extended with arity type args, HOW? *)
+    (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
+    okDef Σ (GADTconstr arity argT retT).
 
 
 Inductive okGadt : GADTEnv -> Prop :=
@@ -431,7 +436,7 @@ Inductive okGadt : GADTEnv -> Prop :=
 | okg_push : forall Σ Defs Name,
     okGadt Σ ->
     Name # Σ ->
-    (forall Def, In Def Defs -> okDef Def) ->
+    (forall Def, In Def Defs -> okDef (Σ & Name ~ Defs) Def) ->
     okGadt (Σ & Name ~ Defs)
 .
 
@@ -443,3 +448,15 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
     okt Σ E -> X # E -> okt Σ (E & withtyp X)
 | okt_typ : forall Σ E x T,
     okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & (x ~: T)).
+
+Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 49).
+
+Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
+| typing_var : forall Σ E x T,
+    okt Σ E ->
+    binds x (bind_var T) E ->
+    {Σ, E} ⊢ (trm_fvar x) ∈ T
+| typing_abs : forall L Σ E V e1 T1,
+    (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
+    {Σ, E} ⊢ trm_abs V e1 ∈ (V ==> T1)
+where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
