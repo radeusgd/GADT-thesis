@@ -68,6 +68,7 @@ Inductive typ : Set :=
 
 Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49).
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
+(* Notation "∀( T )" := (typ_all T) (at level 49). *)
 
 Section typ_ind'.
   Variable P : typ -> Prop.
@@ -342,14 +343,16 @@ Inductive term : trm -> Prop :=
 | term_tabs : forall L e1,
     (forall X, X \notin L -> term (e1 open_te_var X)) ->
     term (trm_tabs e1)
-| term_tapp : forall e1 V,
-    term e1 ->
+| term_tapp : forall v1 V,
+    term v1 ->
+    value v1 ->
     type V ->
-    term (trm_tapp e1 V)
-| term_fix : forall T e1,
+    term (trm_tapp v1 V)
+| term_fix : forall T v1,
     type T ->
-    term e1 ->
-    term (trm_fix T e1)
+    term v1 ->
+    value v1 ->
+    term (trm_fix T v1)
 | term_let : forall L e1 e2,
     term e1 ->
     (forall x, x \notin L -> term (e2 open_ee_var x)) ->
@@ -358,6 +361,19 @@ Inductive term : trm -> Prop :=
     term e1 ->
     (forall cname ce, In (clause cname ce) clauses -> term ce) ->
     term (trm_matchgadt e1 clauses)
+with
+value : trm -> Prop :=
+| value_abs : forall V e1, term (trm_abs V e1) ->
+                      value (trm_abs V e1)
+| value_tabs : forall e1, term (trm_tabs e1) ->
+                     value (trm_tabs e1)
+| value_unit : value (trm_unit)
+                     (* TODO value_fvar ??? this is problematic as we have x-vars and f-vars, do we need to differentiate them? *)
+| value_tuple : forall e1 e2,
+    value e1 ->
+    value e2 ->
+    value (trm_tuple e1 e2)
+(* TODO value GADT *)
 .
 
 
@@ -396,6 +412,7 @@ Inductive bind : Set :=
 Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity).
 Notation "x ~: T" := (x ~ bind_var T) (at level 31, left associativity).
 
+Unset Implicit Arguments.
 Definition ctx := env bind.
 About binds.
 Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
@@ -412,7 +429,7 @@ Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
     wft Σ E T1 ->
     wft Σ E T2 ->
     wft Σ E (typ_tuple T1 T2)
-| wft_all : forall Σ L E T2,
+| wft_all : forall (L : fset var) Σ E T2,
     (forall X, X \notin L ->
           wft Σ (E & withtyp X) (T2 open_tt_var X)) ->
     wft Σ E (typ_all T2)
@@ -449,7 +466,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 | okt_typ : forall Σ E x T,
     okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & (x ~: T)).
 
-Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 49).
+Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
 
 Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_var : forall Σ E x T,
@@ -458,5 +475,75 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
-    {Σ, E} ⊢ trm_abs V e1 ∈ (V ==> T1)
+    {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
+| typing_app : forall Σ E T1 T2 e1 e2,
+    {Σ, E} ⊢ e2 ∈ T1 ->
+    {Σ, E} ⊢ e1 ∈ T1 ==> T2 ->
+    {Σ, E} ⊢ trm_app e1 e2 ∈ T2
+| typing_tabs : forall L Σ E e1 T1,
+    (forall X, X \notin L ->
+          {Σ, E & withtyp X} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
+    {Σ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
+| typing_tapp : forall Σ E e1 T1 T T',
+    {Σ, E} ⊢ e1 ∈ typ_all T1 ->
+    T' = open_tt T1 T ->
+    {Σ, E} ⊢ trm_tapp e1 T ∈ T'
+| typing_tuple : forall Σ E T1 T2 e1 e2,
+    {Σ, E} ⊢ e1 ∈ T1 ->
+    {Σ, E} ⊢ e2 ∈ T2 ->
+    {Σ, E} ⊢ trm_tuple e1 e2 ∈ T1 ** T2
+| typing_fst : forall Σ E T1 T2 e1,
+    {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
+    {Σ, E} ⊢ trm_fst e1 ∈ T1
+| typing_snd : forall Σ E T1 T2 e1,
+    {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
+    {Σ, E} ⊢ trm_snd e1 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
+
+Reserved Notation "e1 --> e2" (at level 49).
+Inductive red : trm -> trm -> Prop :=
+| red_beta : forall T e1 v2 e',
+    term (trm_abs T e1) ->
+    value v2 ->
+    e' = open_ee e1 v2 ->
+    trm_app (trm_abs T e1) v2 --> e'
+| red_tbeta : forall e1 T e',
+    term (trm_tabs e1) ->
+    type T ->
+    e' = open_te e1 T ->
+    trm_tapp (trm_tabs e1) T --> e'
+| red_fst : forall v1 v2,
+    value (trm_tuple v1 v2) ->
+    trm_fst (trm_tuple v1 v2) --> v1
+| red_snd : forall v1 v2,
+    value (trm_tuple v1 v2) ->
+    trm_snd (trm_tuple v1 v2) --> v2
+| red_fix : forall T v e',
+    term (trm_fix T v) ->
+    e' = open_ee v (trm_fix T v) ->
+    trm_fix T v --> e'
+| ered_app_1 : forall e1 e1' e2,
+    e1 --> e1' ->
+    trm_app e1 e2 --> trm_app e1' e2
+| ered_app_2 : forall v1 e2 e2',
+    value v1 ->
+    e2 --> e2' ->
+    trm_app v1 e2 --> trm_app v1 e2'
+| ered_tapp : forall e1 e1' T,
+    type T ->
+    e1 --> e1' ->
+    trm_tapp e1 T --> trm_tapp e1' T
+| ered_fst : forall e e',
+    e --> e' ->
+    trm_fst e --> trm_fst e'
+| ered_snd : forall e e',
+    e --> e' ->
+    trm_snd e --> trm_snd e'
+| ered_tuple_fst : forall e1 e2 e1',
+    e1 --> e1' ->
+    trm_tuple e1 e2 --> trm_tuple e1' e2
+| ered_tuple_snd : forall v1 e2 e2',
+    value v1 ->
+    e2 --> e2' ->
+    trm_tuple v1 e2 --> trm_tuple v1 e2'
+where "e1 --> e2" := (red e1 e2).
