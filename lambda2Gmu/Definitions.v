@@ -547,3 +547,87 @@ Inductive red : trm -> trm -> Prop :=
     e2 --> e2' ->
     trm_tuple v1 e2 --> trm_tuple v1 e2'
 where "e1 --> e2" := (red e1 e2).
+
+Fixpoint fv_typ (T : typ) {struct T} : vars :=
+  match T with
+  | typ_bvar J => \{}
+  | typ_fvar X => \{X}
+  | typ_unit   => \{}
+  | T1 ** T2   => fv_typ T1 \u fv_typ T2
+  | T1 ==> T2   => fv_typ T1 \u fv_typ T2
+  | typ_all T1 => fv_typ T1
+  | typ_gadt _ _ => \{} (* TODO ADT support *)
+  end.
+
+(* TODO shall we differentiate free type and term variables? *)
+
+Fixpoint fv_trm (e : trm) {struct e} : vars :=
+  match e with
+  | trm_bvar i => \{}
+  | trm_fvar x => \{x}
+  | trm_unit   => \{}
+  | trm_tuple e1 e2 => fv_trm e1 \u fv_trm e2
+  | trm_fst e1 => fv_trm e1
+  | trm_snd e1 => fv_trm e1
+  | trm_abs T1 e1 => fv_typ T1 \u fv_trm e1
+  | trm_app e1 e2 => fv_trm e1 \u fv_trm e2
+  | trm_tabs e1 => fv_trm e1
+  | trm_tapp e1 T1 => fv_typ T1 \u fv_trm e1
+  | trm_fix T1 e1 => fv_typ T1 \u fv_trm e1
+  | trm_let e1 e2 => fv_trm e1 \u fv_trm e2
+  | trm_matchgadt _ _ => \{} (* TODO GADT support *)
+  | trm_constructor _ _ _ => \{} (* TODO GADT support *)
+  end.
+
+Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
+  match T with
+  | typ_bvar J => typ_bvar J
+  | typ_fvar X => If X = Z then U else (typ_fvar X)
+  | typ_unit   => typ_unit
+  | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2
+  | T1 ==> T2   => subst_tt Z U T1 ==> subst_tt Z U T2
+  | typ_all T1 => typ_all (subst_tt Z U T1)
+  | typ_gadt _ _ => T (* TODO ADT support *)
+  end.
+
+Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
+  match e with
+  | trm_bvar i => trm_bvar i
+  | trm_fvar x => trm_fvar x
+  | trm_unit   => trm_unit
+  | trm_tuple e1 e2 => trm_tuple (subst_te Z U e1) (subst_te Z U e2)
+  | trm_fst e1 => trm_fst (subst_te Z U e1)
+  | trm_snd e1 => trm_snd (subst_te Z U e1)
+  | trm_abs T1 e1 => trm_abs (subst_tt Z U T1) (subst_te Z U e1)
+  | trm_app e1 e2 => trm_app (subst_te Z U e1) (subst_te Z U e2)
+  | trm_tabs e1 => trm_tabs (subst_te Z U e1)
+  | trm_tapp e1 T1 => trm_tapp (subst_te Z U e1) (subst_tt Z U T1)
+  | trm_fix T1 e1 => trm_fix (subst_tt Z U T1) (subst_te Z U e1)
+  | trm_let e1 e2 => trm_let (subst_te Z U e1) (subst_te Z U e2)
+  | trm_matchgadt _ _ => e (* TODO GADT support *)
+  | trm_constructor _ _ _ => e (* TODO GADT support *)
+  end.
+
+Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
+  match e with
+  | trm_bvar i => trm_bvar i
+  | trm_fvar x => If x = z then u else (trm_fvar x)
+  | trm_unit   => trm_unit
+  | trm_tuple e1 e2 => trm_tuple (subst_ee z u e1) (subst_ee z u e2)
+  | trm_fst e1 => trm_fst (subst_ee z u e1)
+  | trm_snd e1 => trm_snd (subst_ee z u e1)
+  | trm_abs T1 e1 => trm_abs T1 (subst_ee z u e1)
+  | trm_app e1 e2 => trm_app (subst_ee z u e1) (subst_ee z u e2)
+  | trm_tabs e1 => trm_tabs (subst_ee z u e1)
+  | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
+  | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
+  | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
+  | trm_matchgadt _ _ => e (* TODO GADT support *)
+  | trm_constructor _ _ _ => e (* TODO GADT support *)
+  end.
+
+Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
+  match b with
+  | bind_typ => bind_typ
+  | bind_var T => bind_var (subst_tt Z P T)
+  end.
