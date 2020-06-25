@@ -341,11 +341,10 @@ Inductive term : trm -> Prop :=
     term e2 ->
     term (trm_app e1 e2)
 | term_tabs : forall L e1,
-    (forall X, X \notin L -> term (e1 open_te_var X)) ->
+    (forall X, X \notin L -> value (e1 open_te_var X)) ->
     term (trm_tabs e1)
 | term_tapp : forall v1 V,
     term v1 ->
-    value v1 ->
     type V ->
     term (trm_tapp v1 V)
 | term_fix : forall T v1,
@@ -474,6 +473,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     binds x (bind_var T) E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
+    type V -> (* TODO this is useful and doesn't seem to hurt, right *)
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
@@ -631,3 +631,12 @@ Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   | bind_typ => bind_typ
   | bind_var T => bind_var (subst_tt Z P T)
   end.
+
+Definition progress := forall Σ e T,
+    {Σ, empty} ⊢ e ∈ T ->
+    (value e) \/ (exists e', e --> e').
+
+Definition preservation := forall Σ e T e',
+    {Σ, empty} ⊢ e ∈ T ->
+    e --> e' ->
+    {Σ, empty} ⊢ e' ∈ T.

@@ -1,7 +1,7 @@
 Require Import Definitions.
 Require Import TLC.LibLN.
 
-Hint Constructors type term wft typing red.
+Hint Constructors type term wft typing red value.
 
 Hint Resolve typing_var typing_app typing_tapp.
 
@@ -89,3 +89,26 @@ Qed.
 (*     econstructor. *)
 (*     admit. *)
 (* Admitted. *)
+
+
+Lemma values_decidable : forall t,
+    term t ->
+    (value t \/ ~ (value t)).
+  induction t; intro H;
+  inversion H; subst; try solve [
+                     right; intro Hv; inversion Hv
+                   | left; econstructor
+                          ].
+  - apply IHt1 in H2.
+    apply IHt2 in H3.
+    destruct H2.
+    destruct H3; try solve [
+                       left; econstructor; eauto
+                     | right; intro Hv; inversion Hv; congruence
+                     ].
+    right; intro Hv; inversion Hv; congruence. (* why this duplicate is needed??? *)
+  - left; econstructor.
+    econstructor; eauto.
+  - left; econstructor.
+    econstructor; eauto.
+Qed.
