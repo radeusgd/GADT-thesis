@@ -19,23 +19,25 @@ Lemma value_is_term : forall v,
   induction 1; eauto.
 Qed.
 
-Lemma typed_is_term : forall Σ G T t,
-    {Σ, G} ⊢ t ∈ T ->
-    term t.
-  induction 1; subst; eauto.
-  - econstructor; eauto.
-    intros.
-    admit.
-  - econstructor; eauto.
-    inversion IHtyping; 
-      admit.
-Admitted.
+(* Lemma typed_is_term : forall Σ T t, *)
+(*     {Σ, empty} ⊢ t ∈ T -> *)
+(*     term t. *)
+(*   induction 1; subst; eauto. *)
+(*   - econstructor; eauto. *)
+(*     intros. *)
+(*     pose (Ht := H X H1). *)
+(*     inversion Ht; subst. *)
+(*     admit. *)
+(*   - econstructor; eauto. *)
+(*     inversion IHtyping; *)
+(*       admit. *)
+(* Admitted. *)
 
 Ltac IHT e :=
   match goal with
   | Ht: {?Σ, ?E} ⊢ e ∈ ?T |- _ =>
     match goal with
-    | IH: forall T, {Σ, E} ⊢ e ∈ T -> ?P |- _ =>
+    | IH: forall T, ?P0 -> {Σ, E} ⊢ e ∈ T -> ?P |- _ =>
       let H := fresh "IHt" in
       assert P as H; eauto
     end
@@ -49,9 +51,9 @@ Hint Constructors value red.
 Theorem progress_thm : progress.
   unfold progress.
   intro.
-  induction e; introv; intros Htyp; inversion Htyp; subst.
+  induction e; introv; intros Hterm Htyp; inversion Htyp; inversion Hterm; subst.
   - empty_binding.
-  - IHT e1. IHT e2.
+  - IHT e1; IHT e2.
     destruct IHt as [IHv1 | IHev1].
     + destruct IHt0 as [IHv2 | IHev2].
       * left; eauto.
@@ -75,7 +77,6 @@ Theorem progress_thm : progress.
 
     inversion Hev as [e' ev]; eauto.
   - left; econstructor; econstructor; eauto.
-    intros; eapply typed_is_term; eauto. (* TODO ? *)
   - IHT e1; IHT e2.
     destruct IHt as [Hv1 | Hev1].
     + destruct IHt0 as [Hv2 | Hev2].
@@ -83,11 +84,9 @@ Theorem progress_thm : progress.
         eapply CanonicalFormAbs in Hv1'; eauto.
         inversion Hv1' as [v1 Heq]; subst.
         right; eexists; econstructor; eauto.
-        eapply typed_is_term; eauto.
       * right; inversion Hev2; eexists; eauto.
     + right; inversion Hev1; eexists; eauto.
   - left; econstructor; econstructor; eauto.
-    inversion Htyp; subst. (*TODO *) admit.
   - IHT e.
     destruct IHt as [Hv | Hev].
     + right.
@@ -95,9 +94,5 @@ Theorem progress_thm : progress.
       eapply CanonicalFormTAbs in Hv'; eauto.
       inversion Hv' as [v1 eq]; subst.
       eexists. econstructor; eauto.
-      admit.
-      admit.
-    + admit.
-      Unshelve. fs.
-
+    + right; inversion Hev; eauto.
 Qed.

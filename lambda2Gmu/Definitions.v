@@ -633,10 +633,12 @@ Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   end.
 
 Definition progress := forall Σ e T,
+    term e ->
     {Σ, empty} ⊢ e ∈ T ->
     (value e) \/ (exists e', e --> e').
 
 Definition preservation := forall Σ e T e',
+    term e ->
     {Σ, empty} ⊢ e ∈ T ->
     e --> e' ->
-    {Σ, empty} ⊢ e' ∈ T.
+    ({Σ, empty} ⊢ e' ∈ T /\ term e').
