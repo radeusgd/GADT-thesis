@@ -6,9 +6,7 @@ Notation "@ n" := (typ_bvar n) (at level 42).
 Notation "# n" := (trm_bvar n) (at level 42).
 
 Definition id := trm_tabs (trm_abs (@0) (#0)).
-Definition id_typ := typ_all (typ_arrow (@0) (@0)).
-
-
+Definition id_typ := typ_all (@0 ==> @0).
 Inductive evals : trm -> trm -> Prop :=
 | eval_step : forall a b c, a --> b -> evals b c -> evals a c
 | eval_finish : forall a, evals a a.
@@ -29,6 +27,8 @@ Qed.
 
 Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
   solve_simple_type.
+  Unshelve.
+  fs.
 Qed.
 
 (* Ltac tst := *)
@@ -41,25 +41,38 @@ Qed.
 (*     instantiate (1 := T1 ==> _) *)
 (*   end. *)
 
-(* TODO we need an ADT for some Nat numbers type *)
-Definition id_id_app := (trm_app (trm_tapp id id_typ) id).
-Lemma id_of_id_types : {empty, empty} ⊢ id_id_app ∈ id_typ.
+Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
+Lemma id_app_types : {empty, empty} ⊢ id_app ∈ typ_unit.
   solve_simple_type.
   - intros.
-    (* instantiate (1 := _ ==> _). *)
-    instantiate (1 := (@0) ==> @0).
+    instantiate (1 := (@0 ==> @0)).
     simpl_op.
     crush_simple_type.
-  - intros.
-    instantiate (1 := (@0) ==> @0).
-    crush_simple_type.
-  - simpl_op.
+  - crush_simple_type.
+    Unshelve.
+    fs.
 Qed.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
 
-Lemma id_of_id_evals : evals id_id_app id.
+Lemma id_app_evals : evals id_app trm_unit.
   crush_eval.
-  Unshelve. fs. fs. fs. fs. fs. fs. fs.
+  Unshelve. fs. fs. fs.
 Qed.
 
+Definition let_id_app := trm_let (id) (trm_app (trm_tapp (#0) typ_unit) trm_unit).
+Lemma let_id_app_types : {empty, empty} ⊢ let_id_app ∈ typ_unit.
+  econstructor.
+  - eapply well_typed_id.
+  - solve_simple_type.
+    eapply binds_push_eq.
+    cbn. case_if. auto.
+    Unshelve.
+    fs.
+Qed.
+
+Lemma let_id_app_evals : evals let_id_app trm_unit.
+  crush_eval.
+  Unshelve.
+  fs. fs. fs. fs. fs. fs. fs. fs.
+Qed.

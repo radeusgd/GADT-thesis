@@ -79,9 +79,8 @@ Proof.
   intros. unfold open_ee. generalize 0.
   induction t1; intros; simpls; f_equal*.
   case_nat*.
-  - case_var*.
+  case_var*. admit. (* TODO! *)
 Admitted.
-
 
 
 (* TODO *)

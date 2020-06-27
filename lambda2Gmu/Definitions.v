@@ -63,55 +63,53 @@ Inductive typ : Set :=
 | typ_tuple  : typ -> typ -> typ
 | typ_arrow  : typ -> typ -> typ
 | typ_all  : typ -> typ
-| typ_gadt  : (list typ) -> GADTName -> typ
+(* | typ_gadt  : (list typ) -> GADTName -> typ *)
 .
 
 Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49).
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
 (* Notation "∀( T )" := (typ_all T) (at level 49). *)
 
-Section typ_ind'.
-  Variable P : typ -> Prop.
-  Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n).
-  Hypothesis typ_fvar_case : forall (x : var), P (typ_fvar x).
-  Hypothesis typ_unit_case : P (typ_unit).
-  Hypothesis typ_tuple_case : forall (t1 t2 : typ),
-      P t1 -> P t2 -> P (typ_tuple t1 t2).
-  Hypothesis typ_arrow_case : forall (t1 t2 : typ),
-      P t1 -> P t2 -> P (typ_arrow t1 t2).
-  Hypothesis typ_all_case : forall (t1 : typ),
-      P t1 -> P (typ_all t1).
-  Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName),
-      Forall P ls -> P (typ_gadt ls n).
-  Print Forall_cons.
+(* Section typ_ind'. *)
+(*   Variable P : typ -> Prop. *)
+(*   Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n). *)
+(*   Hypothesis typ_fvar_case : forall (x : var), P (typ_fvar x). *)
+(*   Hypothesis typ_unit_case : P (typ_unit). *)
+(*   Hypothesis typ_tuple_case : forall (t1 t2 : typ), *)
+(*       P t1 -> P t2 -> P (typ_tuple t1 t2). *)
+(*   Hypothesis typ_arrow_case : forall (t1 t2 : typ), *)
+(*       P t1 -> P t2 -> P (typ_arrow t1 t2). *)
+(*   Hypothesis typ_all_case : forall (t1 : typ), *)
+(*       P t1 -> P (typ_all t1). *)
+(*   Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName), *)
+(*       Forall P ls -> P (typ_gadt ls n). *)
 
-  Fixpoint typ_ind' (t : typ) : P t :=
-    let fix list_typ_ind (ls : list typ) : Forall P ls :=
-        match ls return (Forall P ls) with
-        | nil => Forall_nil P
-        | cons t' rest =>
-          let Pt : P t' := typ_ind' t' in
-          let LPt : Forall P rest := list_typ_ind rest in
-          (Forall_cons t' Pt LPt)
-        end in
-    match t with
-    | typ_bvar i => typ_bvar_case i
-    | typ_fvar x => typ_fvar_case x
-    | typ_unit => typ_unit_case
-    | typ_tuple t1 t2 => typ_tuple_case (typ_ind' t1) (typ_ind' t2)
-    | typ_arrow t1 t2 => typ_arrow_case (typ_ind' t1) (typ_ind' t2)
-    | typ_all t1 => typ_all_case (typ_ind' t1)
-    | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams)
-    end.
+(*   Fixpoint typ_ind' (t : typ) : P t := *)
+(*     let fix list_typ_ind (ls : list typ) : Forall P ls := *)
+(*         match ls return (Forall P ls) with *)
+(*         | nil => Forall_nil P *)
+(*         | cons t' rest => *)
+(*           let Pt : P t' := typ_ind' t' in *)
+(*           let LPt : Forall P rest := list_typ_ind rest in *)
+(*           (Forall_cons t' Pt LPt) *)
+(*         end in *)
+(*     match t with *)
+(*     | typ_bvar i => typ_bvar_case i *)
+(*     | typ_fvar x => typ_fvar_case x *)
+(*     | typ_unit => typ_unit_case *)
+(*     | typ_tuple t1 t2 => typ_tuple_case (typ_ind' t1) (typ_ind' t2) *)
+(*     | typ_arrow t1 t2 => typ_arrow_case (typ_ind' t1) (typ_ind' t2) *)
+(*     | typ_all t1 => typ_all_case (typ_ind' t1) *)
+(*     | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams) *)
+(*     end. *)
 
-End typ_ind'.
-Print typ_ind'.
+(* End typ_ind'. *)
 
 (* pre-terms *)
 Inductive trm : Set :=
 | trm_bvar : nat -> trm
 | trm_fvar : var -> trm
-| trm_constructor : (list typ) -> GADTConstructor -> trm -> trm
+(* | trm_constructor : (list typ) -> GADTConstructor -> trm -> trm *)
 | trm_unit : trm
 | trm_tuple : trm -> trm -> trm
 | trm_fst : trm -> trm
@@ -123,7 +121,7 @@ Inductive trm : Set :=
 | trm_fix : typ -> trm -> trm
 (* | trm_matchunit *)
 (* | trm_matchtuple *)
-| trm_matchgadt : trm -> (list Clause) -> trm
+(* | trm_matchgadt : trm -> (list Clause) -> trm *)
 | trm_let : trm -> trm -> trm
 with
 Clause : Set :=
@@ -174,7 +172,7 @@ Fixpoint typ_size (t : typ) : nat :=
   | typ_tuple t1 t2 => 1 + typ_size t1 + typ_size t2
   | typ_arrow t1 t2 => 1 + typ_size t1 + typ_size t2
   | typ_all t1 => 1 + typ_size t1
-  | typ_gadt tparams name => 1 + (sum (map typ_size tparams)) (* this works with StdLib map but not TLC map... *)
+  (* | typ_gadt tparams name => 1 + (sum (map typ_size tparams)) *)
     (*)1 + typlist_size tparams*)
   end
 .
@@ -193,7 +191,7 @@ Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
   | typ_tuple t1 t2 => typ_tuple (open_tt_rec k u t1) (open_tt_rec k u t2)
   | typ_arrow t1 t2 => typ_arrow (open_tt_rec k u t1) (open_tt_rec k u t2)
   | typ_all t1 => typ_all (open_tt_rec (S k) u t1)
-  | typ_gadt tparams name => typ_gadt (map (open_tt_rec k u) tparams) name
+  (* | typ_gadt tparams name => typ_gadt (map (open_tt_rec k u) tparams) name *)
 end.
 
 Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k u) ts.
@@ -208,7 +206,7 @@ Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   match t with
   | trm_bvar i    => trm_bvar i
   | trm_fvar x    => trm_fvar x
-  | trm_constructor tparams C e1 => trm_constructor (open_typlist_rec k u tparams) C (open_te_rec k u e1)
+  (* | trm_constructor tparams C e1 => trm_constructor (open_typlist_rec k u tparams) C (open_te_rec k u e1) *)
   | trm_unit => trm_unit
   | trm_tuple e1 e2 => trm_tuple (open_te_rec k u e1) (open_te_rec k u e2)
   | trm_fst e1 => trm_fst (open_te_rec k u e1)
@@ -218,7 +216,7 @@ Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   | trm_tabs e1 => trm_tabs (open_te_rec (S k) u e1)
   | trm_tapp e1 T => trm_tapp (open_te_rec k u e1) (open_tt_rec k u T)
   | trm_fix T e1 => trm_fix (open_tt_rec k u T) (open_te_rec k u e1)
-  | trm_matchgadt e1 clauses => trm_matchgadt (open_te_rec k u e1) (open_te_clauses k u clauses)
+  (* | trm_matchgadt e1 clauses => trm_matchgadt (open_te_rec k u e1) (open_te_clauses k u clauses) *)
   | trm_let e1 e2 => trm_let (open_te_rec k u e1) (open_te_rec k u e2)
   end.
 
@@ -231,7 +229,7 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   match e with
   | trm_bvar i    => If k = i then u else (trm_bvar i)
   | trm_fvar x    => trm_fvar x
-  | trm_constructor tparams C e1 => trm_constructor tparams C (open_ee_rec k u e1)
+  (* | trm_constructor tparams C e1 => trm_constructor tparams C (open_ee_rec k u e1) *)
   | trm_unit => trm_unit
   | trm_tuple e1 e2 => trm_tuple (open_ee_rec k u e1) (open_ee_rec k u e2)
   | trm_fst e1 => trm_fst (open_ee_rec k u e1)
@@ -241,7 +239,7 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tabs e1 => trm_tabs (open_ee_rec k u e1)
   | trm_tapp e1 T => trm_tapp (open_ee_rec k u e1) T
   | trm_fix T e1 => trm_fix T (open_ee_rec k u e1)
-  | trm_matchgadt e1 clauses => trm_matchgadt (open_ee_rec k u e1) (open_ee_clauses k u clauses)
+  (* | trm_matchgadt e1 clauses => trm_matchgadt (open_ee_rec k u e1) (open_ee_clauses k u clauses) *)
   | trm_let e1 e2 => trm_let (open_ee_rec k u e1) (open_ee_rec (S k) u e2)
   end.
 (** Many common applications of opening replace index zero with an
@@ -309,18 +307,18 @@ Inductive type : typ -> Prop :=
   | type_all : forall L T2,
       (forall X, X \notin L -> type (T2 open_tt_var X)) ->
       type (typ_all T2)
-  | type_gadt : forall Tparams Name,
-      (forall Tparam, In Tparam Tparams -> type Tparam) ->
-      type (typ_gadt Tparams Name)
+  (* | type_gadt : forall Tparams Name, *)
+  (*     (forall Tparam, In Tparam Tparams -> type Tparam) -> *)
+  (*     type (typ_gadt Tparams Name) *)
 .
 
 Inductive term : trm -> Prop :=
 | term_var : forall x,
     term (trm_fvar x)
-| term_constructor : forall Tparams Name e1,
-    term e1 ->
-    (forall Tparam, In Tparam Tparams -> type Tparam) ->
-    term (trm_constructor Tparams Name e1)
+(* | term_constructor : forall Tparams Name e1, *)
+(*     term e1 -> *)
+(*     (forall Tparam, In Tparam Tparams -> type Tparam) -> *)
+(*     term (trm_constructor Tparams Name e1) *)
 | term_unit : term trm_unit
 | term_tuple : forall e1 e2,
     term e1 ->
@@ -356,10 +354,10 @@ Inductive term : trm -> Prop :=
     term e1 ->
     (forall x, x \notin L -> term (e2 open_ee_var x)) ->
     term (trm_let e1 e2)
-| term_matchgadt : forall e1 clauses,
-    term e1 ->
-    (forall cname ce, In (clause cname ce) clauses -> term ce) ->
-    term (trm_matchgadt e1 clauses)
+(* | term_matchgadt : forall e1 clauses, *)
+(*     term e1 -> *)
+(*     (forall cname ce, In (clause cname ce) clauses -> term ce) -> *)
+(*     term (trm_matchgadt e1 clauses) *)
 with
 value : trm -> Prop :=
 | value_abs : forall V e1, term (trm_abs V e1) ->
@@ -432,10 +430,10 @@ Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
     (forall X, X \notin L ->
           wft Σ (E & withtyp X) (T2 open_tt_var X)) ->
     wft Σ E (typ_all T2)
-| wft_gadt : forall Σ E Tparams Name Def,
-    (forall T, In T Tparams -> wft Σ E T) ->
-    binds Name Def Σ ->
-    wft Σ E (typ_gadt Tparams Name)
+(* | wft_gadt : forall Σ E Tparams Name Def, *)
+(*     (forall T, In T Tparams -> wft Σ E T) -> *)
+(*     binds Name Def Σ -> *)
+(*     wft Σ E (typ_gadt Tparams Name) *)
 .
 
 Inductive okDef : GADTEnv -> GADTConstructorDef -> Prop :=
@@ -468,6 +466,8 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
 
 Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
+| typing_unit : forall Σ E,
+    {Σ, E} ⊢ trm_unit ∈ typ_unit
 | typing_var : forall Σ E x T,
     okt Σ E ->
     binds x (bind_var T) E ->
@@ -500,6 +500,11 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_snd : forall Σ E T1 T2 e1,
     {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
     {Σ, E} ⊢ trm_snd e1 ∈ T2
+| typing_let : forall L Σ E V T2 e1 e2,
+    (* wft Σ E V -> *)
+    {Σ, E} ⊢ e1 ∈ V ->
+    (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e2 open_ee_var x ∈ T2) ->
+    {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
 
 Reserved Notation "e1 --> e2" (at level 49).
@@ -514,6 +519,11 @@ Inductive red : trm -> trm -> Prop :=
     type T ->
     e' = open_te e1 T ->
     trm_tapp (trm_tabs e1) T --> e'
+| red_letbeta : forall v1 e2 e',
+    term (trm_let v1 e2) ->
+    value v1 ->
+    e' = open_ee e2 v1 ->
+    trm_let v1 e2 --> e'
 | red_fst : forall v1 v2,
     value (trm_tuple v1 v2) ->
     trm_fst (trm_tuple v1 v2) --> v1
@@ -548,6 +558,9 @@ Inductive red : trm -> trm -> Prop :=
     value v1 ->
     e2 --> e2' ->
     trm_tuple v1 e2 --> trm_tuple v1 e2'
+| ered_let : forall e1 e2 e1',
+    e1 --> e1' ->
+    trm_let e1 e2 --> trm_let e1' e2
 where "e1 --> e2" := (red e1 e2).
 
 Fixpoint fv_typ (T : typ) {struct T} : vars :=
@@ -558,7 +571,7 @@ Fixpoint fv_typ (T : typ) {struct T} : vars :=
   | T1 ** T2   => fv_typ T1 \u fv_typ T2
   | T1 ==> T2   => fv_typ T1 \u fv_typ T2
   | typ_all T1 => fv_typ T1
-  | typ_gadt _ _ => \{} (* TODO ADT support *)
+  (* | typ_gadt _ _ => \{} (* TODO ADT support *) *)
   end.
 
 (* TODO shall we differentiate free type and term variables? *)
@@ -577,8 +590,8 @@ Fixpoint fv_trm (e : trm) {struct e} : vars :=
   | trm_tapp e1 T1 => fv_typ T1 \u fv_trm e1
   | trm_fix T1 e1 => fv_typ T1 \u fv_trm e1
   | trm_let e1 e2 => fv_trm e1 \u fv_trm e2
-  | trm_matchgadt _ _ => \{} (* TODO GADT support *)
-  | trm_constructor _ _ _ => \{} (* TODO GADT support *)
+  (* | trm_matchgadt _ _ => \{} (* TODO GADT support *) *)
+  (* | trm_constructor _ _ _ => \{} (* TODO GADT support *) *)
   end.
 
 Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
@@ -589,7 +602,7 @@ Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
   | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2
   | T1 ==> T2   => subst_tt Z U T1 ==> subst_tt Z U T2
   | typ_all T1 => typ_all (subst_tt Z U T1)
-  | typ_gadt _ _ => T (* TODO ADT support *)
+  (* | typ_gadt _ _ => T (* TODO ADT support *) *)
   end.
 
 Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
@@ -606,8 +619,8 @@ Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
   | trm_tapp e1 T1 => trm_tapp (subst_te Z U e1) (subst_tt Z U T1)
   | trm_fix T1 e1 => trm_fix (subst_tt Z U T1) (subst_te Z U e1)
   | trm_let e1 e2 => trm_let (subst_te Z U e1) (subst_te Z U e2)
-  | trm_matchgadt _ _ => e (* TODO GADT support *)
-  | trm_constructor _ _ _ => e (* TODO GADT support *)
+  (* | trm_matchgadt _ _ => e (* TODO GADT support *) *)
+  (* | trm_constructor _ _ _ => e (* TODO GADT support *) *)
   end.
 
 Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
@@ -624,8 +637,8 @@ Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
   | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
   | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
-  | trm_matchgadt _ _ => e (* TODO GADT support *)
-  | trm_constructor _ _ _ => e (* TODO GADT support *)
+  (* | trm_matchgadt _ _ => e (* TODO GADT support *) *)
+  (* | trm_constructor _ _ _ => e (* TODO GADT support *) *)
   end.
 
 Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=

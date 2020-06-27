@@ -45,7 +45,7 @@ Theorem preservation_thm : preservation.
     pick_fresh x.
     assert (x \notin L) as HxiL; eauto.
     lets Hbind: (H10 x HxiL).
-
+    admit.
   - admit.
   - inversion Htyp; inversion Hterm; subst; eauto.
     inversion H10; subst; eauto.

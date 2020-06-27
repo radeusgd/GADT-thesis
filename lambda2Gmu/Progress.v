@@ -58,6 +58,7 @@ Theorem progress_thm : progress.
   intro.
   induction e; introv; intros Hterm Htyp; inversion Htyp; inversion Hterm; subst.
   - empty_binding.
+  - left; eauto.
   - IHT e1; IHT e2.
     destruct IHt as [IHv1 | IHev1].
     + destruct IHt0 as [IHv2 | IHev2].
@@ -100,4 +101,9 @@ Theorem progress_thm : progress.
       inversion Hv' as [v1 eq]; subst.
       eexists. econstructor; eauto.
     + right; inversion Hev; eauto.
+  - IHT e1.
+    right. destruct IHt as [Hv | Hev].
+    + eexists. econstructor; eauto.
+    + inversion Hev as [e1' ev].
+      eexists; eapply ered_let; eauto.
 Qed.
