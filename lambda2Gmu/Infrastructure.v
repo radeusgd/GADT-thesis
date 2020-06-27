@@ -61,6 +61,28 @@ Proof.
   case_var*.
 Qed.
 
+(** ** Properties for substitution in terms ** **)
+
+(** Substitution for a fresh name is identity. *)
+Lemma subst_ee_fresh : forall x u e,
+  x \notin fv_trm e -> subst_ee x u e = e.
+Proof.
+  induction e; simpl; intros; f_equal*.
+  case_var*.
+Qed.
+
+(** Substitution distributes on the open operation. *)
+Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
+  subst_ee x u (open_ee t1 t2) =
+  open_ee (subst_ee x u t1) (subst_ee x u t2).
+Proof.
+  intros. unfold open_ee. generalize 0.
+  induction t1; intros; simpls; f_equal*.
+  case_nat*.
+  - case_var*.
+Admitted.
+
+
 
 (* TODO *)
 

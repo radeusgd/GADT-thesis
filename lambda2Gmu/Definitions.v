@@ -473,7 +473,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     binds x (bind_var T) E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
-    type V -> (* TODO this is useful and doesn't seem to hurt, right *)
+    wft Σ E V ->
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
@@ -482,9 +482,11 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ trm_app e1 e2 ∈ T2
 | typing_tabs : forall L Σ E e1 T1,
     (forall X, X \notin L ->
+          value (e1 open_te_var X) /\
           {Σ, E & withtyp X} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
     {Σ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ E e1 T1 T T',
+    wft Σ E T ->
     {Σ, E} ⊢ e1 ∈ typ_all T1 ->
     T' = open_tt T1 T ->
     {Σ, E} ⊢ trm_tapp e1 T ∈ T'

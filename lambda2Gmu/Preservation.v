@@ -6,6 +6,13 @@ Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
 
+Lemma typing_through_subst_ee : forall Σ E F x u U e T,
+    {Σ, E & (x ~: T) & F} ⊢ e ∈ T ->
+    {Σ, E} ⊢ u ∈ U ->
+    {Σ, E & F} ⊢ subst_ee x u e ∈ T.
+  admit.
+Admitted.
+
 Ltac IHR e :=
   match goal with
   | Hr: e --> ?e' |- _ =>
@@ -34,7 +41,11 @@ Theorem preservation_thm : preservation.
   induction Htyp; inversion Hterm; subst;
     introv; intro Hred; inversion Hred; subst;
       try solve [crush_ihred_gen].
-  - admit.
+  - inversion Htyp2; subst.
+    pick_fresh x.
+    assert (x \notin L) as HxiL; eauto.
+    lets Hbind: (H10 x HxiL).
+
   - admit.
   - inversion Htyp; inversion Hterm; subst; eauto.
     inversion H10; subst; eauto.

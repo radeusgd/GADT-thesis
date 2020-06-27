@@ -44,7 +44,7 @@ CAMLFLAGS         := $(COQMF_CAMLFLAGS)
 HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 
 Makefile.conf: 
-	coq_makefile -R . GMu CanonicalForms.v Definitions.v Infrastructure.v Preservation.v Progress.v Tests.v -o Makefile
+	coq_makefile -R . Top -R ../lambda2Gmu GMu -R ../../dot-calculus/src/extensions/paths '' Predefs.v -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
