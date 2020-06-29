@@ -5,6 +5,10 @@ Hint Constructors type term wft typing red value.
 
 Hint Resolve typing_var typing_app typing_tapp.
 
+Lemma value_is_term : forall e, value e -> term e.
+  induction e; intro Hv; inversion Hv; eauto.
+Qed.
+
 (** Gathering free names already used in the proofs *)
 Ltac gather_vars :=
   let A := gather_vars_with (fun x : vars => x) in
@@ -61,7 +65,38 @@ Proof.
   case_var*.
 Qed.
 
-(** ** Properties for substitution in terms ** **)
+
+(** ** Properties of term substitution in terms *)
+
+Lemma open_ee_rec_term_core : forall e j v u i, i <> j ->
+  open_ee_rec j v e = open_ee_rec i u (open_ee_rec j v e) ->
+  e = open_ee_rec i u e.
+Proof.
+  induction e; introv Neq H; simpl in *; inversion H; f_equal*.
+  case_nat*. case_nat*.
+Qed.
+
+Lemma open_ee_rec_type_core : forall e j V u i,
+  open_te_rec j V e = open_ee_rec i u (open_te_rec j V e) ->
+  e = open_ee_rec i u e.
+Proof.
+  induction e; introv H; simpls; inversion H; f_equal*.
+Qed.
+
+Lemma open_ee_rec_term : forall u e,
+  term e -> forall k, e = open_ee_rec k u e.
+Proof.
+  induction 1; intros; simpl; f_equal*.
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_ee_rec_term_core e1 0 (trm_fvar x)).
+
+  - unfolds open_te.
+    pick_fresh X.
+    apply* (@open_ee_rec_type_core e1 0 (typ_fvar X)).
+
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_ee_rec_term_core e2 0 (trm_fvar x)).
+Qed.
 
 (** Substitution for a fresh name is identity. *)
 Lemma subst_ee_fresh : forall x u e,
@@ -79,9 +114,8 @@ Proof.
   intros. unfold open_ee. generalize 0.
   induction t1; intros; simpls; f_equal*.
   case_nat*.
-  case_var*. admit. (* TODO! *)
-Admitted.
-
+  case_var*. rewrite* <- open_ee_rec_term.
+Qed.
 
 (* TODO *)
 

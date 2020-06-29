@@ -5,6 +5,18 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
+Lemma typing_weakening : forall Σ E F G e T,
+   {Σ, E & G} ⊢ e ∈ T -> 
+   okt Σ (E & F & G) ->
+   {Σ, E & F & G} ⊢ e ∈ T.
+Proof.
+  introv Typ. gen F. inductions Typ; introv Ok; eauto.
+  apply* typing_var. apply* binds_weaken.
+  admit.
+  apply_fresh* typing_abs as x.
+  admit.
+  forwards~ K: (H0 x).
+Admitted.
 
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     {Σ, E & (x ~: T) & F} ⊢ e ∈ T ->
