@@ -5,14 +5,44 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
+Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
+  introv. intro Hokt.
+  induction Hokt; eauto.
+Qed.
+
+Hint Resolve okt_is_ok.
+
+Lemma wft_weakening : forall Σ E F G T,
+    wft Σ (E & G) T ->
+    okt Σ (E & F & G) ->
+    wft Σ (E & F & G) T.
+  introv.
+  generalize E F G.
+  induction T; intros; eauto;
+    inversion H; subst.
+  - econstructor; apply* binds_weaken.
+  - econstructor.
+    + eapply IHT1 in H5; eauto.
+    + eapply IHT2 in H6; eauto.
+  - econstructor.
+    + eapply IHT1 in H5; eauto.
+    + eapply IHT2 in H6; eauto.
+  - econstructor.
+    introv.
+    intros HXiL.
+    lets H_: (H4 X HXiL).
+    (* lets H__: (IHT E0 F0 (G0 & X ~ bind_typ)). *)
+    inversion H_; subst; eauto.
+    admit.
+Qed.
+
 Lemma typing_weakening : forall Σ E F G e T,
-   {Σ, E & G} ⊢ e ∈ T -> 
+   {Σ, E & G} ⊢ e ∈ T ->
    okt Σ (E & F & G) ->
    {Σ, E & F & G} ⊢ e ∈ T.
 Proof.
   introv Typ. gen F. inductions Typ; introv Ok; eauto.
   apply* typing_var. apply* binds_weaken.
-  admit.
   apply_fresh* typing_abs as x.
   admit.
   forwards~ K: (H0 x).
