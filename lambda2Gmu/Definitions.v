@@ -413,7 +413,7 @@ Notation "x ~: T" := (x ~ bind_var T) (at level 31, left associativity).
 Unset Implicit Arguments.
 Definition ctx := env bind.
 About binds.
-Inductive wft : GADTEnv -> ctx -> typ -> Prop :=
+Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
 | wft_unit : forall Σ E,
     wft Σ E typ_unit
 | wft_var : forall Σ E X,
@@ -483,7 +483,8 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ trm_app e1 e2 ∈ T2
 | typing_tabs : forall L Σ E e1 T1,
     (forall X, X \notin L ->
-          value (e1 open_te_var X) /\
+          value (e1 open_te_var X)) ->
+    (forall X, X \notin L ->
           {Σ, E & withtyp X} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
     {Σ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ E e1 T1 T T',
@@ -502,7 +503,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
     {Σ, E} ⊢ trm_snd e1 ∈ T2
 | typing_let : forall L Σ E V T2 e1 e2,
-    (* wft Σ E V -> *)
+    wft Σ E V ->
     {Σ, E} ⊢ e1 ∈ V ->
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
