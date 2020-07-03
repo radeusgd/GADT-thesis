@@ -167,3 +167,125 @@ Lemma values_decidable : forall t,
   - left; econstructor.
     econstructor; eauto.
 Qed.
+
+(* Based on: https://github.com/tchajed/strong-induction/blob/master/StrongInduction.v *)
+Lemma strong_induction (P : nat -> Prop): (forall m, (forall k, k < m -> P k) -> P m) -> forall n, P n.
+  introv IH.
+  assert (P 0) as P0.
+  apply IH; introv Hfalse; inversion Hfalse.
+  assert (forall n m, n <= m -> Nat.pred n <= Nat.pred m) as pred_increasing.
+  induction n; cbn; intros.
+  apply le_0_n.
+  induction H; subst; cbn; eauto.
+  destruct m; eauto.
+  assert (forall n, (forall m, m <= n -> P m)) as strong_induction_all.
+  induction n; intros.
+  inversion H; eauto.
+  inversion H; eauto using le_S_n.
+  eauto using strong_induction_all.
+Qed.
+
+Lemma strong_induction_on_term_size_helper : forall (P : trm -> Prop),
+    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
+    forall n e, trm_size e = n -> P e.
+  introv IH.
+  lets K: strong_induction (fun n => forall e, trm_size e = n -> P e).
+  apply K.
+  introv IHk.
+  lets IHm: IH m.
+  apply IHm.
+  intros.
+  eapply IHk; eauto.
+Qed.
+
+Lemma strong_induction_on_term_size : forall (P : trm -> Prop),
+    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
+    forall e, P e.
+  intros.
+  pose (n := trm_size e).
+  eapply strong_induction_on_term_size_helper; eauto.
+Qed.
+
+(* TODO DRY *)
+Lemma strong_induction_on_type_size_helper : forall (P : typ -> Prop),
+    (forall n, (forall e, typ_size e < n -> P e) -> forall e, typ_size e = n -> P e) ->
+    forall n e, typ_size e = n -> P e.
+  introv IH.
+  lets K: strong_induction (fun n => forall e, typ_size e = n -> P e).
+  apply K.
+  introv IHk.
+  lets IHm: IH m.
+  apply IHm.
+  intros.
+  eapply IHk; eauto.
+Qed.
+
+Lemma strong_induction_on_typ_size : forall (P : typ -> Prop),
+    (forall n, (forall T, typ_size T < n -> P T) -> forall T, typ_size T = n -> P T) ->
+    forall T, P T.
+  intros.
+  pose (n := typ_size T).
+  eapply strong_induction_on_type_size_helper; eauto.
+Qed.
+
+Lemma open_ee_var_preserves_size : forall e x n,
+    trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
+  induction e; introv; try solve [cbn; try case_if; cbn; eauto].
+Qed.
+Lemma open_te_var_preserves_size : forall e x n,
+    trm_size e = trm_size (open_te_rec n (typ_fvar x) e).
+  induction e; introv; try solve [cbn; try case_if; cbn; eauto].
+Qed.
+
+Lemma open_tt_var_preserves_size : forall T X n,
+    typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
+  induction T; introv; try solve [cbn; try case_if; cbn; eauto].
+Qed.
+
+Require Import Psatz.
+Lemma wft_implies_type : forall T Σ E, wft Σ E T -> type T.
+  pose (P := fun T => forall (Σ : GADTEnv) (E : env bind), wft Σ E T -> type T).
+  lets H0: strong_induction_on_typ_size P.
+  apply H0; unfold P; clear H0 P.
+
+  introv IH. introv T_size_n. introv Hwft.
+  inversions Hwft; eauto; try solve [econstructor; eapply IH; cbn; eauto; lia].
+
+  econstructor.
+  introv XiL.
+  eapply IH; eauto.
+  unfold open_tt.
+  erewrite <- open_tt_var_preserves_size.
+  cbn; lia.
+Qed.
+
+Ltac IHap IH := eapply IH; eauto;
+                try (unfold open_ee; rewrite <- open_ee_var_preserves_size);
+                try (unfold open_te; rewrite <- open_te_var_preserves_size);
+                cbn; lia.
+
+Lemma typing_implies_term : forall Σ E e T,
+    {Σ, E} ⊢ e ∈ T ->
+    term e.
+  introv. gen Σ E T.
+  gen e.
+  pose (P := fun e => (forall (Σ : GADTEnv) (E : ctx) (T : typ), {Σ, E}⊢ e ∈ T -> term e)).
+  lets H0: strong_induction_on_term_size P.
+  apply H0. unfold P. clear H0 P.
+  (* TODO ^ this should be automated *)
+  introv IH. introv e_size_n. introv Hetyp.
+  inversion Hetyp; subst; eauto; try solve [econstructor; eauto; IHap IH].
+  - econstructor; eauto.
+    eapply wft_implies_type; eauto.
+    introv XiL.
+    IHap IH.
+  - econstructor; eauto.
+    introv XiL.
+    IHap IH.
+  - econstructor; eauto.
+    eapply wft_implies_type; eauto.
+  - econstructor; eauto.
+    IHap IH.
+    introv xiL.
+    IHap IH.
+Qed.

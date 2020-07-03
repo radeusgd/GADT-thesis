@@ -183,6 +183,24 @@ Fixpoint typ_size (t : typ) : nat :=
 (*   | cons h t => typ_size h + typlist_size t *)
 (*   end. *)
 
+Fixpoint trm_size (e : trm) : nat :=
+  match e with
+  | trm_bvar i    => 1
+  | trm_fvar x    => 1
+  (* | trm_constructor tparams C e1 =>  *)
+  | trm_unit => 1
+  | trm_tuple e1 e2 => 1 + trm_size e1 + trm_size e2
+  | trm_fst e1 => 1 + trm_size e1
+  | trm_snd e1 => 1 + trm_size e1
+  | trm_abs T e1    => 1 + trm_size e1 (* TODO: typ? *)
+  | trm_app e1 e2 => 1 + trm_size e1 + trm_size e2
+  | trm_tabs e1 => 1 + trm_size e1
+  | trm_tapp e1 T => 1 + trm_size e1
+  | trm_fix T e1 => 1 + trm_size e1
+  (* | trm_matchgadt e1 clauses =>  *)
+  | trm_let e1 e2 => 1 + trm_size e1 + trm_size e2
+  end.
+
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
   match t with
   | typ_bvar i => If k = i then u else (typ_bvar i)
@@ -470,26 +488,26 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_unit : forall Σ E,
     {Σ, E} ⊢ trm_unit ∈ typ_unit
 | typing_var : forall Σ E x T,
-    okt Σ E ->
     binds x (bind_var T) E ->
+    okt Σ E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
-    wft Σ E V ->
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
+    wft Σ E V ->
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
     {Σ, E} ⊢ e2 ∈ T1 ->
     {Σ, E} ⊢ e1 ∈ T1 ==> T2 ->
     {Σ, E} ⊢ trm_app e1 e2 ∈ T2
 | typing_tabs : forall L Σ E e1 T1,
-    (forall X, X \notin L ->
+    (forall X, X \notin L -> (* TODO consider splitting value and term as this case may be problematic ? *)
           value (e1 open_te_var X)) ->
     (forall X, X \notin L ->
           {Σ, E & withtyp X} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
     {Σ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ E e1 T1 T T',
-    wft Σ E T ->
     {Σ, E} ⊢ e1 ∈ typ_all T1 ->
+    wft Σ E T ->
     T' = open_tt T1 T ->
     {Σ, E} ⊢ trm_tapp e1 T ∈ T'
 | typing_tuple : forall Σ E T1 T2 e1 e2,
@@ -503,8 +521,8 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
     {Σ, E} ⊢ trm_snd e1 ∈ T2
 | typing_let : forall L Σ E V T2 e1 e2,
-    wft Σ E V ->
     {Σ, E} ⊢ e1 ∈ V ->
+    wft Σ E V ->
     (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
@@ -650,12 +668,10 @@ Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   end.
 
 Definition progress := forall Σ e T,
-    term e ->
     {Σ, empty} ⊢ e ∈ T ->
     (value e) \/ (exists e', e --> e').
 
 Definition preservation := forall Σ e T e',
-    term e ->
     {Σ, empty} ⊢ e ∈ T ->
     e --> e' ->
-    ({Σ, empty} ⊢ e' ∈ T /\ term e').
+    {Σ, empty} ⊢ e' ∈ T.

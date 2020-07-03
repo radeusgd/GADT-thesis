@@ -10,6 +10,27 @@ Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
   induction Hokt; eauto.
 Qed.
 
+Lemma term_through_subst : forall e x u,
+    term u ->
+    term e ->
+    term (subst_ee x u e).
+  introv Htermu Hterme.
+  induction e; eauto;
+    try solve [
+          cbn; case_if; eauto
+        | inversion Hterme; subst; cbn; econstructor; eauto
+        ].
+  - cbn.
+    econstructor; eauto.
+    inversion Hterme; subst; eauto.
+    inversion Hterme; subst; eauto.
+    admit.
+  - cbn. inversion Hterme; subst.
+    econstructor.
+    + intros; eauto.
+Admitted.
+
+
 Hint Resolve okt_is_ok.
 
 Lemma wft_weaken : forall Σ E F G T,
@@ -69,20 +90,21 @@ Lemma typing_weakening : forall Σ E F G e T,
 Proof.
   introv HTyp. gen F. inductions HTyp; introv Ok; eauto.
   - apply* typing_var. apply* binds_weaken.
-  - apply_fresh* typing_abs as x. apply* wft_weaken.
-    forwards~ K: (H0 x).
-    apply_ih_bind (H1 x); eauto.
+  - apply_fresh* typing_abs as x.
+    forwards~ K: (H x).
+    apply_ih_bind (H0 x); eauto.
     econstructor; eauto.
     apply* wft_weaken.
+    apply* wft_weaken.
   - apply_fresh* typing_tabs as X.
-    forwards~ K: (H0 X).
+    forwards~ K: (H X).
     apply_ih_bind (H1 X).
     eauto. auto.
     econstructor; eauto.
   - apply* typing_tapp. apply* wft_weaken.
   - apply_fresh typing_let as x.
-    apply wft_weaken. exact H.
     eauto.
+    apply wft_weaken. exact H.
     eauto.
     intros.
     forwards~ K: (H0 x); eauto.
@@ -119,21 +141,20 @@ Ltac crush_ihred_gen :=
 
 Theorem preservation_thm : preservation.
   unfold preservation.
-  introv.
-  intros Hterm Htyp.
+  introv Htyp.
+  assert (term e) as Hterm; eauto using typing_implies_term.
   generalize e'.
   clear e'.
   induction Htyp; inversion Hterm; subst;
     introv; intro Hred; inversion Hred; subst;
-      try solve [crush_ihred_gen].
+      try solve [crush_ihred_gen | eauto].
   - inversion Htyp2; subst.
     pick_fresh x.
     assert (x \notin L) as HxiL; eauto.
-    lets Hbind: (H10 x HxiL).
+    lets Hbind: (H8 x HxiL).
     admit.
   - admit.
   - inversion Htyp; inversion Hterm; subst; eauto.
-    inversion H10; subst; eauto.
   - inversion Htyp; inversion Hterm; subst; eauto.
-    inversion H10; subst; eauto.
+  - admit.
 Admitted.

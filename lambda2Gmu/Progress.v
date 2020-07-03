@@ -55,8 +55,11 @@ Ltac copy H1 H2 :=
 Hint Constructors value red.
 Theorem progress_thm : progress.
   unfold progress.
-  intro.
-  induction e; introv; intros Hterm Htyp; inversion Htyp; inversion Hterm; subst.
+  intros.
+  cut (term e).
+  intro Ht.
+  gen T Ht H.
+  induction e; introv Hterm Htyp; inversion Htyp; inversion Hterm; subst.
   - empty_binding.
   - left; eauto.
   - IHT e1; IHT e2.
@@ -106,4 +109,6 @@ Theorem progress_thm : progress.
     + eexists. econstructor; eauto.
     + inversion Hev as [e1' ev].
       eexists; eapply ered_let; eauto.
+
+  - eapply typing_implies_term; eauto.
 Qed.

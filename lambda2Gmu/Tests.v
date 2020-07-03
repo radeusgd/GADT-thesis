@@ -22,7 +22,7 @@ Lemma well_formed_id :
   /\ type id_typ
   /\ wft empty empty id_typ.
   intuition; solve_simple_type.
-  Unshelve. fs. fs. fs. fs.
+  Unshelve. fs. fs. fs. fs. fs.
 Qed.
 
 Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
@@ -57,22 +57,24 @@ Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_o
 
 Lemma id_app_evals : evals id_app trm_unit.
   crush_eval.
-  Unshelve. fs. fs. fs.
+  Unshelve. fs. fs. fs. fs.
 Qed.
 
 Definition let_id_app := trm_let (id) (trm_app (trm_tapp (#0) typ_unit) trm_unit).
 Lemma let_id_app_types : {empty, empty} ⊢ let_id_app ∈ typ_unit.
+  unfold let_id_app.
   econstructor.
   - eapply well_typed_id.
+  - solve_simple_type.
   - solve_simple_type.
     eapply binds_push_eq.
     cbn. case_if. auto.
     Unshelve.
-    fs.
+    fs. fs.
 Qed.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
   crush_eval.
   Unshelve.
-  fs. fs. fs. fs. fs. fs. fs. fs.
+  fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
 Qed.
