@@ -20,16 +20,7 @@ Lemma term_through_subst : forall e x u,
           cbn; case_if; eauto
         | inversion Hterme; subst; cbn; econstructor; eauto
         ].
-  - cbn.
-    econstructor; eauto.
-    inversion Hterme; subst; eauto.
-    inversion Hterme; subst; eauto.
-    admit.
-  - cbn. inversion Hterme; subst.
-    econstructor.
-    + intros; eauto.
-Admitted.
-
+Qed.
 
 Hint Resolve okt_is_ok.
 
@@ -60,6 +51,12 @@ Proof.
   apply_fresh* wft_all as Y. apply_ih_bind* H0.
 Qed.
 
+Lemma okt_strengthen : forall Σ E F G,
+    okt Σ (E & F & G) -> okt Σ (E & G).
+  introv Hok.
+  inversion Hok.
+  admit.
+Admitted.
 (** ** Environment is unchanged by substitution from a fresh name *)
 
 Lemma notin_fv_tt_open : forall Y X T,
@@ -112,12 +109,30 @@ Proof.
     econstructor; eauto.
     apply* wft_weaken.
 Qed.
-
+Hint Resolve typing_implies_term wft_strengthen.
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
-    {Σ, E & (x ~: T) & F} ⊢ e ∈ T ->
+    {Σ, E & (x ~: U) & F} ⊢ e ∈ T ->
     {Σ, E} ⊢ u ∈ U ->
     {Σ, E & F} ⊢ subst_ee x u e ∈ T.
-  admit.
+  introv TypT TypU.
+  inductions TypT; introv; cbn; eauto.
+  - assert (okt Σ (E & F)). admit.
+    case_var.
+    binds_get H. eauto.
+      assert (E & F & empty = E & F). apply concat_empty_r.
+      rewrite <- H2.
+      apply typing_weakening; rewrite concat_empty_r; eauto.
+    binds_cases H; apply* typing_var.
+  - apply_fresh* typing_abs as y.
+    rewrite* subst_ee_open_ee_var.
+    apply_ih_bind* H0.
+  - apply_fresh* typing_tabs as Y.
+    rewrite* subst_ee_open_te_var.
+    rewrite* subst_ee_open_te_var.
+    apply_ih_bind* H1.
+  - apply_fresh* typing_let as y.
+    rewrite* subst_ee_open_ee_var.
+    apply_ih_bind* H1.
 Admitted.
 
 Ltac IHR e :=

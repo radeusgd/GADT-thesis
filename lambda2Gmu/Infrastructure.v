@@ -1,6 +1,6 @@
 Require Import Definitions.
 Require Import TLC.LibLN.
-
+(* large portions of this are based on the TLC formalisation of FSub *)
 Hint Constructors type term wft typing red value.
 
 Hint Resolve typing_var typing_app typing_tapp.
@@ -57,14 +57,144 @@ Ltac unsimpl_map_bind :=
 Tactic Notation "unsimpl_map_bind" "*" :=
   unsimpl_map_bind; auto_star.
 
+(** ** Properties of type substitution in type *)
+
+(** Substitution on indices is identity on well-formed terms. *)
+
+Lemma open_tt_rec_type_core : forall T j V U i, i <> j ->
+  (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) ->
+  T = open_tt_rec i U T.
+Proof.
+  induction T; introv Neq H; simpl in *; inversion H; f_equal*.
+  case_nat*. case_nat*.
+Qed.
+
+Lemma open_tt_rec_type : forall T U,
+  type T -> forall k, T = open_tt_rec k U T.
+Proof.
+  induction 1; intros; simpl; f_equal*. unfolds open_tt.
+  pick_fresh X. apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)).
+Qed.
+
 (** Substitution for a fresh name is identity. *)
+
 Lemma subst_tt_fresh : forall Z U T,
   Z \notin fv_typ T -> subst_tt Z U T = T.
 Proof.
   induction T; simpl; intros; f_equal*.
-  case_var*.
+  case_var*. 
 Qed.
 
+(** Substitution distributes on the open operation. *)
+
+Lemma subst_tt_open_tt_rec : forall T1 T2 X P n, type P ->
+  subst_tt X P (open_tt_rec n T2 T1) =
+  open_tt_rec n (subst_tt X P T2) (subst_tt X P T1).
+Proof.
+  introv WP. generalize n.
+  induction T1; intros k; simpls; f_equal*.
+  case_nat*.
+  case_var*. rewrite* <- open_tt_rec_type.
+Qed.
+
+Lemma subst_tt_open_tt : forall T1 T2 X P, type P ->
+  subst_tt X P (open_tt T1 T2) =
+  open_tt (subst_tt X P T1) (subst_tt X P T2).
+Proof.
+  unfold open_tt. autos* subst_tt_open_tt_rec.
+Qed.
+
+(** Substitution and open_var for distinct names commute. *)
+
+Lemma subst_tt_open_tt_var : forall X Y U T, Y <> X -> type U ->
+  (subst_tt X U T) open_tt_var Y = subst_tt X U (T open_tt_var Y).
+Proof.
+  introv Neq Wu. rewrite* subst_tt_open_tt.
+  simpl. case_var*.
+Qed.
+
+(** Opening up a body t with a type u is the same as opening
+  up the abstraction with a fresh name x and then substituting u for x. *)
+
+Lemma subst_tt_intro : forall X T2 U, 
+  X \notin fv_typ T2 -> type U ->
+  open_tt T2 U = subst_tt X U (T2 open_tt_var X).
+Proof.
+  introv Fr Wu. rewrite* subst_tt_open_tt.
+  rewrite* subst_tt_fresh. simpl. case_var*.
+Qed.
+
+
+(* ********************************************************************** *)
+(** ** Properties of type substitution in terms *)
+
+Lemma open_te_rec_term_core : forall e j u i P ,
+  open_ee_rec j u e = open_te_rec i P (open_ee_rec j u e) ->
+  e = open_te_rec i P e.
+Proof.
+  induction e; intros; simpl in *; inversion H; f_equal*; f_equal*.
+Qed.
+
+Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
+  open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) ->
+   e = open_te_rec i P e.
+Proof.
+  induction e; intros; simpl in *; inversion H0; f_equal*;
+  match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
+   apply* (@open_tt_rec_type_core t j) end.
+Qed.
+
+Lemma open_te_rec_term : forall e U,
+  term e -> forall k, e = open_te_rec k U e.
+Proof.
+  intros e U WF. induction WF; intros; simpl;
+    f_equal*; try solve [ apply* open_tt_rec_type ].
+  unfolds open_ee. pick_fresh x.
+   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
+  unfolds open_te. pick_fresh X.
+   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
+  unfolds open_ee. pick_fresh x.
+   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
+Qed.
+
+(** Substitution for a fresh name is identity. *)
+
+Lemma subst_te_fresh : forall X U e,
+  X \notin fv_trm e -> subst_te X U e = e.
+Proof.
+  induction e; simpl; intros; f_equal*; autos* subst_tt_fresh.
+Qed.
+
+(** Substitution distributes on the open operation. *)
+
+Lemma subst_te_open_te : forall e T X U, type U ->
+  subst_te X U (open_te e T) =
+  open_te (subst_te X U e) (subst_tt X U T).
+Proof.
+  intros. unfold open_te. generalize 0.
+  induction e; intros; simpls; f_equal*;
+  autos* subst_tt_open_tt_rec.
+Qed.
+
+(** Substitution and open_var for distinct names commute. *)
+
+Lemma subst_te_open_te_var : forall X Y U e, Y <> X -> type U ->
+  (subst_te X U e) open_te_var Y = subst_te X U (e open_te_var Y).
+Proof.
+  introv Neq Wu. rewrite* subst_te_open_te.
+  simpl. case_var*.
+Qed.
+
+(** Opening up a body t with a type u is the same as opening
+  up the abstraction with a fresh name x and then substituting u for x. *)
+
+Lemma subst_te_intro : forall X U e, 
+  X \notin fv_trm e -> type U ->
+  open_te e U = subst_te X U (e open_te_var X).
+Proof.
+  introv Fr Wu. rewrite* subst_te_open_te.
+  rewrite* subst_te_fresh. simpl. case_var*.
+Qed.
 
 (** ** Properties of term substitution in terms *)
 
@@ -117,7 +247,99 @@ Proof.
   case_var*. rewrite* <- open_ee_rec_term.
 Qed.
 
-(* TODO *)
+(** Substitution and open_var for distinct names commute. *)
+Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
+  (subst_ee x u e) open_ee_var y = subst_ee x u (e open_ee_var y).
+Proof.
+  introv Neq Wu. rewrite* subst_ee_open_ee.
+  simpl. case_var*.
+Qed.
+
+(** Opening up a body t with a type u is the same as opening
+  up the abstraction with a fresh name x and then substituting u for x. *)
+
+Lemma subst_ee_intro : forall x u e, 
+  x \notin fv_trm e -> term u ->
+  open_ee e u = subst_ee x u (e open_ee_var x).
+Proof.
+  introv Fr Wu. rewrite* subst_ee_open_ee.
+  rewrite* subst_ee_fresh. simpl. case_var*.
+Qed.
+
+(** Interactions between type substitutions in terms and opening
+  with term variables in terms. *)
+
+Lemma subst_te_open_ee_var : forall Z P x e,
+  (subst_te Z P e) open_ee_var x = subst_te Z P (e open_ee_var x).
+Proof.
+  introv. unfold open_ee. generalize 0.
+  induction e; intros; simpl; f_equal*. case_nat*.
+Qed.
+
+(** Interactions between term substitutions in terms and opening
+  with type variables in terms. *)
+
+Lemma subst_ee_open_te_var : forall z u e X, term u ->
+  (subst_ee z u e) open_te_var X = subst_ee z u (e open_te_var X).
+Proof.
+  introv. unfold open_te. generalize 0.
+  induction e; intros; simpl; f_equal*.
+  case_var*. symmetry. autos* open_te_rec_term.
+Qed.
+
+(** Substitutions preserve local closure. *)
+
+Lemma subst_tt_type : forall T Z P,
+  type T -> type P -> type (subst_tt Z P T).
+Proof.
+  induction 1; intros; simpl; auto.
+  case_var*.
+  apply_fresh* type_all as X. rewrite* subst_tt_open_tt_var.
+Qed.
+
+Lemma subst_te_term : forall e Z P,
+    term e -> type P -> term (subst_te Z P e)
+with subst_te_value : forall e Z P,
+    value e -> type P -> value (subst_te Z P e).
+Proof.
+  - lets: subst_tt_type. induction 1; intros; cbn; auto.
+    + apply_fresh* term_abs as x. rewrite* subst_te_open_ee_var.
+    + apply_fresh* term_tabs as x.
+      rewrite* subst_te_open_te_var.
+      rewrite* subst_te_open_te_var.
+    + apply_fresh* term_let as x. rewrite* subst_te_open_ee_var.
+  - lets: subst_tt_type. induction 1; intros; cbn; auto.
+    + apply value_abs.
+      inversions H0.
+      apply_fresh* term_abs as x.
+      rewrite* subst_te_open_ee_var.
+    + apply value_tabs. inversion H0.
+      apply_fresh* term_tabs as x.
+      rewrite* subst_te_open_te_var.
+      rewrite* subst_te_open_te_var.
+Qed.
+
+Lemma subst_ee_term : forall e1 Z e2,
+    term e1 -> term e2 -> term (subst_ee Z e2 e1)
+with subst_ee_value : forall e1 Z e2,
+    value e1 -> term e2 -> value (subst_ee Z e2 e1).
+Proof.
+  - induction 1; intros; simpl; auto.
+    + case_var*.
+    + apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
+    + apply_fresh* term_tabs as Y. rewrite* subst_ee_open_te_var.
+      rewrite* subst_ee_open_te_var.
+    + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
+  - induction 1; intros; simpl; auto.
+    + apply value_abs. inversions H.
+      apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
+    + apply value_tabs; inversions H.
+      apply_fresh* term_tabs as Y. rewrite* subst_ee_open_te_var.
+      rewrite* subst_ee_open_te_var.
+Qed.
+
+Hint Resolve subst_tt_type subst_te_term subst_ee_term.
+Hint Resolve subst_te_value subst_ee_value.
 
 (** * Properties of well-formedness of a type in an environment *)
 
@@ -128,23 +350,6 @@ Lemma type_from_wft : forall Σ E T,
 Proof.
   induction 1; eauto.
 Qed.
-
-(* Lemma wft_weaken : forall Σ G T E F, *)
-(*   wft Σ (E & G) T -> *)
-(*   ok (E & F & G) -> *)
-(*   wft Σ (E & F & G) T. *)
-(*   intros. *)
-(*   induction H; intros; subst; eauto. *)
-
-(*   - (* fvar *) *)
-(*     econstructor. *)
-(*     admit. *)
-
-(*   - (* all *) *)
-(*     econstructor. *)
-(*     admit. *)
-(* Admitted. *)
-
 
 Lemma values_decidable : forall t,
     term t ->
@@ -243,21 +448,6 @@ Lemma open_tt_var_preserves_size : forall T X n,
 Qed.
 
 Require Import Psatz.
-Lemma wft_implies_type : forall T Σ E, wft Σ E T -> type T.
-  pose (P := fun T => forall (Σ : GADTEnv) (E : env bind), wft Σ E T -> type T).
-  lets H0: strong_induction_on_typ_size P.
-  apply H0; unfold P; clear H0 P.
-
-  introv IH. introv T_size_n. introv Hwft.
-  inversions Hwft; eauto; try solve [econstructor; eapply IH; cbn; eauto; lia].
-
-  econstructor.
-  introv XiL.
-  eapply IH; eauto.
-  unfold open_tt.
-  erewrite <- open_tt_var_preserves_size.
-  cbn; lia.
-Qed.
 
 Ltac IHap IH := eapply IH; eauto;
                 try (unfold open_ee; rewrite <- open_ee_var_preserves_size);
@@ -276,16 +466,24 @@ Lemma typing_implies_term : forall Σ E e T,
   introv IH. introv e_size_n. introv Hetyp.
   inversion Hetyp; subst; eauto; try solve [econstructor; eauto; IHap IH].
   - econstructor; eauto.
-    eapply wft_implies_type; eauto.
+    eapply type_from_wft; eauto.
     introv XiL.
     IHap IH.
   - econstructor; eauto.
     introv XiL.
     IHap IH.
   - econstructor; eauto.
-    eapply wft_implies_type; eauto.
+    eapply type_from_wft; eauto.
   - econstructor; eauto.
     IHap IH.
     introv xiL.
     IHap IH.
+Qed.
+
+Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
+  lets: var_compare_eq x y.
+  Require Import TLC.LibReflect.
+  destruct (var_compare x y);
+  rewrite isTrue_eq_if in H;
+  case_if; auto.
 Qed.
