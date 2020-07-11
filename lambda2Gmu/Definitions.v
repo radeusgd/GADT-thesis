@@ -426,7 +426,7 @@ Inductive bind : Set :=
 | bind_var : typ -> bind.
 
 Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity).
-Notation "x ~: T" := (x ~ bind_var T) (at level 31, left associativity).
+Notation "x ~: T" := (x ~ bind_var T) (at level 27, left associativity).
 
 Unset Implicit Arguments.
 Definition ctx := env bind.
@@ -480,7 +480,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 | okt_sub : forall Σ E X,
     okt Σ E -> X # E -> okt Σ (E & withtyp X)
 | okt_typ : forall Σ E x T,
-    okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & (x ~: T)).
+    okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & x ~: T).
 
 Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
 
@@ -492,7 +492,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     okt Σ E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
-    (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e1 open_ee_var x ∈ T1) ->
+    (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
     wft Σ E V ->
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
@@ -523,7 +523,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_let : forall L Σ E V T2 e1 e2,
     {Σ, E} ⊢ e1 ∈ V ->
     wft Σ E V ->
-    (forall x, x \notin L -> {Σ, E & (x ~: V)} ⊢ e2 open_ee_var x ∈ T2) ->
+    (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
 

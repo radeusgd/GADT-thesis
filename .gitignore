@@ -4,3 +4,5 @@
 .coqdeps.d
 .#*
 .lia.cache
+priv/
+papers/
