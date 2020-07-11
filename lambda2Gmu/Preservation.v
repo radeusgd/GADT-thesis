@@ -6,6 +6,35 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
+Ltac expand_env_empty E :=
+  let HE := fresh "HE" in
+  assert (HE: E = E & empty); [
+    rewrite* concat_empty_r
+  | rewrite HE ].
+
+Ltac fold_env_empty :=
+  match goal with
+  | |- context [?E & empty] =>
+    let HE := fresh "HE" in
+    assert (HE: E = E & empty); [
+      rewrite* concat_empty_r
+    | rewrite* <- HE ]
+  end.
+
+Ltac fold_env_empty_H :=
+  match goal with
+  | H: context [?E & empty] |- _ =>
+    let HE := fresh "HE" in
+    assert (HE: E = E & empty); [
+      rewrite* concat_empty_r
+    | rewrite* <- HE in H]
+  | H: context [empty & ?E] |- _ =>
+    let HE := fresh "HE" in
+    assert (HE: E = empty & E); [
+      rewrite* concat_empty_l
+    | rewrite* <- HE in H]
+  end.
+
 Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
   introv. intro Hokt.
   induction Hokt; eauto.
@@ -103,15 +132,81 @@ Lemma okt_strengthen : forall Σ E x U F,
       applys~ okt_typ. applys* wft_strengthen.
 Qed.
 
-Lemma okt_strengthen_simple : forall Σ E x U,
-    okt Σ (E & (x ~: U)) -> okt Σ E.
-  intros.
-  inversion H.
-  - exfalso; apply* empty_push_inv.
-  - apply eq_push_inv in H0. destruct H0 as [Ha [Hb Hc]].
-    congruence.
-  - apply eq_push_inv in H0. destruct H0 as [Ha [Hb Hc]]. subst*.
+Lemma wft_subst_tb : forall Σ F E Z P T,
+  wft Σ (E & (withtyp Z) & F) T ->
+  wft Σ E P ->
+  ok (E & map (subst_tb Z P) F) ->
+  wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T).
+Proof.
+  introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
+  induction WT; intros F EQ Ok; subst; simpl subst_tt; auto.
+  case_var*.
+  (*   apply_empty* wft_weaken. *)
+  (*   destruct (binds_concat_inv H) as [?|[? ?]]. *)
+  (*     apply (@wft_var (subst_tt Z P U)).  *)
+  (*      apply~ binds_concat_right.  *)
+  (*      unsimpl_map_bind. apply~ binds_map. *)
+  (*     destruct (binds_push_inv H1) as [[? ?]|[? ?]]. *)
+  (*       subst. false~. *)
+  (*       applys wft_var. apply* binds_concat_left. *)
+  (* apply_fresh* wft_all as Y.  *)
+  (*  unsimpl ((subst_tb Z P) (bind_sub T1)). *)
+  (*  lets: wft_type. *)
+  (*  rewrite* subst_tt_open_tt_var. *)
+  (*  apply_ih_map_bind* H0. *)
+Admitted.
+
+Hint Resolve wft_subst_tb.
+
+Lemma okt_subst_tb : forall Σ Z P E F,
+  okt Σ (E & (withtyp Z) & F) ->
+  wft Σ E P ->
+  okt Σ (E & map (subst_tb Z P) F).
+Proof.
+  introv O W. induction F using env_ind.
+  - rewrite map_empty. rewrite concat_empty_r in *.
+    lets*: (okt_push_typ_inv O).
+  - rewrite map_push. rewrite concat_assoc in *.
+    lets HPI: okt_push_inv O; destruct HPI; subst.
+    + lets (?&?): (okt_push_typ_inv O).
+      applys~ okt_sub.
+    + inversions H.
+      lets (?&?&?): (okt_push_var_inv O).
+      applys~ okt_typ. applys* wft_subst_tb.
 Qed.
+
+(* Lemma ok_subst_tb : forall Σ Z P E F, *)
+(*   ok (E & (withtyp Z) & F) -> *)
+(*   wft Σ E P -> *)
+(*   ok (E & map (subst_tb Z P) F). *)
+(* Proof. *)
+(*   introv O W. induction F using env_ind. *)
+(*   - rewrite map_empty. rewrite concat_empty_r in *. *)
+(*     inversions O. exfalso; apply* empty_push_inv. *)
+(*     apply eq_push_inv in H. destructs H. subst*. *)
+(*   - rewrite map_push. rewrite concat_assoc in *. *)
+
+(*     lets HPI: okt_push_inv O; destruct HPI; subst. *)
+(*     + lets (?&?): (okt_push_typ_inv O). *)
+(*       applys~ okt_sub. *)
+(*     + inversions H. *)
+(*       lets (?&?&?): (okt_push_var_inv O). *)
+(*       applys~ okt_typ. applys* wft_subst_tb. *)
+(* Qed. *)
+
+Lemma okt_strengthen_simple : forall Σ E F,
+    okt Σ (E & F) -> okt Σ E.
+  introv O.
+  induction F using env_ind.
+  - fold_env_empty_H.
+  - rewrite concat_assoc in O.
+    inversions O.
+    + exfalso; apply* empty_push_inv.
+    + apply eq_push_inv in H. destructs H; subst. auto.
+    + apply eq_push_inv in H. destructs H; subst. auto.
+Qed.
+
+Hint Resolve okt_strengthen_simple.
 
 (** ** Environment is unchanged by substitution from a fresh name *)
 
@@ -135,6 +230,19 @@ Proof.
   notin_simpl; auto.
   notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
 Qed.
+
+Lemma map_subst_tb_id : forall Σ G Z P,
+  okt Σ G -> Z # G -> G = map (subst_tb Z P) G.
+Proof.
+  induction 1; intros Fr; autorewrite with rew_env_map; simpl.
+  - auto.
+  - rewrite* <- IHokt.
+  - rewrite* <- IHokt.
+    rewrite* subst_tt_fresh.
+    apply* notin_fv_wf.
+Qed.
+
+Hint Resolve map_subst_tb_id.
 
 Lemma typing_weakening : forall Σ E F G e T,
    {Σ, E & G} ⊢ e ∈ T ->
@@ -192,11 +300,33 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     apply_ih_bind* H1.
 Qed.
 
+(* Lemma okt_from_wft : forall Σ E T,  (may not be provable?) *)
+(*     wft Σ E T -> okt Σ E. *)
+(*   introv W. *)
+(*   inversions W. *)
 
 Lemma typing_through_subst_te : forall Σ E F Z e T P,
-  {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
-  {Σ, E & map (subst_tb Z P) F} ⊢ (subst_te Z P e) ∈ (subst_tt Z P T).
+    {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
+    wft Σ E P ->
+    {Σ, E & map (subst_tb Z P) F} ⊢ (subst_te Z P e) ∈ (subst_tt Z P T).
 Proof.
+  introv Typ W.
+  inductions Typ; introv; simpls subst_tt; simpls subst_te; eauto.
+  - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
+    binds_cases H; unsimpl_map_bind*.
+    apply* okt_subst_tb.
+  - apply_fresh* typing_abs as y.
+    unsimpl (subst_tb Z P (bind_var V)).
+    rewrite* subst_te_open_ee_var.
+    apply_ih_map_bind* H0.
+    apply* wft_subst_tb.
+    admit.
+  - apply_fresh* typing_tabs as Y.
+    unsimpl (subst_tb Z P bind_typ).
+    rewrite* subst_te_open_te_var. admit. admit.
+    rewrite* subst_tt_open_tt_var. admit. admit.
+  - apply* typing_tapp; admit.
+  - admit.
 Admitted.
 
 Ltac IHR e :=
@@ -216,21 +346,6 @@ Ltac crush_ihred_gen :=
   match goal with
   | H: ?e --> ?e' |- _ =>
     crush_ihred e
-  end.
-
-Ltac expand_env_empty E :=
-  let HE := fresh "HE" in
-  assert (HE: E = E & empty); [
-    rewrite* concat_empty_r
-  | rewrite HE ].
-
-Ltac fold_env_empty :=
-  match goal with
-  | |- context [?E & empty] =>
-    let HE := fresh "HE" in
-    assert (HE: E = E & empty); [
-      rewrite* concat_empty_r
-    | rewrite* <- HE ]
   end.
 
 Theorem preservation_thm : preservation.
