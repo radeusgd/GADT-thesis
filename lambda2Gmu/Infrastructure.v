@@ -1,3 +1,4 @@
+Set Implicit Arguments.
 Require Import Definitions.
 Require Import TLC.LibLN.
 (* large portions of this are based on the TLC formalisation of FSub *)
@@ -454,6 +455,202 @@ Ltac IHap IH := eapply IH; eauto;
                 try (unfold open_te; rewrite <- open_te_var_preserves_size);
                 cbn; lia.
 
+Lemma wft_weaken : forall Σ E F G T,
+    wft Σ (E & G) T ->
+    ok (E & F & G) ->
+    wft Σ (E & F & G) T.
+  intros. gen_eq K: (E & G). gen E F G.
+  induction H; intros; subst; auto.
+  (* case: var *)
+  apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken.
+  (* case: all *)
+  apply_fresh* wft_all as X. apply_ih_bind* H0.
+Qed.
+
+Ltac expand_env_empty E :=
+  let HE := fresh "HE" in
+  assert (HE: E = E & empty); [
+    rewrite* concat_empty_r
+  | rewrite HE ].
+
+Ltac fold_env_empty :=
+  match goal with
+  | |- context [?E & empty] =>
+    let HE := fresh "HE" in
+    assert (HE: E = E & empty); [
+      rewrite* concat_empty_r
+    | rewrite* <- HE ]
+  end.
+
+Ltac fold_env_empty_H :=
+  match goal with
+  | H: context [?E & empty] |- _ =>
+    let HE := fresh "HE" in
+    assert (HE: E = E & empty); [
+      rewrite* concat_empty_r
+    | rewrite* <- HE in H]
+  | H: context [empty & ?E] |- _ =>
+    let HE := fresh "HE" in
+    assert (HE: E = empty & E); [
+      rewrite* concat_empty_l
+    | rewrite* <- HE in H]
+  end.
+
+Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
+  introv. intro Hokt.
+  induction Hokt; eauto.
+Qed.
+Hint Extern 1 (ok _) => apply okt_is_ok.
+
+Lemma wft_from_env_has_typ : forall Σ x U E, 
+  okt Σ E -> binds x (bind_var U) E -> wft Σ E U.
+Proof.
+  induction E using env_ind; intros Ok B.
+  false* binds_empty_inv.
+  inversions Ok.
+  - false (empty_push_inv H).
+  - destruct (eq_push_inv H) as [? [? ?]]. subst. clear H.
+     destruct (binds_push_inv B) as [[? ?]|[? ?]]. subst.
+     inversions H1.
+     expand_env_empty (E & x0 ~ bind_typ); apply* wft_weaken; fold_env_empty.
+     econstructor. apply* okt_is_ok. auto.
+  - destruct (eq_push_inv H) as [? [? ?]]. subst. clear H.
+    destruct (binds_push_inv B) as [[? ?]|[? ?]]. subst.
+    + inversions H2.
+     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty.
+     econstructor. apply* okt_is_ok. auto.
+    + inversions H2.
+     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty.
+     econstructor. apply* okt_is_ok. auto.
+Qed.
+
+(* TODO do some cleanup and move them around, probably separate files *)
+Lemma wft_strengthen : forall Σ E F x U T,
+ wft Σ (E & (x ~: U) & F) T -> wft Σ (E & F) T.
+Proof.
+  intros. gen_eq G: (E & (x ~: U) & F). gen F.
+  induction H; intros F EQ; subst; auto.
+  apply* (@wft_var).
+  destruct (binds_concat_inv H) as [?|[? ?]].
+    apply~ binds_concat_right.
+    destruct (binds_push_inv H1) as [[? ?]|[? ?]].
+      subst. false.
+      apply~ binds_concat_left.
+  (* todo: binds_cases tactic *)
+  apply_fresh* wft_all as Y. apply_ih_bind* H0.
+Qed.
+
+Lemma okt_implies_okgadt : forall Σ E, okt Σ E -> okGadt Σ.
+  induction 1; auto.
+Qed.
+
+Lemma okt_push_var_inv : forall Σ E x T,
+  okt Σ (E & x ~: T) -> okt Σ E /\ wft Σ E T /\ x # E.
+Proof.
+  introv O. inverts O.
+    false* empty_push_inv.
+    lets (?&?&?): (eq_push_inv H). false.
+    lets (?&M&?): (eq_push_inv H). subst. inverts~ M.
+Qed.
+
+Lemma okt_push_typ_inv : forall Σ E X,
+  okt Σ (E & withtyp X) -> okt Σ E /\ X # E.
+Proof.
+  introv O. inverts O.
+    false* empty_push_inv.
+    lets (?&M&?): (eq_push_inv H). subst. inverts~ M.
+    lets (?&?&?): (eq_push_inv H). false.
+Qed.
+
+Lemma okt_push_inv : forall Σ E X B,
+  okt Σ (E & X ~ B) -> B = bind_typ \/ exists T, B = bind_var T.
+Proof.
+  introv O. inverts O.
+  false* empty_push_inv.
+  lets (?&?&?): (eq_push_inv H). subst*.
+  lets (?&?&?): (eq_push_inv H). subst*.
+Qed.
+
+Lemma okt_strengthen : forall Σ E x U F,
+    okt Σ (E & (x ~: U) & F) -> okt Σ (E & F).
+  introv O. induction F using env_ind.
+  - rewrite concat_empty_r in *. lets*: (okt_push_var_inv O).
+  - rewrite concat_assoc in *.
+    lets Hinv: okt_push_inv O; inversions Hinv.
+    + lets (?&?): (okt_push_typ_inv O).
+      applys~ okt_sub.
+    + inversions H.
+      lets (?&?&?): (okt_push_var_inv O).
+      applys~ okt_typ. applys* wft_strengthen.
+Qed.
+
+
+Ltac copy H :=
+  let H' := fresh H in
+  let Heq := fresh "EQ" in
+  remember H as H' eqn:Heq; clear Heq.
+
+Lemma typing_regular : forall Σ E e T,
+   {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
+Proof.
+  induction 1.
+  - splits*.
+  - splits*. apply* wft_from_env_has_typ.
+  - pick_fresh y.
+    copy H0.
+    specializes H0 y. destructs~ H0.
+    forwards*: okt_push_inv.
+    destruct H4; try congruence.
+    destruct H4 as [U HU]. inversions HU.
+    splits*.
+    + expand_env_empty E; apply* okt_strengthen; fold_env_empty.
+    + econstructor. (* TODO HERE *)
+   apply_fresh* term_abs as y.
+     pick_fresh y. specializes H0 y. destructs~ H0.
+      forwards*: okt_push_typ_inv.
+     specializes H0 y. destructs~ H0.
+   pick_fresh y. specializes H0 y. destructs~ H0. 
+    apply* wft_arrow.
+      forwards*: okt_push_typ_inv.
+      apply_empty* wft_strengthen.
+  splits*. destructs IHtyping1. inversion* H3.
+  splits.
+   pick_fresh y. specializes H0 y. destructs~ H0. 
+    forwards*: okt_push_sub_inv.
+   apply_fresh* term_tabs as y.
+     pick_fresh y. forwards~ K: (H0 y). destructs K. 
+       forwards*: okt_push_sub_inv. 
+     forwards~ K: (H0 y). destructs K. auto.
+   apply_fresh* wft_all as Y.  
+     pick_fresh y. forwards~ K: (H0 y). destructs K. 
+      forwards*: okt_push_sub_inv.
+     forwards~ K: (H0 Y). destructs K.
+      forwards*: okt_push_sub_inv. 
+  splits*; destructs (sub_regular H0).
+   apply* term_tapp. applys* wft_type.
+   applys* wft_open T1. 
+  splits*. destructs~ (sub_regular H0). 
+Qed.
+
+(** The value relation is restricted to well-formed objects. *)
+
+Lemma value_regular : forall t,
+  value t -> term t.
+Proof.
+  induction 1; autos*.
+Qed.
+
+(** The reduction relation is restricted to well-formed objects. *)
+
+Lemma red_regular : forall t t',
+  red t t' -> term t /\ term t'.
+Proof.
+  induction 1; split; autos* value_regular.
+  inversions H. pick_fresh y. rewrite* (@subst_ee_intro y).
+  inversions H. pick_fresh Y. rewrite* (@subst_te_intro Y).
+Qed.
+
+
 Lemma typing_implies_term : forall Σ E e T,
     {Σ, E} ⊢ e ∈ T ->
     term e.
@@ -487,3 +684,4 @@ Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
   rewrite isTrue_eq_if in H;
   case_if; auto.
 Qed.
+

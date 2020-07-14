@@ -6,40 +6,6 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
-Ltac expand_env_empty E :=
-  let HE := fresh "HE" in
-  assert (HE: E = E & empty); [
-    rewrite* concat_empty_r
-  | rewrite HE ].
-
-Ltac fold_env_empty :=
-  match goal with
-  | |- context [?E & empty] =>
-    let HE := fresh "HE" in
-    assert (HE: E = E & empty); [
-      rewrite* concat_empty_r
-    | rewrite* <- HE ]
-  end.
-
-Ltac fold_env_empty_H :=
-  match goal with
-  | H: context [?E & empty] |- _ =>
-    let HE := fresh "HE" in
-    assert (HE: E = E & empty); [
-      rewrite* concat_empty_r
-    | rewrite* <- HE in H]
-  | H: context [empty & ?E] |- _ =>
-    let HE := fresh "HE" in
-    assert (HE: E = empty & E); [
-      rewrite* concat_empty_l
-    | rewrite* <- HE in H]
-  end.
-
-Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
-  introv. intro Hokt.
-  induction Hokt; eauto.
-Qed.
-Hint Extern 1 (ok _) => apply okt_is_ok.
 
 Lemma term_through_subst : forall e x u,
     term u ->
@@ -61,76 +27,13 @@ Proof.
   induction 1; eauto.
 Qed.
 
-Lemma wft_weaken : forall Σ E F G T,
-    wft Σ (E & G) T ->
-    ok (E & F & G) ->
-    wft Σ (E & F & G) T.
-  intros. gen_eq K: (E & G). gen E F G.
-  induction H; intros; subst; auto.
-  (* case: var *)
-  apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken.
-  (* case: all *)
-  apply_fresh* wft_all as X. apply_ih_bind* H0.
-Qed.
 
-Lemma wft_strengthen : forall Σ E F x U T,
- wft Σ (E & (x ~: U) & F) T -> wft Σ (E & F) T.
-Proof.
-  intros. gen_eq G: (E & (x ~: U) & F). gen F.
-  induction H; intros F EQ; subst; auto.
-  apply* (@wft_var).
-  destruct (binds_concat_inv H) as [?|[? ?]].
-    apply~ binds_concat_right.
-    destruct (binds_push_inv H1) as [[? ?]|[? ?]].
-      subst. false.
-      apply~ binds_concat_left.
-  (* todo: binds_cases tactic *)
-  apply_fresh* wft_all as Y. apply_ih_bind* H0.
-Qed.
-
-Lemma okt_implies_okgadt : forall Σ E, okt Σ E -> okGadt Σ.
-  induction 1; auto.
-Qed.
-
-Lemma okt_push_var_inv : forall Σ E x T,
-  okt Σ (E & x ~: T) -> okt Σ E /\ wft Σ E T /\ x # E.
-Proof.
-  introv O. inverts O.
-    false* empty_push_inv.
-    lets (?&?&?): (eq_push_inv H). false.
-    lets (?&M&?): (eq_push_inv H). subst. inverts~ M.
-Qed.
-
-Lemma okt_push_typ_inv : forall Σ E X,
-  okt Σ (E & withtyp X) -> okt Σ E /\ X # E.
-Proof.
-  introv O. inverts O.
-    false* empty_push_inv.
-    lets (?&M&?): (eq_push_inv H). subst. inverts~ M.
-    lets (?&?&?): (eq_push_inv H). false.
-Qed.
-
-Lemma okt_push_inv : forall Σ E X B,
-  okt Σ (E & X ~ B) -> B = bind_typ \/ exists T, B = bind_var T.
-Proof.
-  introv O. inverts O.
-  false* empty_push_inv.
-  lets (?&?&?): (eq_push_inv H). subst*.
-  lets (?&?&?): (eq_push_inv H). subst*.
-Qed.
-
-Lemma okt_strengthen : forall Σ E x U F,
-    okt Σ (E & (x ~: U) & F) -> okt Σ (E & F).
-  introv O. induction F using env_ind.
-  - rewrite concat_empty_r in *. lets*: (okt_push_var_inv O).
-  - rewrite concat_assoc in *.
-    lets Hinv: okt_push_inv O; inversions Hinv.
-    + lets (?&?): (okt_push_typ_inv O).
-      applys~ okt_sub.
-    + inversions H.
-      lets (?&?&?): (okt_push_var_inv O).
-      applys~ okt_typ. applys* wft_strengthen.
-Qed.
+(* TODO port back to infra *)
+Ltac unsimpl_map_bind_typ Z P :=
+  match goal with
+  | |- context [ bind_typ ] =>
+    unsimpl (subst_tb Z P bind_typ)
+  end.
 
 Lemma wft_subst_tb : forall Σ F E Z P T,
   wft Σ (E & (withtyp Z) & F) T ->
@@ -140,21 +43,23 @@ Lemma wft_subst_tb : forall Σ F E Z P T,
 Proof.
   introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
   induction WT; intros F EQ Ok; subst; simpl subst_tt; auto.
-  case_var*.
-  (*   apply_empty* wft_weaken. *)
-  (*   destruct (binds_concat_inv H) as [?|[? ?]]. *)
-  (*     apply (@wft_var (subst_tt Z P U)).  *)
-  (*      apply~ binds_concat_right.  *)
-  (*      unsimpl_map_bind. apply~ binds_map. *)
-  (*     destruct (binds_push_inv H1) as [[? ?]|[? ?]]. *)
-  (*       subst. false~. *)
-  (*       applys wft_var. apply* binds_concat_left. *)
-  (* apply_fresh* wft_all as Y.  *)
-  (*  unsimpl ((subst_tb Z P) (bind_sub T1)). *)
-  (*  lets: wft_type. *)
-  (*  rewrite* subst_tt_open_tt_var. *)
-  (*  apply_ih_map_bind* H0. *)
-Admitted.
+  - case_var*.
+    + expand_env_empty (E & map (subst_tb Z P) F).
+      apply* wft_weaken; fold_env_empty.
+    + destruct (binds_concat_inv H) as [?|[? ?]].
+      * apply wft_var.
+        apply~ binds_concat_right.
+        unsimpl_map_bind_typ Z P.
+        apply~ binds_map.
+      * destruct (binds_push_inv H1) as [[? ?]|[? ?]].
+        -- subst. false~.
+        -- applys wft_var. apply* binds_concat_left.
+  - apply_fresh* wft_all as Y.
+    unsimpl ((subst_tb Z P) bind_typ).
+   lets: wft_type.
+   rewrite* subst_tt_open_tt_var.
+   apply_ih_map_bind* H0.
+Qed.
 
 Hint Resolve wft_subst_tb.
 

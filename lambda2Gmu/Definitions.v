@@ -486,6 +486,7 @@ Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
 
 Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_unit : forall Σ E,
+    okt Σ E ->
     {Σ, E} ⊢ trm_unit ∈ typ_unit
 | typing_var : forall Σ E x T,
     binds x (bind_var T) E ->
@@ -493,7 +494,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_abs : forall L Σ E V e1 T1,
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
-    wft Σ E V ->
+  (*  wft Σ E V -> *)
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
     {Σ, E} ⊢ e2 ∈ T1 ->
@@ -522,7 +523,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ trm_snd e1 ∈ T2
 | typing_let : forall L Σ E V T2 e1 e2,
     {Σ, E} ⊢ e1 ∈ V ->
-    wft Σ E V ->
+(*    wft Σ E V -> *)
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
@@ -675,3 +676,4 @@ Definition preservation := forall Σ e T e',
     {Σ, empty} ⊢ e ∈ T ->
     e --> e' ->
     {Σ, empty} ⊢ e' ∈ T.
+
