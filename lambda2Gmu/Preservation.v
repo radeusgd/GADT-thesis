@@ -21,47 +21,8 @@ Qed.
 
 Hint Resolve okt_is_ok.
 
-Lemma wft_type : forall Σ E T,
-    wft Σ E T -> type T.
-Proof.
-  induction 1; eauto.
-Qed.
 
 
-(* TODO port back to infra *)
-Ltac unsimpl_map_bind_typ Z P :=
-  match goal with
-  | |- context [ bind_typ ] =>
-    unsimpl (subst_tb Z P bind_typ)
-  end.
-
-Lemma wft_subst_tb : forall Σ F E Z P T,
-  wft Σ (E & (withtyp Z) & F) T ->
-  wft Σ E P ->
-  ok (E & map (subst_tb Z P) F) ->
-  wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T).
-Proof.
-  introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
-  induction WT; intros F EQ Ok; subst; simpl subst_tt; auto.
-  - case_var*.
-    + expand_env_empty (E & map (subst_tb Z P) F).
-      apply* wft_weaken; fold_env_empty.
-    + destruct (binds_concat_inv H) as [?|[? ?]].
-      * apply wft_var.
-        apply~ binds_concat_right.
-        unsimpl_map_bind_typ Z P.
-        apply~ binds_map.
-      * destruct (binds_push_inv H1) as [[? ?]|[? ?]].
-        -- subst. false~.
-        -- applys wft_var. apply* binds_concat_left.
-  - apply_fresh* wft_all as Y.
-    unsimpl ((subst_tb Z P) bind_typ).
-   lets: wft_type.
-   rewrite* subst_tt_open_tt_var.
-   apply_ih_map_bind* H0.
-Qed.
-
-Hint Resolve wft_subst_tb.
 
 Lemma okt_subst_tb : forall Σ Z P E F,
   okt Σ (E & (withtyp Z) & F) ->
@@ -160,8 +121,9 @@ Proof.
     forwards~ K: (H x).
     apply_ih_bind (H0 x); eauto.
     econstructor; eauto.
-    apply* wft_weaken.
-    apply* wft_weaken.
+    apply* wft_weaken. admit.
+    (* apply_folding (E & G) wft_weaken. *)
+    (* apply* wft_weaken. *)
   - apply_fresh* typing_tabs as X.
     forwards~ K: (H X).
     apply_ih_bind (H1 X).

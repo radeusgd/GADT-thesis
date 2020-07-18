@@ -352,6 +352,8 @@ Proof.
   induction 1; eauto.
 Qed.
 
+Hint Resolve type_from_wft.
+
 Lemma values_decidable : forall t,
     term t ->
     (value t \/ ~ (value t)).
@@ -590,11 +592,83 @@ Ltac copy H :=
   let Heq := fresh "EQ" in
   remember H as H' eqn:Heq; clear Heq.
 
+Lemma okt_is_wft : forall Σ E x T,
+    okt Σ (E & x ~: T) -> wft Σ E T.
+  intros.
+  inversion H.
+  false* empty_push_inv.
+  lets (?&?&?): eq_push_inv H0. false*.
+  lets (?&?&?): eq_push_inv H0. subst. inversions* H6.
+Qed.
+
+Lemma okt_is_type : forall Σ E x T,
+    okt Σ (E & x ~: T) -> type T.
+  intros. apply okt_is_wft in H. apply* type_from_wft.
+Qed.
+
+Ltac apply_folding E lemma :=
+  expand_env_empty E; apply* lemma; fold_env_empty.
+
+Ltac add_notin x L :=
+  let Fr := fresh "Fr" in
+  assert (Fr: x \notin L); auto.
+
+Ltac unsimpl_map_bind_typ Z P :=
+  match goal with
+  | |- context [ bind_typ ] =>
+    unsimpl (subst_tb Z P bind_typ)
+  end.
+
+Lemma wft_type : forall Σ E T,
+    wft Σ E T -> type T.
+Proof.
+  induction 1; eauto.
+Qed.
+
+Lemma wft_subst_tb : forall Σ F E Z P T,
+  wft Σ (E & (withtyp Z) & F) T ->
+  wft Σ E P ->
+  ok (E & map (subst_tb Z P) F) ->
+  wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T).
+Proof.
+  introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
+  induction WT; intros F EQ Ok; subst; simpl subst_tt; auto.
+  - case_var*.
+    + expand_env_empty (E & map (subst_tb Z P) F).
+      apply* wft_weaken; fold_env_empty.
+    + destruct (binds_concat_inv H) as [?|[? ?]].
+      * apply wft_var.
+        apply~ binds_concat_right.
+        unsimpl_map_bind_typ Z P.
+        apply~ binds_map.
+      * destruct (binds_push_inv H1) as [[? ?]|[? ?]].
+        -- subst. false~.
+        -- applys wft_var. apply* binds_concat_left.
+  - apply_fresh* wft_all as Y.
+    unsimpl ((subst_tb Z P) bind_typ).
+   lets: wft_type.
+   rewrite* subst_tt_open_tt_var.
+   apply_ih_map_bind* H0.
+Qed.
+Hint Resolve wft_subst_tb.
+
+Lemma wft_open : forall Σ E U T1,
+  ok E ->
+  wft Σ E (typ_all T1) ->
+  wft Σ E U ->
+  wft Σ E (open_tt T1 U).
+Proof.
+  introv Ok WA WU. inversions WA. pick_fresh X.
+  rewrite* (@subst_tt_intro X).
+  lets K: (@wft_subst_tb Σ empty).
+  specializes_vars K. clean_empty K. apply* K.
+Qed.
+Hint Resolve okt_is_ok.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
-  induction 1.
-  - splits*.
+  induction 1; try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
   - pick_fresh y.
     copy H0.
@@ -603,33 +677,40 @@ Proof.
     destruct H4; try congruence.
     destruct H4 as [U HU]. inversions HU.
     splits*.
-    + expand_env_empty E; apply* okt_strengthen; fold_env_empty.
-    + econstructor. (* TODO HERE *)
-   apply_fresh* term_abs as y.
-     pick_fresh y. specializes H0 y. destructs~ H0.
-      forwards*: okt_push_typ_inv.
-     specializes H0 y. destructs~ H0.
-   pick_fresh y. specializes H0 y. destructs~ H0. 
-    apply* wft_arrow.
-      forwards*: okt_push_typ_inv.
-      apply_empty* wft_strengthen.
-  splits*. destructs IHtyping1. inversion* H3.
-  splits.
-   pick_fresh y. specializes H0 y. destructs~ H0. 
-    forwards*: okt_push_sub_inv.
-   apply_fresh* term_tabs as y.
-     pick_fresh y. forwards~ K: (H0 y). destructs K. 
-       forwards*: okt_push_sub_inv. 
-     forwards~ K: (H0 y). destructs K. auto.
-   apply_fresh* wft_all as Y.  
-     pick_fresh y. forwards~ K: (H0 y). destructs K. 
-      forwards*: okt_push_sub_inv.
-     forwards~ K: (H0 Y). destructs K.
-      forwards*: okt_push_sub_inv. 
-  splits*; destructs (sub_regular H0).
-   apply* term_tapp. applys* wft_type.
-   applys* wft_open T1. 
-  splits*. destructs~ (sub_regular H0). 
+    + apply_folding E okt_strengthen.
+    + econstructor. apply* okt_is_type.
+      intros. apply* H1.
+    + econstructor.
+      apply* okt_is_wft.
+      apply_folding E wft_strengthen.
+  - splits*.
+    destructs IHtyping2. inversion* H3.
+  - copy H1.
+    pick_fresh y. specializes H1 y.
+    add_notin y L. lets HF: H1 Fr0. destructs~ HF.
+    splits*.
+    + forwards*: okt_push_typ_inv.
+    + apply* term_tabs. intros. apply* H2.
+    + apply_fresh* wft_all as Y.
+      add_notin Y L. lets HF: H2 Y Fr1. destruct* HF.
+  - subst. splits*. destructs IHtyping. inversions H3.
+    pick_fresh Y. add_notin Y L. lets HW: H7 Y Fr0.
+    apply* wft_open.
+  - splits*.
+    destructs IHtyping. inversion* H2.
+  - splits*.
+    destructs IHtyping. inversion* H2.
+  - destructs IHtyping.
+    pick_fresh y.
+    copy H1.
+    specializes H1 y. destructs~ H1.
+    forwards*: okt_push_inv.
+    destruct H8; try congruence.
+    destruct H8 as [U HU]. inversions HU.
+    splits*.
+    + econstructor. auto.
+      intros. lets HF: H5 x H8. destruct* HF.
+    + apply_folding E wft_strengthen.
 Qed.
 
 (** The value relation is restricted to well-formed objects. *)
@@ -642,39 +723,26 @@ Qed.
 
 (** The reduction relation is restricted to well-formed objects. *)
 
-Lemma red_regular : forall t t',
-  red t t' -> term t /\ term t'.
-Proof.
-  induction 1; split; autos* value_regular.
-  inversions H. pick_fresh y. rewrite* (@subst_ee_intro y).
-  inversions H. pick_fresh Y. rewrite* (@subst_te_intro Y).
-Qed.
+(* Lemma red_regular : forall t t', *)
+(*   red t t' -> term t /\ term t'. *)
+(* Proof. *)
+(*   induction 1; split; autos* value_regular. *)
+(*   - inversions H. pick_fresh y. rewrite* (@subst_ee_intro y). *)
+(*   - inversions H. pick_fresh Y. rewrite* (@subst_te_intro Y). *)
+(*   - inversions H. pick_fresh y. rewrite* (@subst_ee_intro y). *)
+(*   - inversions H. auto. *)
+(*   - inversions H. auto. *)
+(*   - inversions H. admit. *)
+(*   - inversions IHred. econstructor. *)
+(* Qed. *)
 
 
 Lemma typing_implies_term : forall Σ E e T,
     {Σ, E} ⊢ e ∈ T ->
     term e.
-  introv. gen Σ E T.
-  gen e.
-  pose (P := fun e => (forall (Σ : GADTEnv) (E : ctx) (T : typ), {Σ, E}⊢ e ∈ T -> term e)).
-  lets H0: strong_induction_on_term_size P.
-  apply H0. unfold P. clear H0 P.
-  (* TODO ^ this should be automated *)
-  introv IH. introv e_size_n. introv Hetyp.
-  inversion Hetyp; subst; eauto; try solve [econstructor; eauto; IHap IH].
-  - econstructor; eauto.
-    eapply type_from_wft; eauto.
-    introv XiL.
-    IHap IH.
-  - econstructor; eauto.
-    introv XiL.
-    IHap IH.
-  - econstructor; eauto.
-    eapply type_from_wft; eauto.
-  - econstructor; eauto.
-    IHap IH.
-    introv xiL.
-    IHap IH.
+  intros.
+  lets TR: typing_regular Σ E e T.
+  destruct* TR.
 Qed.
 
 Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
