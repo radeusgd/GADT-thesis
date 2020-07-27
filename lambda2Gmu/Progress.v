@@ -80,6 +80,9 @@ Theorem progress_thm : progress.
       inversion Hv' as [v1 eq]; subst.
       eexists. econstructor; eauto.
     + right; inversion Hev; eauto.
+  - right.
+    eexists.
+    constructor*.
   - IHT e1.
     right. destruct IHt as [Hv | Hev].
     + eexists. econstructor; eauto.

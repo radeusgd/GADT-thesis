@@ -485,6 +485,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
 
 Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
+  (* TODO typing_eq *)
 | typing_unit : forall Σ E,
     okt Σ E ->
     {Σ, E} ⊢ trm_unit ∈ typ_unit
@@ -492,9 +493,9 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     binds x (bind_var T) E ->
     okt Σ E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
+  (* TODO typing_cons *)
 | typing_abs : forall L Σ E V e1 T1,
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
-  (*  wft Σ E V -> *)
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ E T1 T2 e1 e2,
     {Σ, E} ⊢ e2 ∈ T1 ->
@@ -521,9 +522,12 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
 | typing_snd : forall Σ E T1 T2 e1,
     {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
     {Σ, E} ⊢ trm_snd e1 ∈ T2
+| typing_fix : forall L Σ E T v,
+    (forall x, x \notin L -> value (v open_ee_var x)) ->
+    (forall x, x \notin L -> {Σ, E & x ~: T} ⊢ (v open_ee_var x) ∈ T) ->
+    {Σ, E} ⊢ trm_fix T v ∈ T
 | typing_let : forall L Σ E V T2 e1 e2,
     {Σ, E} ⊢ e1 ∈ V ->
-(*    wft Σ E V -> *)
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).

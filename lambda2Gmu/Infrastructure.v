@@ -700,6 +700,7 @@ Proof.
     destructs IHtyping. inversion* H2.
   - splits*.
     destructs IHtyping. inversion* H2.
+  - admit.
   - destructs IHtyping.
     pick_fresh y.
     copy H1.
@@ -711,7 +712,7 @@ Proof.
     + econstructor. auto.
       intros. lets HF: H5 x H8. destruct* HF.
     + apply_folding E wft_strengthen.
-Qed.
+Admitted.
 
 (** The value relation is restricted to well-formed objects. *)
 
