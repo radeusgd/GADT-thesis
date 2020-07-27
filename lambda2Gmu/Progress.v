@@ -14,30 +14,6 @@ Ltac empty_binding :=
   | _ => fail "no empty bindings found"
   end.
 
-Lemma value_is_term : forall v,
-    value v -> term v.
-  induction 1; eauto.
-Qed.
-
-(* Lemma typed_is_term : forall Σ T t, *)
-(*     {Σ, empty} ⊢ t ∈ T -> *)
-(*     term t. *)
-(*   introv. *)
-(*   intro Htyp. *)
-(*   inversion Htyp; subst; eauto. *)
-(*   -  *)
-(*   destruct Htyp. *)
-(*   3: {} *)
-(*   induction 1; subst; eauto; econstructor; eauto. *)
-(*   - inversion H; subst; econstructor; eauto. *)
-(*   - econstructor; eauto. *)
-(*     intros.  *)
-(*     pose (Ht := H X H0). *)
-(*     inversion Ht; subst; eauto. *)
-(*   - econstructor; eauto. *)
-    
-(* Admitted. *)
-
 Ltac IHT e :=
   match goal with
   | Ht: {?Σ, ?E} ⊢ e ∈ ?T |- _ =>

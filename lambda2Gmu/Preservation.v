@@ -121,26 +121,23 @@ Proof.
     forwards~ K: (H x).
     apply_ih_bind (H0 x); eauto.
     econstructor; eauto.
-    apply* wft_weaken. admit.
-    (* apply_folding (E & G) wft_weaken. *)
-    (* apply* wft_weaken. *)
+    lets (Hokt&?&?): typing_regular K.
+    lets (?&?&?): okt_push_var_inv Hokt.
+    apply* wft_weaken.
   - apply_fresh* typing_tabs as X.
     forwards~ K: (H X).
-    apply_ih_bind (H1 X).
-    eauto. auto.
+    apply_ih_bind (H1 X); auto.
     econstructor; eauto.
   - apply* typing_tapp. apply* wft_weaken.
-  - apply_fresh typing_let as x.
-    eauto.
-    apply wft_weaken. exact H.
-    eauto.
-    intros.
-    forwards~ K: (H0 x); eauto.
-    apply_ih_bind (H1 x); eauto.
+  - apply_fresh* typing_let as x.
+    forwards~ K: (H x).
+    apply_ih_bind (H0 x); eauto.
     econstructor; eauto.
+    lets (Hokt&?&?): typing_regular K.
+    lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
 Qed.
-Hint Resolve typing_implies_term wft_strengthen.
+Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
 
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     {Σ, E & (x ~: U) & F} ⊢ e ∈ T ->
@@ -164,13 +161,21 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     apply_ih_bind* H1.
   - apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
-    apply_ih_bind* H1.
+    apply_ih_bind* H0.
 Qed.
 
 (* Lemma okt_from_wft : forall Σ E T,  (may not be provable?) *)
 (*     wft Σ E T -> okt Σ E. *)
 (*   introv W. *)
 (*   inversions W. *)
+
+Hint Resolve okt_subst_tb.
+
+Lemma ok_map : forall E F Z P,
+    ok (E & (withtyp Z) & F) ->
+    ok (E & map (subst_tb Z P) F).
+
+  Admitted.
 
 Lemma typing_through_subst_te : forall Σ E F Z e T P,
     {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
@@ -181,20 +186,26 @@ Proof.
   inductions Typ; introv; simpls subst_tt; simpls subst_te; eauto.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
     binds_cases H; unsimpl_map_bind*.
-    apply* okt_subst_tb.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih_map_bind* H0.
-    apply* wft_subst_tb.
-    admit.
   - apply_fresh* typing_tabs as Y.
-    unsimpl (subst_tb Z P bind_typ).
-    rewrite* subst_te_open_te_var. admit. admit.
-    rewrite* subst_tt_open_tt_var. admit. admit.
-  - apply* typing_tapp; admit.
-  - admit.
-Admitted.
+    + rewrite* subst_te_open_te_var.
+    + unsimpl (subst_tb Z P bind_typ).
+      rewrite* subst_tt_open_tt_var.
+      rewrite* subst_te_open_te_var.
+      apply_ih_map_bind* H1.
+  - rewrite* subst_tt_open_tt. apply* typing_tapp.
+    apply* wft_subst_tb.
+    apply* ok_concat_map.
+    destructs (typing_regular Typ).
+    lets*: okt_is_ok H0.
+  - apply_fresh* typing_let as y.
+    unsimpl (subst_tb Z P (bind_var V)).
+    rewrite* subst_te_open_ee_var.
+    apply_ih_map_bind* H0.
+Qed.
 
 Ltac IHR e :=
   match goal with
@@ -226,7 +237,7 @@ Theorem preservation_thm : preservation.
       try solve [crush_ihred_gen | eauto].
   - (* app *)
     inversions Htyp2.
-    pick_fresh x. forwards~ K: (H8 x).
+    pick_fresh x. forwards~ K: (H6 x).
     rewrite* (@subst_ee_intro x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
@@ -242,7 +253,7 @@ Theorem preservation_thm : preservation.
   - inversion Htyp; subst; eauto.
   - inversion Htyp; subst; eauto.
   - (* let *)
-    pick_fresh x. forwards~ K: (H0 x).
+    pick_fresh x. forwards~ K: (H x).
     rewrite* (@subst_ee_intro x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
