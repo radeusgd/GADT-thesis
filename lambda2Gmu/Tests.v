@@ -13,22 +13,28 @@ Inductive evals : trm -> trm -> Prop :=
 
 
 Ltac simpl_op := cbn; try case_if; auto.
-Ltac solve_simple_type := repeat ((* let L := gather_vars in try apply typing_abs with L; *) econstructor; eauto; cbn; try case_if; eauto).
+(* Ltac solve_simple_type := repeat ((* let L := gather_vars in try apply typing_abs with L; *) intros; econstructor; eauto; cbn; try case_if; eauto). *)
 Ltac crush_simple_type := repeat (cbv; (try case_if); econstructor; eauto).
 Ltac fs := exact \{}. (* There must be a better way *)
+
+Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
+  econstructor.
+  - intros.
+    constructor*. cbv. case_if. econstructor. econstructor.
+    intros. cbv. case_if. econstructor.
+  - intros.
+    econstructor. cbn. case_if. intros.
+    econstructor. eauto. constructor*.
+    repeat constructor*.
+  Unshelve.
+  fs. fs.
+Qed.
 
 Lemma well_formed_id :
   term id
   /\ type id_typ
   /\ wft empty empty id_typ.
-  intuition; solve_simple_type.
-  Unshelve. fs. fs. fs. fs. fs.
-Qed.
-
-Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
-  solve_simple_type.
-  Unshelve.
-  fs.
+  destruct* (typing_regular well_typed_id).
 Qed.
 
 (* Ltac tst := *)
@@ -43,7 +49,9 @@ Qed.
 
 Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
 Lemma id_app_types : {empty, empty} ⊢ id_app ∈ typ_unit.
-  solve_simple_type.
+  econstructor; repeat econstructor; cbn; try case_if.
+  - econstructor.
+  - intros. econstructor.
   - intros.
     instantiate (1 := (@0 ==> @0)).
     simpl_op.
@@ -65,10 +73,7 @@ Lemma let_id_app_types : {empty, empty} ⊢ let_id_app ∈ typ_unit.
   unfold let_id_app.
   econstructor.
   - eapply well_typed_id.
-  - solve_simple_type.
-  - solve_simple_type.
-    eapply binds_push_eq.
-    cbn. case_if. auto.
+  - crush_simple_type.
     Unshelve.
     fs. fs.
 Qed.
