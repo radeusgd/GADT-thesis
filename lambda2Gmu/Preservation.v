@@ -129,7 +129,13 @@ Proof.
     apply_ih_bind (H1 X); auto.
     econstructor; eauto.
   - apply* typing_tapp. apply* wft_weaken.
-  - admit.
+  - apply_fresh* typing_fix as x.
+    forwards~ K: (H0 x).
+    apply_ih_bind (H1 x); eauto.
+    econstructor; eauto.
+    lets (Hokt&?&?): typing_regular K.
+    lets (?&?&?): okt_push_var_inv Hokt.
+    apply* wft_weaken.
   - apply_fresh* typing_let as x.
     forwards~ K: (H x).
     apply_ih_bind (H0 x); eauto.
@@ -137,7 +143,8 @@ Proof.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-Admitted.
+Qed.
+
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
 
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
@@ -160,11 +167,14 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     rewrite* subst_ee_open_te_var.
     rewrite* subst_ee_open_te_var.
     apply_ih_bind* H1.
-  - admit.
+  - apply_fresh* typing_fix as y.
+    rewrite* subst_ee_open_ee_var.
+    rewrite* subst_ee_open_ee_var.
+    apply_ih_bind* H1.
   - apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
     apply_ih_bind* H0.
-Admitted.
+Qed.
 
 (* Lemma okt_from_wft : forall Σ E T,  (may not be provable?) *)
 (*     wft Σ E T -> okt Σ E. *)
@@ -197,12 +207,16 @@ Proof.
     apply* ok_concat_map.
     destructs (typing_regular Typ).
     lets*: okt_is_ok H0.
-  - admit.
+  - apply_fresh* typing_fix as y.
+    rewrite* subst_te_open_ee_var.
+    unsimpl (subst_tb Z P (bind_var T)).
+    rewrite* subst_te_open_ee_var.
+    apply_ih_map_bind* H1.
   - apply_fresh* typing_let as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih_map_bind* H0.
-Admitted.
+Qed.
 
 Ltac IHR e :=
   match goal with

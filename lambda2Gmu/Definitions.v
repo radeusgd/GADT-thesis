@@ -256,7 +256,7 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   | trm_app e1 e2 => trm_app (open_ee_rec k u e1) (open_ee_rec k u e2)
   | trm_tabs e1 => trm_tabs (open_ee_rec k u e1)
   | trm_tapp e1 T => trm_tapp (open_ee_rec k u e1) T
-  | trm_fix T e1 => trm_fix T (open_ee_rec k u e1)
+  | trm_fix T e1 => trm_fix T (open_ee_rec (S k) u e1)
   (* | trm_matchgadt e1 clauses => trm_matchgadt (open_ee_rec k u e1) (open_ee_clauses k u clauses) *)
   | trm_let e1 e2 => trm_let (open_ee_rec k u e1) (open_ee_rec (S k) u e2)
   end.
@@ -364,10 +364,10 @@ Inductive term : trm -> Prop :=
     term v1 ->
     type V ->
     term (trm_tapp v1 V)
-| term_fix : forall T v1,
+| term_fix : forall L T v1,
     type T ->
-    term v1 ->
-    value v1 ->
+    (forall x, x \notin L -> term (v1 open_ee_var x)) ->
+    (forall x, x \notin L -> value (v1 open_ee_var x)) -> (* this has be separated to make some induction proofs work. we may consider completely splitting the values requirements to a separate property *)
     term (trm_fix T v1)
 | term_let : forall L e1 e2,
     term e1 ->

@@ -150,12 +150,14 @@ Lemma open_te_rec_term : forall e U,
 Proof.
   intros e U WF. induction WF; intros; simpl;
     f_equal*; try solve [ apply* open_tt_rec_type ].
-  unfolds open_ee. pick_fresh x.
-   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
-  unfolds open_te. pick_fresh X.
-   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
-  unfolds open_ee. pick_fresh x.
-   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
+  - unfolds open_te. pick_fresh X.
+    apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
 Qed.
 
 (** Substitution for a fresh name is identity. *)
@@ -224,6 +226,10 @@ Proof.
   - unfolds open_te.
     pick_fresh X.
     apply* (@open_ee_rec_type_core e1 0 (typ_fvar X)).
+
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_ee_rec_term_core v1 0 (trm_fvar x)).
+
 
   - unfolds open_ee. pick_fresh x.
     apply* (@open_ee_rec_term_core e2 0 (trm_fvar x)).
@@ -308,6 +314,9 @@ Proof.
     + apply_fresh* term_tabs as x.
       rewrite* subst_te_open_te_var.
       rewrite* subst_te_open_te_var.
+    + apply_fresh* term_fix as x.
+      rewrite* subst_te_open_ee_var.
+      rewrite* subst_te_open_ee_var.
     + apply_fresh* term_let as x. rewrite* subst_te_open_ee_var.
   - lets: subst_tt_type. induction 1; intros; cbn; auto.
     + apply value_abs.
@@ -330,6 +339,9 @@ Proof.
     + apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_tabs as Y. rewrite* subst_ee_open_te_var.
       rewrite* subst_ee_open_te_var.
+    + apply_fresh* term_fix as y.
+      rewrite* subst_ee_open_ee_var.
+      rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
   - induction 1; intros; simpl; auto.
     + apply value_abs. inversions H.
@@ -700,7 +712,18 @@ Proof.
     destructs IHtyping. inversion* H2.
   - splits*.
     destructs IHtyping. inversion* H2.
-  - admit.
+  - pick_fresh y.
+    copy H1.
+    specializes H1 y. destructs~ H1.
+    forwards* Hp: okt_push_inv.
+    destruct Hp; try congruence.
+    destruct H5 as [U HU]. inversions HU.
+    splits*.
+    + apply_folding E okt_strengthen.
+    + econstructor. apply* okt_is_type.
+      intros. apply* H2.
+      intros. apply* H.
+    + apply_folding E wft_strengthen.
   - destructs IHtyping.
     pick_fresh y.
     copy H1.
@@ -712,7 +735,7 @@ Proof.
     + econstructor. auto.
       intros. lets HF: H5 x H8. destruct* HF.
     + apply_folding E wft_strengthen.
-Admitted.
+Qed.
 
 (** The value relation is restricted to well-formed objects. *)
 
@@ -733,7 +756,6 @@ Qed.
 (*   - inversions H. pick_fresh y. rewrite* (@subst_ee_intro y). *)
 (*   - inversions H. auto. *)
 (*   - inversions H. auto. *)
-(*   - inversions H. admit. *)
 (*   - inversions IHred. econstructor. *)
 (* Qed. *)
 

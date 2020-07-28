@@ -83,3 +83,40 @@ Lemma let_id_app_evals : evals let_id_app trm_unit.
   Unshelve.
   fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
 Qed.
+
+Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#1) (#0))).
+
+Lemma loop_type : {empty, empty} ⊢ loop ∈ (typ_unit ==> typ_unit).
+  cbv.
+  econstructor; intros; econstructor; cbn; repeat case_if; econstructor.
+  - econstructor.
+  - intros. econstructor; cbn; try case_if; econstructor.
+  - cbn; case_if; repeat constructor*.
+  - repeat constructor*.
+    Unshelve. fs. fs.
+Qed.
+
+Definition divergent := trm_app loop trm_unit.
+
+Lemma divergent_type : {empty, empty} ⊢ divergent ∈ typ_unit.
+  econstructor.
+  2: {
+    apply loop_type.
+  }
+  repeat econstructor.
+Qed.
+
+Lemma divergent_diverges : evals divergent divergent.
+  cbv.
+  econstructor.
+  - crush_eval.
+  - unfold open_ee. cbn; repeat case_if.
+    econstructor.
+    + crush_eval.
+    + repeat case_if.
+      apply eval_finish.
+
+      Unshelve.
+      fs. fs. fs. fs. fs. fs. fs.
+Qed.
+
