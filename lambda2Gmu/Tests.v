@@ -119,4 +119,3 @@ Lemma divergent_diverges : evals divergent divergent.
       Unshelve.
       fs. fs. fs. fs. fs. fs. fs.
 Qed.
-
