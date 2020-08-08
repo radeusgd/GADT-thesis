@@ -67,15 +67,18 @@ Lemma open_tt_rec_type_core : forall T j V U i, i <> j ->
   T = open_tt_rec i U T.
 Proof.
   induction T; introv Neq H; simpl in *; inversion H; f_equal*.
-  case_nat*. case_nat*.
-Qed.
+  - case_nat*. case_nat*.
+  - admit.
+    (* TODO will most likely need a stronger induction principle to deal with these *)
+Admitted.
 
 Lemma open_tt_rec_type : forall T U,
   type T -> forall k, T = open_tt_rec k U T.
 Proof.
   induction 1; intros; simpl; f_equal*. unfolds open_tt.
-  pick_fresh X. apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)).
-Qed.
+  - pick_fresh X. apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)).
+  - admit.
+Admitted.
 
 (** Substitution for a fresh name is identity. *)
 
@@ -83,8 +86,9 @@ Lemma subst_tt_fresh : forall Z U T,
   Z \notin fv_typ T -> subst_tt Z U T = T.
 Proof.
   induction T; simpl; intros; f_equal*.
-  case_var*.
-Qed.
+  - case_var*.
+  - admit.
+Admitted.
 
 (** Substitution distributes on the open operation. *)
 
