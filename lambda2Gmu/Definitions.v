@@ -70,40 +70,40 @@ Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49).
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
 (* Notation "∀( T )" := (typ_all T) (at level 49). *)
 
-(* Section typ_ind'. *)
-(*   Variable P : typ -> Prop. *)
-(*   Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n). *)
-(*   Hypothesis typ_fvar_case : forall (x : var), P (typ_fvar x). *)
-(*   Hypothesis typ_unit_case : P (typ_unit). *)
-(*   Hypothesis typ_tuple_case : forall (t1 t2 : typ), *)
-(*       P t1 -> P t2 -> P (typ_tuple t1 t2). *)
-(*   Hypothesis typ_arrow_case : forall (t1 t2 : typ), *)
-(*       P t1 -> P t2 -> P (typ_arrow t1 t2). *)
-(*   Hypothesis typ_all_case : forall (t1 : typ), *)
-(*       P t1 -> P (typ_all t1). *)
-(*   Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName), *)
-(*       Forall P ls -> P (typ_gadt ls n). *)
+Section typ_ind'.
+  Variable P : typ -> Prop.
+  Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n).
+  Hypothesis typ_fvar_case : forall (x : var), P (typ_fvar x).
+  Hypothesis typ_unit_case : P (typ_unit).
+  Hypothesis typ_tuple_case : forall (t1 t2 : typ),
+      P t1 -> P t2 -> P (typ_tuple t1 t2).
+  Hypothesis typ_arrow_case : forall (t1 t2 : typ),
+      P t1 -> P t2 -> P (typ_arrow t1 t2).
+  Hypothesis typ_all_case : forall (t1 : typ),
+      P t1 -> P (typ_all t1).
+  Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName),
+      Forall P ls -> P (typ_gadt ls n).
 
-(*   Fixpoint typ_ind' (t : typ) : P t := *)
-(*     let fix list_typ_ind (ls : list typ) : Forall P ls := *)
-(*         match ls return (Forall P ls) with *)
-(*         | nil => Forall_nil P *)
-(*         | cons t' rest => *)
-(*           let Pt : P t' := typ_ind' t' in *)
-(*           let LPt : Forall P rest := list_typ_ind rest in *)
-(*           (Forall_cons t' Pt LPt) *)
-(*         end in *)
-(*     match t with *)
-(*     | typ_bvar i => typ_bvar_case i *)
-(*     | typ_fvar x => typ_fvar_case x *)
-(*     | typ_unit => typ_unit_case *)
-(*     | typ_tuple t1 t2 => typ_tuple_case (typ_ind' t1) (typ_ind' t2) *)
-(*     | typ_arrow t1 t2 => typ_arrow_case (typ_ind' t1) (typ_ind' t2) *)
-(*     | typ_all t1 => typ_all_case (typ_ind' t1) *)
-(*     | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams) *)
-(*     end. *)
+  Fixpoint typ_ind' (t : typ) : P t :=
+    let fix list_typ_ind (ls : list typ) : Forall P ls :=
+        match ls return (Forall P ls) with
+        | nil => Forall_nil P
+        | cons t' rest =>
+          let Pt : P t' := typ_ind' t' in
+          let LPt : Forall P rest := list_typ_ind rest in
+          (Forall_cons t' Pt LPt)
+        end in
+    match t with
+    | typ_bvar i => typ_bvar_case i
+    | typ_fvar x => typ_fvar_case x
+    | typ_unit => typ_unit_case
+    | typ_tuple t1 t2 => typ_tuple_case (typ_ind' t1) (typ_ind' t2)
+    | typ_arrow t1 t2 => typ_arrow_case (typ_ind' t1) (typ_ind' t2)
+    | typ_all t1 => typ_all_case (typ_ind' t1)
+    | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams)
+    end.
 
-(* End typ_ind'. *)
+End typ_ind'.
 
 (* pre-terms *)
 Inductive trm : Set :=

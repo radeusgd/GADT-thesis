@@ -39,6 +39,65 @@ Ltac get_env :=
   | |- typing ?E _ _ => E
   end.
 
+(* Based on: https://github.com/tchajed/strong-induction/blob/master/StrongInduction.v *)
+Lemma strong_induction (P : nat -> Prop): (forall m, (forall k, k < m -> P k) -> P m) -> forall n, P n.
+  introv IH.
+  assert (P 0) as P0; [apply IH; introv Hfalse; inversion Hfalse | ].
+  assert (forall n m, n <= m -> Nat.pred n <= Nat.pred m) as pred_increasing.
+  - induction n; cbn; intros.
+    apply le_0_n.
+    induction H; subst; cbn; eauto.
+    destruct m; eauto.
+  - assert (forall n, (forall m, m <= n -> P m)) as strong_induction_all.
+    + induction n; intros.
+      * inversion H; eauto.
+      * inversion H; eauto using le_S_n.
+    + eauto using strong_induction_all.
+Qed.
+
+Lemma strong_induction_on_term_size_helper : forall (P : trm -> Prop),
+    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
+    forall n e, trm_size e = n -> P e.
+  introv IH.
+  lets K: strong_induction (fun n => forall e, trm_size e = n -> P e).
+  apply K.
+  introv IHk.
+  lets IHm: IH m.
+  apply IHm.
+  intros.
+  eapply IHk; eauto.
+Qed.
+
+Lemma strong_induction_on_term_size : forall (P : trm -> Prop),
+    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
+    forall e, P e.
+  intros.
+  pose (n := trm_size e).
+  eapply strong_induction_on_term_size_helper; eauto.
+Qed.
+
+(* TODO DRY *)
+Lemma strong_induction_on_type_size_helper : forall (P : typ -> Prop),
+    (forall n, (forall e, typ_size e < n -> P e) -> forall e, typ_size e = n -> P e) ->
+    forall n e, typ_size e = n -> P e.
+  introv IH.
+  lets K: strong_induction (fun n => forall e, typ_size e = n -> P e).
+  apply K.
+  introv IHk.
+  lets IHm: IH m.
+  apply IHm.
+  intros.
+  eapply IHk; eauto.
+Qed.
+
+Lemma strong_induction_on_typ_size : forall (P : typ -> Prop),
+    (forall n, (forall T, typ_size T < n -> P T) -> forall T, typ_size T = n -> P T) ->
+    forall T, P T.
+  intros.
+  pose (n := typ_size T).
+  eapply strong_induction_on_type_size_helper; eauto.
+Qed.
+
 (* (** These tactics help applying a lemma which conclusion mentions *)
 (*   an environment (E & F) in the particular case when F is empty *) *)
 (* Tactic Notation "apply_empty_bis" tactic(get_env) constr(lemma) := *)
@@ -58,6 +117,29 @@ Ltac unsimpl_map_bind :=
 Tactic Notation "unsimpl_map_bind" "*" :=
   unsimpl_map_bind; auto_star.
 
+Lemma map_id : forall (A : Type) (f : A -> A) (ls : list A),
+    (forall x, List.In x ls -> x = f x) ->
+    ls = List.map f ls.
+  introv feq.
+  induction ls.
+  - auto.
+  - cbn.
+    rewrite <- feq.
+    + rewrite <- IHls.
+      * auto.
+      * intros.
+        apply feq.
+        apply* List.in_cons.
+    + constructor*.
+Qed.
+
+(* adapted from a newer version of Coq stdlib:
+https://github.com/coq/coq/blob/master/theories/Lists/List.v
+*)
+Lemma ext_in_map :
+  forall (A B : Type)(f g:A->B) l, List.map f l = List.map g l -> forall a, List.In a l -> f a = g a.
+Proof. induction l; intros [=] ? []; subst; auto. Qed.
+
 (** ** Properties of type substitution in type *)
 
 (** Substitution on indices is identity on well-formed terms. *)
@@ -66,29 +148,76 @@ Lemma open_tt_rec_type_core : forall T j V U i, i <> j ->
   (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) ->
   T = open_tt_rec i U T.
 Proof.
-  induction T; introv Neq H; simpl in *; inversion H; f_equal*.
+  induction T using typ_ind' ; introv Neq Heq; simpl in *; inversion Heq; f_equal*.
   - case_nat*. case_nat*.
-  - admit.
-    (* TODO will most likely need a stronger induction principle to deal with these *)
-Admitted.
+  - apply map_id.
+    introv Lin.
+    rewrite <- list_quantification in H.
+    eapply H.
+    + auto.
+    + exact Neq.
+    + rewrite List.map_map in H1.
+      eapply ext_in_map in H1. exact H1.
+      auto.
+Qed.
 
 Lemma open_tt_rec_type : forall T U,
   type T -> forall k, T = open_tt_rec k U T.
 Proof.
   induction 1; intros; simpl; f_equal*. unfolds open_tt.
   - pick_fresh X. apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)).
-  - admit.
-Admitted.
+  - apply map_id.
+    auto.
+Qed.
 
 (** Substitution for a fresh name is identity. *)
+
+
+  (* H0 : Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls \{} *)
+  (* x : typ *)
+  (* Lin : List.In x ls *)
+  (* ============================ *)
+  (* Z \notin fv_typ x *)
+
+Lemma fv_fold : forall Z x ls,
+    Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls \{} ->
+    List.In x ls ->
+    Z \notin fv_typ x.
+  introv ZIL Lin.
+  induction ls.
+  - false*.
+  - apply List.in_inv in Lin.
+    destruct Lin.
+    + cbn in ZIL.
+      (* TODO WIP *)
+Admitted.
+
+Lemma fv_fold_base : forall x ls base,
+    x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
+    x \notin base.
+  intros x ls.
+  induction ls.
+  - introv Hfold. cbn in Hfold. auto.
+  - introv Hfold. cbn in Hfold.
+    assert (x \notin base \u fv_typ a).
+    + apply* IHls.
+    + auto.
+Qed.
+
 
 Lemma subst_tt_fresh : forall Z U T,
   Z \notin fv_typ T -> subst_tt Z U T = T.
 Proof.
-  induction T; simpl; intros; f_equal*.
+  induction T using typ_ind' ; simpl; intros; f_equal*.
   - case_var*.
-  - admit.
-Admitted.
+  - symmetry.
+    apply map_id.
+    introv Lin.
+    rewrite <- list_quantification in H.
+    symmetry.
+    apply* H.
+    apply* fv_fold.
+Qed.
 
 (** Substitution distributes on the open operation. *)
 
@@ -97,10 +226,11 @@ Lemma subst_tt_open_tt_rec : forall T1 T2 X P n, type P ->
   open_tt_rec n (subst_tt X P T2) (subst_tt X P T1).
 Proof.
   introv WP. generalize n.
-  induction T1; intros k; simpls; f_equal*.
+  induction T1 using typ_ind' ; intros k; simpls; f_equal*.
   - case_nat*.
   - case_var*. rewrite* <- open_tt_rec_type.
-Qed.
+  - admit.
+Admitted.
 
 Lemma subst_tt_open_tt : forall T1 T2 X P, type P ->
   subst_tt X P (open_tt T1 T2) =
@@ -145,15 +275,17 @@ Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
    e = open_te_rec i P e.
 Proof.
   induction e; intros; simpl in *; inversion H0; f_equal*;
-  match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
-   apply* (@open_tt_rec_type_core t j) end.
-Qed.
+  try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
+                      apply* (@open_tt_rec_type_core t j) end.
+  - admit.
+Admitted.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
   intros e U WF. induction WF; intro k; simpl;
-    f_equal*; try solve [ apply* open_tt_rec_type ].
+                   f_equal*; try solve [ apply* open_tt_rec_type ].
+  - admit.
   - unfolds open_ee. pick_fresh x.
     apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
   - unfolds open_te. pick_fresh X.
@@ -162,7 +294,7 @@ Proof.
     apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
   - unfolds open_ee. pick_fresh x.
     apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
-Qed.
+Admitted.
 
 (** Substitution for a fresh name is identity. *)
 
@@ -170,7 +302,8 @@ Lemma subst_te_fresh : forall X U e,
   X \notin fv_trm e -> subst_te X U e = e.
 Proof.
   induction e; simpl; intros; f_equal*; autos* subst_tt_fresh.
-Qed.
+  - admit.
+Admitted.
 
 (** Substitution distributes on the open operation. *)
 
@@ -180,8 +313,9 @@ Lemma subst_te_open_te : forall e T X U, type U ->
 Proof.
   intros. unfold open_te. generalize 0.
   induction e; intro n0; simpls; f_equal*;
-  autos* subst_tt_open_tt_rec.
-Qed.
+    autos* subst_tt_open_tt_rec.
+  - admit.
+Admitted.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -243,7 +377,8 @@ Lemma subst_ee_fresh : forall x u e,
   x \notin fv_trm e -> subst_ee x u e = e.
 Proof.
   induction e; simpl; intros; f_equal*.
-  case_var*.
+  - case_var*.
+  - apply IHe. apply* fv_fold_base.
 Qed.
 
 (** Substitution distributes on the open operation. *)
@@ -303,9 +438,10 @@ Lemma subst_tt_type : forall T Z P,
   type T -> type P -> type (subst_tt Z P T).
 Proof.
   induction 1; intros; simpl; auto.
-  case_var*.
-  apply_fresh* type_all as X. rewrite* subst_tt_open_tt_var.
-Qed.
+  - case_var*.
+  - apply_fresh* type_all as X. rewrite* subst_tt_open_tt_var.
+  - admit.
+Admitted.
 
 Lemma subst_te_term : forall e Z P,
     term e -> type P -> term (subst_te Z P e)
@@ -313,6 +449,7 @@ with subst_te_value : forall e Z P,
     value e -> type P -> value (subst_te Z P e).
 Proof.
   - lets: subst_tt_type. induction 1; intros; cbn; auto.
+    + admit.
     + apply_fresh* term_abs as x. rewrite* subst_te_open_ee_var.
     + apply_fresh* term_tabs as x.
       rewrite* subst_te_open_te_var.
@@ -332,7 +469,7 @@ Proof.
       apply_fresh* term_tabs as x.
       rewrite* subst_te_open_te_var.
       rewrite* subst_te_open_te_var.
-Qed.
+Admitted.
 
 Lemma subst_ee_term : forall e1 Z e2,
     term e1 -> term e2 -> term (subst_ee Z e2 e1)
@@ -346,7 +483,7 @@ Proof.
     + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
   - induction 1; intros; simpl; auto;
-      match goal with
+      try match goal with
       | H: term (trm_abs _ _) |- _ => rename H into Hterm
       | H: term (trm_tabs _) |- _ => rename H into Hterm
       end.
@@ -354,7 +491,8 @@ Proof.
       apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
     + apply value_tabs; inversions Hterm.
       apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
-Qed.
+    + admit.
+Admitted.
 
 Hint Resolve subst_tt_type subst_te_term subst_ee_term.
 Hint Resolve subst_te_value subst_ee_value.
@@ -379,6 +517,7 @@ Lemma values_decidable : forall t,
                      right; intro Hv; inversion Hv
                    | left; econstructor
                           ].
+  - admit.
   - match goal with
     | H: term t1 |- _ => rename H into Ht1 end.
     match goal with
@@ -393,67 +532,8 @@ Lemma values_decidable : forall t,
     econstructor; eauto.
   - left; econstructor.
     econstructor; eauto.
-Qed.
+Admitted.
 
-(* Based on: https://github.com/tchajed/strong-induction/blob/master/StrongInduction.v *)
-Lemma strong_induction (P : nat -> Prop): (forall m, (forall k, k < m -> P k) -> P m) -> forall n, P n.
-  introv IH.
-  assert (P 0) as P0.
-  apply IH; introv Hfalse; inversion Hfalse.
-  assert (forall n m, n <= m -> Nat.pred n <= Nat.pred m) as pred_increasing.
-  induction n; cbn; intros.
-  apply le_0_n.
-  induction H; subst; cbn; eauto.
-  destruct m; eauto.
-  assert (forall n, (forall m, m <= n -> P m)) as strong_induction_all.
-  induction n; intros.
-  inversion H; eauto.
-  inversion H; eauto using le_S_n.
-  eauto using strong_induction_all.
-Qed.
-
-Lemma strong_induction_on_term_size_helper : forall (P : trm -> Prop),
-    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
-    forall n e, trm_size e = n -> P e.
-  introv IH.
-  lets K: strong_induction (fun n => forall e, trm_size e = n -> P e).
-  apply K.
-  introv IHk.
-  lets IHm: IH m.
-  apply IHm.
-  intros.
-  eapply IHk; eauto.
-Qed.
-
-Lemma strong_induction_on_term_size : forall (P : trm -> Prop),
-    (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
-    forall e, P e.
-  intros.
-  pose (n := trm_size e).
-  eapply strong_induction_on_term_size_helper; eauto.
-Qed.
-
-(* TODO DRY *)
-Lemma strong_induction_on_type_size_helper : forall (P : typ -> Prop),
-    (forall n, (forall e, typ_size e < n -> P e) -> forall e, typ_size e = n -> P e) ->
-    forall n e, typ_size e = n -> P e.
-  introv IH.
-  lets K: strong_induction (fun n => forall e, typ_size e = n -> P e).
-  apply K.
-  introv IHk.
-  lets IHm: IH m.
-  apply IHm.
-  intros.
-  eapply IHk; eauto.
-Qed.
-
-Lemma strong_induction_on_typ_size : forall (P : typ -> Prop),
-    (forall n, (forall T, typ_size T < n -> P T) -> forall T, typ_size T = n -> P T) ->
-    forall T, P T.
-  intros.
-  pose (n := typ_size T).
-  eapply strong_induction_on_type_size_helper; eauto.
-Qed.
 
 Lemma open_ee_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
@@ -464,9 +544,17 @@ Lemma open_te_var_preserves_size : forall e x n,
   induction e; introv; try solve [cbn; try case_if; cbn; eauto].
 Qed.
 
+
 Lemma open_tt_var_preserves_size : forall T X n,
     typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
-  induction T; introv; try solve [cbn; try case_if; cbn; eauto].
+  induction T using typ_ind' ; introv; try solve [cbn; try case_if; cbn; eauto].
+  - cbn.
+    rewrite List.map_map.
+    assert ((List.map typ_size ls) = (List.map (fun x : typ => typ_size (open_tt_rec n0 (typ_fvar X) x)) ls)) as Hmapeq.
+    + apply List.map_ext_in.
+      rewrite <- list_quantification in H.
+      intros. apply* H.
+    + rewrite Hmapeq. auto.
 Qed.
 
 Require Import Psatz.
@@ -486,7 +574,8 @@ Lemma wft_weaken : forall Σ E F G T,
     apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken.
   - (* case: all *)
     apply_fresh* wft_all as X. apply_ih_bind* H0.
-Qed.
+  - admit.
+Admitted.
 
 Ltac expand_env_empty E :=
   let HE := fresh "HE" in
@@ -523,7 +612,7 @@ Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
 Qed.
 Hint Extern 1 (ok _) => apply okt_is_ok.
 
-Lemma wft_from_env_has_typ : forall Σ x U E, 
+Lemma wft_from_env_has_typ : forall Σ x U E,
     okt Σ E -> binds x (bind_var U) E -> wft Σ E U.
 Proof.
   induction E using env_ind; intros Ok B.
@@ -567,7 +656,8 @@ Proof.
     | H: forall X, X \notin L -> forall F0, ?P1 -> ?P2 |- _ =>
       rename H into H_ctxEq_implies_wft end.
     apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft.
-Qed.
+  - admit.
+Admitted.
 
 Lemma okt_implies_okgadt : forall Σ E, okt Σ E -> okGadt Σ.
   induction 1; auto.
@@ -674,7 +764,7 @@ Lemma wft_subst_tb : forall Σ F E Z P T,
   wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T).
 Proof.
   introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
-  induction WT as [ | | | | ? ? ? ? ? IH]; intros F EQ Ok; subst; simpl subst_tt; auto.
+  induction WT as [ | | | | ? ? ? ? ? IH | ]; intros F EQ Ok; subst; simpl subst_tt; auto.
   - case_var*.
     + expand_env_empty (E & map (subst_tb Z P) F).
       apply* wft_weaken; fold_env_empty.
@@ -691,7 +781,8 @@ Proof.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
     apply_ih_map_bind* IH.
-Qed.
+  - admit.
+Admitted.
 Hint Resolve wft_subst_tb.
 
 Lemma wft_open : forall Σ E U T1,
@@ -711,14 +802,17 @@ Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
   induction 1 as [ |
+                   |
                    | ? ? ? ? ? ? ? IH
                    |
                    | ? ? ? ? ? ? ? IH
                    | | | |
                    | ? ? ? ? ? IHval ? IH
-                   | ? ? ? ? ? ? ? ? ? ? IH];
+                   | ? ? ? ? ? ? ? ? ? ? IH
+                   ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
+  - admit.
   - pick_fresh y.
     copyTo IH IH1.
     specializes IH y. destructs~ IH.
@@ -775,7 +869,7 @@ Proof.
     + econstructor. auto.
       introv HxiL. lets HF: IH1 x HxiL. destruct* HF.
     + apply_folding E wft_strengthen.
-Qed.
+Admitted.
 
 (** The value relation is restricted to well-formed objects. *)
 

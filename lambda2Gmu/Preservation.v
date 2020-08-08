@@ -80,16 +80,18 @@ Proof.
  induction T; simpl; intros k Fr; eauto.
  - specializes IHT1 k. specializes IHT2 k. auto.
  - specializes IHT1 k. specializes IHT2 k. auto.
-Qed.
+ - admit.
+Admitted.
 
 Lemma notin_fv_wf : forall Σ E X T,
   wft Σ E T -> X # E -> X \notin fv_typ T.
 Proof.
-  induction 1 as [ | ? ? ? Hbinds | | |];
+  induction 1 as [ | ? ? ? Hbinds | | | |];
     introv Fr; simpl; eauto.
   - rewrite notin_singleton. intro. subst. applys binds_fresh_inv Hbinds Fr.
   - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
-Qed.
+  - admit.
+Admitted.
 
 Lemma map_subst_tb_id : forall Σ G Z P,
   okt Σ G -> Z # G -> G = map (subst_tb Z P) G.
@@ -212,6 +214,7 @@ Proof.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
     match goal with
     | Hbinds: binds _ _ _ |- _ => binds_cases Hbinds; unsimpl_map_bind* end.
+  - admit.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
@@ -238,7 +241,7 @@ Proof.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih2.
-Qed.
+Admitted.
 
 Ltac IHR e :=
   match goal with

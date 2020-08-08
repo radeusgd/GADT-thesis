@@ -37,6 +37,7 @@ Theorem progress_thm : progress.
   gen T Ht H.
   induction e; introv Hterm Htyp; inversion Htyp; inversion Hterm; subst.
   - empty_binding.
+  - admit.
   - left; eauto.
   - IHT e1; IHT e2.
     destruct IHt as [IHv1 | IHev1].
@@ -90,4 +91,4 @@ Theorem progress_thm : progress.
       eexists; eapply ered_let; eauto.
 
   - eapply typing_implies_term; eauto.
-Qed.
+Admitted.
