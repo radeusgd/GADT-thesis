@@ -47,20 +47,20 @@ Theorem progress_thm : progress.
     + inversion IHev1; right; eauto.
   - IHT e.
     destruct IHt as [Hv | Hev].
-    copy Hv Hv'.
-    eapply CanonicalFormTuple in Hv; eauto.
-    inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
-    right; eauto.
+    + copy Hv Hv'.
+      eapply CanonicalFormTuple in Hv; eauto.
+      inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
+      right; eauto.
 
-    inversion Hev as [e' ev]; eauto.
+    + inversion Hev as [e' ev]; eauto.
   - IHT e.
     destruct IHt as [Hv | Hev].
-    copy Hv Hv'.
-    eapply CanonicalFormTuple in Hv; eauto.
-    inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
-    right; eauto.
+    + copy Hv Hv'.
+      eapply CanonicalFormTuple in Hv; eauto.
+      inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
+      right; eauto.
 
-    inversion Hev as [e' ev]; eauto.
+    + inversion Hev as [e' ev]; eauto.
   - left; econstructor; econstructor; eauto.
   - IHT e1; IHT e2.
     destruct IHt as [Hv1 | Hev1].

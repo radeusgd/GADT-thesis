@@ -6,7 +6,6 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
-
 Lemma term_through_subst : forall e x u,
     term u ->
     term e ->
@@ -21,9 +20,6 @@ Qed.
 
 Hint Resolve okt_is_ok.
 
-
-
-
 Lemma okt_subst_tb : forall Σ Z P E F,
   okt Σ (E & (withtyp Z) & F) ->
   wft Σ E P ->
@@ -33,10 +29,10 @@ Proof.
   - rewrite map_empty. rewrite concat_empty_r in *.
     lets*: (okt_push_typ_inv O).
   - rewrite map_push. rewrite concat_assoc in *.
-    lets HPI: okt_push_inv O; destruct HPI; subst.
+    lets HPI: okt_push_inv O; destruct HPI as [? | Hex_bind]; subst.
     + lets (?&?): (okt_push_typ_inv O).
       applys~ okt_sub.
-    + inversions H.
+    + inversions Hex_bind.
       lets (?&?&?): (okt_push_var_inv O).
       applys~ okt_typ. applys* wft_subst_tb.
 Qed.
@@ -66,10 +62,10 @@ Lemma okt_strengthen_simple : forall Σ E F,
   induction F using env_ind.
   - fold_env_empty_H.
   - rewrite concat_assoc in O.
-    inversions O.
+    inversion O as [| ? ? ? ? H1 H2 Heq | ? ? ? ? H1 H2 H3 H4 Heq]. subst.
     + exfalso; apply* empty_push_inv.
-    + apply eq_push_inv in H. destructs H; subst. auto.
-    + apply eq_push_inv in H. destructs H; subst. auto.
+    + apply eq_push_inv in Heq. destructs Heq; subst. auto.
+    + apply eq_push_inv in Heq. destructs Heq; subst. auto.
 Qed.
 
 Hint Resolve okt_strengthen_simple.
@@ -81,20 +77,18 @@ Lemma notin_fv_tt_open : forall Y X T,
   X \notin fv_typ T.
 Proof.
  introv. unfold open_tt. generalize 0.
- induction T; simpl; intros k Fr; auto.
- specializes IHT1 k. specializes IHT2 k. auto.
- specializes IHT1 k. specializes IHT2 k. auto.
- eauto.
+ induction T; simpl; intros k Fr; eauto.
+ - specializes IHT1 k. specializes IHT2 k. auto.
+ - specializes IHT1 k. specializes IHT2 k. auto.
 Qed.
 
 Lemma notin_fv_wf : forall Σ E X T,
   wft Σ E T -> X # E -> X \notin fv_typ T.
 Proof.
-  induction 1; intros Fr; simpl.
-  eauto.
-  rewrite notin_singleton. intro. subst. applys binds_fresh_inv H Fr.
-  notin_simpl; auto.
-  notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
+  induction 1 as [ | ? ? ? Hbinds | | |];
+    introv Fr; simpl; eauto.
+  - rewrite notin_singleton. intro. subst. applys binds_fresh_inv Hbinds Fr.
+  - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
 Qed.
 
 Lemma map_subst_tb_id : forall Σ G Z P,
@@ -110,35 +104,48 @@ Qed.
 
 Hint Resolve map_subst_tb_id.
 
+Ltac renameIHs H Heq :=
+  match goal with
+  | IH: forall X, X \notin ?L -> typing _ _ _ _ |- _ =>
+    rename IH into H end;
+  match goal with
+  | IH: forall X, X \notin ?L -> forall E0 G0, ?P1 -> ?P2 |- _ =>
+    rename IH into Heq end.
+
 Lemma typing_weakening : forall Σ E F G e T,
    {Σ, E & G} ⊢ e ∈ T ->
    okt Σ (E & F & G) ->
    {Σ, E & F & G} ⊢ e ∈ T.
 Proof.
-  introv HTyp. gen F. inductions HTyp; introv Ok; eauto.
+  introv HTyp. gen F.
+  inductions HTyp; introv Ok; eauto.
   - apply* typing_var. apply* binds_weaken.
-  - apply_fresh* typing_abs as x.
-    forwards~ K: (H x).
-    apply_ih_bind (H0 x); eauto.
+  - renameIHs IH IHeq.
+    apply_fresh* typing_abs as x.
+    forwards~ K: (IH x).
+    apply_ih_bind (IHeq x); eauto.
     econstructor; eauto.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-  - apply_fresh* typing_tabs as X.
-    forwards~ K: (H X).
-    apply_ih_bind (H1 X); auto.
+  - renameIHs IH IHeq.
+    apply_fresh* typing_tabs as X.
+    forwards~ K: (IH X).
+    apply_ih_bind (IHeq X); auto.
     econstructor; eauto.
   - apply* typing_tapp. apply* wft_weaken.
-  - apply_fresh* typing_fix as x.
-    forwards~ K: (H0 x).
-    apply_ih_bind (H1 x); eauto.
+  - renameIHs IH IHeq.
+    apply_fresh* typing_fix as x.
+    forwards~ K: (IH x).
+    apply_ih_bind (IHeq x); eauto.
     econstructor; eauto.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-  - apply_fresh* typing_let as x.
-    forwards~ K: (H x).
-    apply_ih_bind (H0 x); eauto.
+  - renameIHs IH IHeq.
+    apply_fresh* typing_let as x.
+    forwards~ K: (IH x).
+    apply_ih_bind (IHeq x); eauto.
     econstructor; eauto.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
@@ -151,29 +158,37 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     {Σ, E & (x ~: U) & F} ⊢ e ∈ T ->
     {Σ, E} ⊢ u ∈ U ->
     {Σ, E & F} ⊢ subst_ee x u e ∈ T.
+
+  (* H1 : forall X : var, *)
+  (*      X \notin L -> *)
+  (*      forall (E0 F0 : env bind) (x0 : var) (U0 : typ), *)
+  (*      JMeq.JMeq (E & x ~ bind_var U & F & X ~ bind_typ) (E0 & x0 ~ bind_var U0 & F0) -> *)
+  (*      {Σ, E0}⊢ u ∈ U0 -> *)
+  (*      {Σ, E0 & F0}⊢ subst_ee x0 u (e1 open_te_var X) ∈ (T1 open_tt_var X) *)
+  Ltac apply_ih :=
+    match goal with
+    | H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ =>
+      apply_ih_bind* H end.
   introv TypT TypU.
   inductions TypT; introv; cbn; eauto.
-  - assert (okt Σ (E & F)). apply* okt_strengthen.
-    case_var.
-    + binds_get H. eauto.
-      assert (E & F & empty = E & F) as HEF. apply concat_empty_r.
-      rewrite <- HEF.
-      apply typing_weakening; rewrite concat_empty_r; eauto.
-    + binds_cases H; apply* typing_var.
+  - assert (okt Σ (E & F)).
+    + apply* okt_strengthen.
+    + case_var.
+      * binds_get H. eauto.
+        assert (E & F & empty = E & F) as HEF. apply concat_empty_r.
+        rewrite <- HEF.
+        apply typing_weakening; rewrite concat_empty_r; eauto.
+      * binds_cases H; apply* typing_var.
   - apply_fresh* typing_abs as y.
     rewrite* subst_ee_open_ee_var.
-    apply_ih_bind* H0.
-  - apply_fresh* typing_tabs as Y.
-    rewrite* subst_ee_open_te_var.
-    rewrite* subst_ee_open_te_var.
-    apply_ih_bind* H1.
-  - apply_fresh* typing_fix as y.
-    rewrite* subst_ee_open_ee_var.
-    rewrite* subst_ee_open_ee_var.
-    apply_ih_bind* H1.
+    apply_ih.
+  - apply_fresh* typing_tabs as Y; rewrite* subst_ee_open_te_var.
+    apply_ih.
+  - apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
+    apply_ih.
   - apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
-    apply_ih_bind* H0.
+    apply_ih.
 Qed.
 
 (* Lemma okt_from_wft : forall Σ E T,  (may not be provable?) *)
@@ -188,34 +203,41 @@ Lemma typing_through_subst_te : forall Σ E F Z e T P,
     wft Σ E P ->
     {Σ, E & map (subst_tb Z P) F} ⊢ (subst_te Z P e) ∈ (subst_tt Z P T).
 Proof.
+  Ltac apply_ih2 :=
+    match goal with
+    | H: forall X, X \notin ?L -> forall E0 F0 Z0, ?P1 -> ?P2 |- _ =>
+      apply_ih_map_bind* H end.
   introv Typ W.
   inductions Typ; introv; simpls subst_tt; simpls subst_te; eauto.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
-    binds_cases H; unsimpl_map_bind*.
+    match goal with
+    | Hbinds: binds _ _ _ |- _ => binds_cases Hbinds; unsimpl_map_bind* end.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
-    apply_ih_map_bind* H0.
+    apply_ih2.
   - apply_fresh* typing_tabs as Y.
     + rewrite* subst_te_open_te_var.
     + unsimpl (subst_tb Z P bind_typ).
       rewrite* subst_tt_open_tt_var.
       rewrite* subst_te_open_te_var.
-      apply_ih_map_bind* H1.
+      apply_ih2.
   - rewrite* subst_tt_open_tt. apply* typing_tapp.
     apply* wft_subst_tb.
     apply* ok_concat_map.
     destructs (typing_regular Typ).
-    lets*: okt_is_ok H0.
+    match goal with
+    | Hokt: okt _ _ |- _ =>
+      lets*: okt_is_ok Hokt end.
   - apply_fresh* typing_fix as y.
     rewrite* subst_te_open_ee_var.
     unsimpl (subst_tb Z P (bind_var T)).
     rewrite* subst_te_open_ee_var.
-    apply_ih_map_bind* H1.
+    apply_ih2.
   - apply_fresh* typing_let as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
-    apply_ih_map_bind* H0.
+    apply_ih2.
 Qed.
 
 Ltac IHR e :=
@@ -238,6 +260,18 @@ Ltac crush_ihred_gen :=
   end.
 
 Theorem preservation_thm : preservation.
+  Ltac find_hopen :=
+    let Hopen := fresh "Hopen" in
+    match goal with
+    | H: forall x, x \notin ?L -> typing _ _ _ _ |- _ =>
+      rename H into Hopen
+    end.
+  Ltac find_hval :=
+    let Hval := fresh "Hval" in
+    match goal with
+    | H: forall x, x \notin ?L -> value _ |- _ =>
+      rename H into Hval
+    end.
   unfold preservation.
   introv Htyp.
   assert (term e) as Hterm; eauto using typing_implies_term.
@@ -248,13 +282,15 @@ Theorem preservation_thm : preservation.
       try solve [crush_ihred_gen | eauto].
   - (* app *)
     inversions Htyp2.
-    pick_fresh x. forwards~ K: (H6 x).
+    pick_fresh x.
+    find_hopen. forwards~ K: (Hopen x).
     rewrite* (@subst_ee_intro x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
     fold_env_empty.
   - inversions Htyp.
-    pick_fresh X. forwards~ K: (H9 X).
+    pick_fresh X.
+    find_hopen. forwards~ K: (Hopen X).
     rewrite* (@subst_te_intro X).
     rewrite* (@subst_tt_intro X).
     expand_env_empty E.
@@ -264,13 +300,17 @@ Theorem preservation_thm : preservation.
   - inversion Htyp; subst; eauto.
   - inversion Htyp; subst; eauto.
   - (* fix *)
-    pick_fresh x. forwards~ K: (H x).
+    pick_fresh x.
+    find_hval.
+    forwards~ K: (Hval x).
     rewrite* (@subst_ee_intro x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
     fold_env_empty.
   - (* let *)
-    pick_fresh x. forwards~ K: (H x).
+    pick_fresh x.
+    find_hopen.
+    forwards~ K: (Hopen x).
     rewrite* (@subst_ee_intro x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
