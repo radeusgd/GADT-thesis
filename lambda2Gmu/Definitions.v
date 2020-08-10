@@ -592,6 +592,9 @@ Inductive red : trm -> trm -> Prop :=
 | ered_app_1 : forall e1 e1' e2,
     e1 --> e1' ->
     trm_app e1 e2 --> trm_app e1' e2
+| ered_constructor : forall l Ctor e e',
+    e --> e' ->
+    trm_constructor l Ctor e --> trm_constructor l Ctor e'
 | ered_app_2 : forall v1 e2 e2',
     value v1 ->
     e2 --> e2' ->

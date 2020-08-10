@@ -144,6 +144,18 @@ Proof. induction l; intros [=] ? []; subst; auto. Qed.
 
 (** Substitution on indices is identity on well-formed terms. *)
 
+Ltac handleforall :=
+  let Hforall := fresh "Hforall" in
+  match goal with
+  | H: List.Forall ?P ?ls |- _ => rename H into Hforall; rewrite List.Forall_forall in Hforall
+  end.
+
+Ltac rewritemapmap :=
+  let H' := fresh "Hmapmap" in
+  match goal with
+  | H: List.map ?f ?ls = (List.map ?g (List.map ?h ?ls)) |- _ => rename H into H'; rewrite List.map_map in H'
+  end.
+
 Lemma open_tt_rec_type_core : forall T j V U i, i <> j ->
   (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) ->
   T = open_tt_rec i U T.
@@ -152,12 +164,12 @@ Proof.
   - case_nat*. case_nat*.
   - apply map_id.
     introv Lin.
-    rewrite <- list_quantification in H.
-    eapply H.
+    handleforall.
+    eapply Hforall.
     + auto.
     + exact Neq.
-    + rewrite List.map_map in H1.
-      eapply ext_in_map in H1. exact H1.
+    + rewritemapmap.
+      eapply ext_in_map in Hmapmap. exact Hmapmap.
       auto.
 Qed.
 
@@ -179,23 +191,9 @@ Qed.
   (* ============================ *)
   (* Z \notin fv_typ x *)
 
-Lemma fv_fold : forall Z x ls,
-    Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls \{} ->
-    List.In x ls ->
-    Z \notin fv_typ x.
-  introv ZIL Lin.
-  induction ls.
-  - false*.
-  - apply List.in_inv in Lin.
-    destruct Lin.
-    + cbn in ZIL.
-      (* TODO WIP *)
-Admitted.
-
 Lemma fv_fold_base : forall x ls base,
     x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
     x \notin base.
-  intros x ls.
   induction ls.
   - introv Hfold. cbn in Hfold. auto.
   - introv Hfold. cbn in Hfold.
@@ -204,6 +202,20 @@ Lemma fv_fold_base : forall x ls base,
     + auto.
 Qed.
 
+Lemma fv_fold : forall Z x ls base,
+    Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
+    List.In x ls ->
+    Z \notin fv_typ x.
+  induction ls; introv ZIL Lin.
+  - false*.
+  - apply List.in_inv in Lin.
+    destruct Lin.
+    + cbn in ZIL.
+      apply fv_fold_base in ZIL. subst. auto.
+    + apply* IHls.
+Qed.
+
+Hint Resolve fv_fold_base fv_fold.
 
 Lemma subst_tt_fresh : forall Z U T,
   Z \notin fv_typ T -> subst_tt Z U T = T.
@@ -213,10 +225,9 @@ Proof.
   - symmetry.
     apply map_id.
     introv Lin.
-    rewrite <- list_quantification in H.
+    handleforall.
     symmetry.
-    apply* H.
-    apply* fv_fold.
+    apply* Hforall.
 Qed.
 
 (** Substitution distributes on the open operation. *)
@@ -229,8 +240,13 @@ Proof.
   induction T1 using typ_ind' ; intros k; simpls; f_equal*.
   - case_nat*.
   - case_var*. rewrite* <- open_tt_rec_type.
-  - admit.
-Admitted.
+  - rewrite* List.map_map.
+    rewrite* List.map_map.
+    apply List.map_ext_in.
+    handleforall.
+    introv Lin.
+    apply* Hforall.
+Qed.
 
 Lemma subst_tt_open_tt : forall T1 T2 X P, type P ->
   subst_tt X P (open_tt T1 T2) =
@@ -251,7 +267,7 @@ Qed.
 (** Opening up a body t with a type u is the same as opening
   up the abstraction with a fresh name x and then substituting u for x. *)
 
-Lemma subst_tt_intro : forall X T2 U, 
+Lemma subst_tt_intro : forall X T2 U,
   X \notin fv_typ T2 -> type U ->
   open_tt T2 U = subst_tt X U (T2 open_tt_var X).
 Proof.
@@ -270,22 +286,54 @@ Proof.
   induction e; intros; simpl in *; inversion H; f_equal*; f_equal*.
 Qed.
 
+
+Lemma open_typlist_rec_type_core : forall l j Q i P,
+    open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) ->
+    i <> j ->
+    l = open_typlist_rec i P l.
+  induction l; intros; simpl in *; inversion H; f_equal*;
+    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
+                        apply* (@open_tt_rec_type_core t j) end.
+Qed.
+
 Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) ->
-   e = open_te_rec i P e.
+  e = open_te_rec i P e.
 Proof.
   induction e; intros; simpl in *; inversion H0; f_equal*;
-  try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
-                      apply* (@open_tt_rec_type_core t j) end.
-  - admit.
-Admitted.
+    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
+                        apply* (@open_tt_rec_type_core t j) end.
+  - apply* open_typlist_rec_type_core.
+Qed.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
   intros e U WF. induction WF; intro k; simpl;
                    f_equal*; try solve [ apply* open_tt_rec_type ].
-  - admit.
+  - destruct k.
+    + eapply open_typlist_rec_type_core.
+      2: {
+        auto.
+      }
+      unfold open_typlist_rec.
+      rewrite List.map_map.
+      apply List.map_ext_in.
+      introv Tin.
+      apply open_tt_rec_type.
+      instantiate (1:=U).
+      rewrite* <- open_tt_rec_type.
+    + eapply open_typlist_rec_type_core.
+      2: {
+        instantiate (1:=0). auto.
+      }
+      unfold open_typlist_rec.
+      rewrite List.map_map.
+      apply List.map_ext_in.
+      introv Tin.
+      apply open_tt_rec_type.
+      instantiate (1:=U).
+      rewrite* <- open_tt_rec_type.
   - unfolds open_ee. pick_fresh x.
     apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
   - unfolds open_te. pick_fresh X.
@@ -294,7 +342,7 @@ Proof.
     apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
   - unfolds open_ee. pick_fresh x.
     apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
-Admitted.
+Qed.
 
 (** Substitution for a fresh name is identity. *)
 
@@ -302,8 +350,11 @@ Lemma subst_te_fresh : forall X U e,
   X \notin fv_trm e -> subst_te X U e = e.
 Proof.
   induction e; simpl; intros; f_equal*; autos* subst_tt_fresh.
-  - admit.
-Admitted.
+  - symmetry.
+    apply map_id. introv Lin.
+    symmetry.
+    apply* subst_tt_fresh.
+Qed.
 
 (** Substitution distributes on the open operation. *)
 
@@ -314,8 +365,13 @@ Proof.
   intros. unfold open_te. generalize 0.
   induction e; intro n0; simpls; f_equal*;
     autos* subst_tt_open_tt_rec.
-  - admit.
-Admitted.
+  - unfold open_typlist_rec.
+    rewrite List.map_map.
+    rewrite List.map_map.
+    apply List.map_ext.
+    intro.
+    apply* H0.
+Qed.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -378,7 +434,6 @@ Lemma subst_ee_fresh : forall x u e,
 Proof.
   induction e; simpl; intros; f_equal*.
   - case_var*.
-  - apply IHe. apply* fv_fold_base.
 Qed.
 
 (** Substitution distributes on the open operation. *)
@@ -434,14 +489,30 @@ Qed.
 
 (** Substitutions preserve local closure. *)
 
+Lemma subst_map_reverse_type : forall Tparams Z P,
+    type P ->
+    (forall Tparam : typ,
+        List.In Tparam Tparams -> type P -> type (subst_tt Z P Tparam)) ->
+    forall Tparam : typ, List.In Tparam (List.map (subst_tt Z P) Tparams) -> type Tparam.
+  introv HP HTP.
+  introv Tin.
+  apply List.in_map_iff in Tin.
+  destruct Tin as [T Tand].
+  destruct Tand as [Teq Tin].
+  rewrite <- Teq.
+  apply* HTP.
+Qed.
+
 Lemma subst_tt_type : forall T Z P,
   type T -> type P -> type (subst_tt Z P T).
 Proof.
   induction 1; intros; simpl; auto.
   - case_var*.
   - apply_fresh* type_all as X. rewrite* subst_tt_open_tt_var.
-  - admit.
-Admitted.
+  - econstructor.
+    apply* subst_map_reverse_type.
+Qed.
+
 
 Lemma subst_te_term : forall e Z P,
     term e -> type P -> term (subst_te Z P e)
@@ -449,7 +520,8 @@ with subst_te_value : forall e Z P,
     value e -> type P -> value (subst_te Z P e).
 Proof.
   - lets: subst_tt_type. induction 1; intros; cbn; auto.
-    + admit.
+    + constructor*.
+      apply* subst_map_reverse_type.
     + apply_fresh* term_abs as x. rewrite* subst_te_open_ee_var.
     + apply_fresh* term_tabs as x.
       rewrite* subst_te_open_te_var.
@@ -469,7 +541,12 @@ Proof.
       apply_fresh* term_tabs as x.
       rewrite* subst_te_open_te_var.
       rewrite* subst_te_open_te_var.
-Admitted.
+    + constructor*.
+      constructor*.
+      * apply* value_is_term.
+      * apply* subst_map_reverse_type.
+        inversion* Hterm.
+Qed.
 
 Lemma subst_ee_term : forall e1 Z e2,
     term e1 -> term e2 -> term (subst_ee Z e2 e1)
@@ -491,8 +568,12 @@ Proof.
       apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
     + apply value_tabs; inversions Hterm.
       apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
-    + admit.
-Admitted.
+    + econstructor.
+      * econstructor.
+        -- apply* value_is_term.
+        -- inversion* H.
+      * apply* IHvalue.
+Qed.
 
 Hint Resolve subst_tt_type subst_te_term subst_ee_term.
 Hint Resolve subst_te_value subst_ee_value.
@@ -517,7 +598,12 @@ Lemma values_decidable : forall t,
                      right; intro Hv; inversion Hv
                    | left; econstructor
                           ].
-  - admit.
+  - match goal with
+    | H: term t |- _ => rename H into Ht end.
+    apply IHt in Ht.
+    destruct Ht as [Hv | Hv].
+    + left; constructor*.
+    + right. intro Hv'. inversion* Hv'.
   - match goal with
     | H: term t1 |- _ => rename H into Ht1 end.
     match goal with
@@ -532,8 +618,7 @@ Lemma values_decidable : forall t,
     econstructor; eauto.
   - left; econstructor.
     econstructor; eauto.
-Admitted.
-
+Qed.
 
 Lemma open_ee_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
@@ -574,8 +659,8 @@ Lemma wft_weaken : forall Σ E F G T,
     apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken.
   - (* case: all *)
     apply_fresh* wft_all as X. apply_ih_bind* H0.
-  - admit.
-Admitted.
+  - econstructor; eauto.
+Qed.
 
 Ltac expand_env_empty E :=
   let HE := fresh "HE" in
@@ -656,8 +741,8 @@ Proof.
     | H: forall X, X \notin L -> forall F0, ?P1 -> ?P2 |- _ =>
       rename H into H_ctxEq_implies_wft end.
     apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft.
-  - admit.
-Admitted.
+  - econstructor; eauto.
+Qed.
 
 Lemma okt_implies_okgadt : forall Σ E, okt Σ E -> okGadt Σ.
   induction 1; auto.
@@ -781,8 +866,15 @@ Proof.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
     apply_ih_map_bind* IH.
-  - admit.
-Admitted.
+  - econstructor; eauto.
+    + introv Tin.
+      apply List.in_map_iff in Tin.
+      destruct Tin as [T' Tand].
+      destruct Tand as [Teq Tin].
+      rewrite <- Teq.
+      apply* H0.
+    + apply List.map_length.
+Qed.
 Hint Resolve wft_subst_tb.
 
 Lemma wft_open : forall Σ E U T1,
@@ -812,7 +904,16 @@ Proof.
                    ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
-  - admit.
+  - destruct IHtyping as [Hokt [Hterm Hwft]].
+    subst.
+    splits*.
+    + constructor*.
+      introv Tin.
+      unfold open_tt_many in *.
+      admit.
+    + assert (okGadt Σ) as Hgadt.
+      * apply* okt_implies_okgadt.
+      * admit.
   - pick_fresh y.
     copyTo IH IH1.
     specializes IH y. destructs~ IH.

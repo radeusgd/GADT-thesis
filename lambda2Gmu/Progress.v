@@ -37,21 +37,26 @@ Theorem progress_thm : progress.
   gen T Ht H.
   induction e; introv Hterm Htyp; inversion Htyp; inversion Hterm; subst.
   - empty_binding.
-  - admit.
-  - left; eauto.
+  - IHT e.
+    destruct IHt as [ | Hred].
+    + left*.
+    + right.
+      destruct Hred as [e' Hred].
+      eexists. constructor*.
+  - left*.
   - IHT e1; IHT e2.
     destruct IHt as [IHv1 | IHev1].
     + destruct IHt0 as [IHv2 | IHev2].
-      * left; eauto.
+      * left*.
       * inversion IHev2 as [e2' Hev2].
-        right; eauto.
+        right*.
     + inversion IHev1; right; eauto.
   - IHT e.
     destruct IHt as [Hv | Hev].
     + copy Hv Hv'.
       eapply CanonicalFormTuple in Hv; eauto.
       inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
-      right; eauto.
+      right*.
 
     + inversion Hev as [e' ev]; eauto.
   - IHT e.
@@ -59,7 +64,7 @@ Theorem progress_thm : progress.
     + copy Hv Hv'.
       eapply CanonicalFormTuple in Hv; eauto.
       inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
-      right; eauto.
+      right*.
 
     + inversion Hev as [e' ev]; eauto.
   - left; econstructor; econstructor; eauto.
@@ -91,4 +96,4 @@ Theorem progress_thm : progress.
       eexists; eapply ered_let; eauto.
 
   - eapply typing_implies_term; eauto.
-Admitted.
+Qed.
