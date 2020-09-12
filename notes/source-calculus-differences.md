@@ -43,7 +43,7 @@ which deconstructs each ADT separately.
 Such notation makes the program larger but it does not affect its semantics.
 
 > TODO describe a possible translation and argue why it does not lessen expressivity.
-> A source of information on the topic may be compiler optimization papers which sometimes translate nested pattern matching into decision trees which may be equivalent to non-nested exhaustive pattern matches. [Luc Maranget, Compiling Pattern Matching to Good Decision Trees](http://moscova.inria.fr/~maranget/papers/ml05e-maLuc Maranget, ranget.pdf) may be worth looking into may be worth looking into.
+> A source of information on the topic may be compiler optimization papers which sometimes translate nested pattern matching into decision trees which may be equivalent to non-nested exhaustive pattern matches. [Luc Maranget, Compiling Pattern Matching to Good Decision Trees](http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf) may be worth looking into may be worth looking into.
 
 #### Determinism
 
@@ -108,7 +108,18 @@ Without nested patterns they are useless, since they can be replaced with a simp
 
 ### Unifying fix-variables with lam-variables
 
-TODO
+> TODO this one **is** currently implemented but its implications have not been deeply analysed yet.
+
+The source calculus differentiates lam-variables introduced by lambdas and fix-variables introduced by fixpoints.
+The distinction is that the lam-variables are treated as values, but fix-variables are not.
+
+At first it may seem strange, since when evaluating a well-typed expression, at the top-level it will never produce a raw variable (a variable in a well-typed expression will be wrapped by some `let` or other constructs that define it). The distrinction is however important, because some terms are well-typed only when their sub-terms are values.
+That is the case for example for the `fix` operator and for the $\Lambda$. I have not yet analysed this very deeply, I think it may be a similar concept to pDOT only allowing stable paths in some places.
+
+The formalization currently only has one class of variables which are conservatively treated as not-values (so that the `fix` can be safely used).
+I argue that this does not reduce language's expressivity. It does disallow some expressions, for example: $\lambda x: T. \Lambda A. x$ (which has type $T \to \forall_A. T$) is invalid now. But it can easily be fixed by for example introducing abstractions over unit, like: $\lambda x: T. \Lambda A. \lambda u: 1. x$, typing to $T \to \forall_A 1 \to T$, which is a different type, but functionally they are mostly equivalent. They only slightly differ in how they are evaluated, but given the call-by-value semantics of lambdas, this example shouldn't even be affected by this (but others may).
+
+> TODO this argument should be more carefully written and analysed, because of its importance on the rest of the work
 
 ## Considered differences
 
@@ -116,4 +127,55 @@ These are differences that are (or were) considered but a decision hasn't been m
 
 ### Single Type-Argument GADTs
 
-TODO
+The source language does a peculiar design choice - the GADT is parametrized with a list of type arguments, and so is the constructor, but the constructor only takes a single value argument.
+
+This is completely valid, as that single value argument can be a tuple containing any necessary values we may wish to store (or a Unit if we do not wish to store anything) and it helps a lot in the formalization, as handling lists is always more problematic than having just a single value there.
+
+#### GADT type-parameters
+
+Theoretically, one can reduce the amount of GADT type parameters to just one and simply store tuple-types there.
+For example, let's look at equality:
+```
+// original version
+enum Eq[A, B] {
+  case Refl[C] extends Eq[C, C]
+}
+
+val ev: Eq[T, U] // evidence that T =:= U
+ev match {
+  case Refl[C] => // here we can use the fact that T =:= C =:= U
+}
+
+// version with just one type parameter
+enum Eq[A] {
+  case Refl[C] extends Eq[C * C]
+}
+
+val ev: Eq[T * U]
+ev match {
+  case Refl[C] => // here we know that C * C =:= T * U but that should entail T =:= C =:= U
+}
+```
+
+> **Important Objection**: It seems like the source language does not define type equality in such a way that equality of two tuple-types can automatically entail equality of their respective elements (see Figure 7 in the paper), but I may understand something wrongly here. I definitely need to revise this aspect of the paper as it will soon be very important when defining the type-equality entailment relation. TODO
+
+
+#### Constructors
+
+I conjecture that constructors must allow for multiple type arguments to not reduce the expressivity greatly.
+
+We could also use type-tuples in the constructors, but we cannot since we do not have subtyping or type-classes in the source language, we cannot restrict the type arguments in any way.
+
+For example:
+```
+enum Foo[A] {
+  case Bar[C] extends Foo[C * C]
+}
+
+
+something match {
+  case Case[T] =>  // hmmm [that example is a work in progress]
+}
+```
+
+> hmm TODO maybe it is not a problem? but I'm pretty sure intuitively that this limits our possibilities. Counterexamples should be explored.

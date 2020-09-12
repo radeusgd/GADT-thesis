@@ -3,7 +3,7 @@
 This is my private repo where I put Work In Progress works on my master's thesis.
 
 - [lambda 2Gmu](./lambda2Gmu/) - my formalization of the source calculus
-- [notes/source-calculus-differences.md](Source calculus differences) explains differences between the paper version of the calculus and the formalization.
+- [Source calculus differences](notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
 
 
 
