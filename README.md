@@ -2,7 +2,10 @@
 
 This is my private repo where I put Work In Progress works on my master's thesis.
 
-[experiments/](experiments/) currently contains my attempt at formalizing the λ2Gμ calculus
+- [lambda 2Gmu](./lambda2Gmu/) - my formalization of the source calculus
+- [notes/source-calculus-differences.md](Source calculus differences) explains differences between the paper version of the calculus and the formalization.
+
+
 
 ## Useful links
 
@@ -26,4 +29,3 @@ This is my private repo where I put Work In Progress works on my master's thesis
   + [Fsub soundness in TLC](../CoqLibs/formalmetacoq/ln/Fsub_Soundness.v)
 - [pDOT proof](../dot-calculus/src/extensions/paths/) - quick access to the pDOT proof
   + [pDOT Definitions](../dot-calculus/src/extensions/paths/Definitions.v)
-

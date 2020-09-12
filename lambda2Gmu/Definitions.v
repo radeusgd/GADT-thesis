@@ -66,7 +66,7 @@ Inductive typ : Set :=
 | typ_gadt  : (list typ) -> GADTName -> typ
 .
 
-Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49).
+Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49, right associativity).
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
 (* Notation "∀( T )" := (typ_all T) (at level 49). *)
 
@@ -203,7 +203,7 @@ Fixpoint trm_size (e : trm) : nat :=
 
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
   match t with
-  | typ_bvar i => If k = i then u else (typ_bvar i)
+  | typ_bvar i => If k = i then u else (typ_bvar i) (* TODO shouldnt some decrement happen here? *)
   | typ_fvar x => typ_fvar x
   | typ_unit => typ_unit
   | typ_tuple t1 t2 => typ_tuple (open_tt_rec k u t1) (open_tt_rec k u t2)
@@ -506,7 +506,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 | okt_typ : forall Σ E x T,
     okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & x ~: T).
 
-Reserved Notation "{ Σ , E } ⊢ t ∈ T" (at level 59).
+Reserved Notation "{ Σ , E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
 Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
   (* TODO typing_eq *)

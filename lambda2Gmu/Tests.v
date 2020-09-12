@@ -99,11 +99,9 @@ Qed.
 Definition divergent := trm_app loop trm_unit.
 
 Lemma divergent_type : {empty, empty} ⊢ divergent ∈ typ_unit.
-  econstructor.
-  2: {
-    apply loop_type.
-  }
-  repeat econstructor.
+  econstructor; swap 1 2.
+  - apply loop_type.
+  - repeat econstructor.
 Qed.
 
 Lemma divergent_diverges : evals divergent divergent.
@@ -119,3 +117,4 @@ Lemma divergent_diverges : evals divergent divergent.
       Unshelve.
       fs. fs. fs. fs. fs. fs. fs.
 Qed.
+
