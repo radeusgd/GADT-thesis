@@ -117,7 +117,7 @@ At first it may seem strange, since when evaluating a well-typed expression, at 
 That is the case for example for the `fix` operator and for the $\Lambda$. I have not yet analysed this very deeply, I think it may be a similar concept to pDOT only allowing stable paths in some places.
 
 The formalization currently only has one class of variables which are conservatively treated as not-values (so that the `fix` can be safely used).
-I argue that this does not reduce language's expressivity. It does disallow some expressions, for example: $\lambda x: T. \Lambda A. x$ (which has type $T \to \forall_A. T$) is invalid now. But it can easily be fixed by for example introducing abstractions over unit, like: $\lambda x: T. \Lambda A. \lambda u: 1. x$, typing to $T \to \forall_A 1 \to T$, which is a different type, but functionally they are mostly equivalent. They only slightly differ in how they are evaluated, but given the call-by-value semantics of lambdas, this example shouldn't even be affected by this (but others may).
+I argue that this does not reduce language's expressivity. It does disallow some expressions, for example: $\lambda x: T. \Lambda A. x$ (which has type $T \to (\forall_A. T)$) is invalid now. But it can easily be fixed by for example introducing abstractions over unit, like: $\lambda x: T. \Lambda A. \lambda u: 1. x$, typing to $T \to (\forall_A 1 \to T)$, which is a different type, but functionally they are mostly equivalent. They only slightly differ in how they are evaluated, but given the call-by-value semantics of lambdas, this example shouldn't even be affected by this (but others may).
 
 > TODO this argument should be more carefully written and analysed, because of its importance on the rest of the work
 
@@ -127,11 +127,24 @@ These are differences that are (or were) considered but a decision hasn't been m
 
 ### Single Type-Argument GADTs
 
+> *Quick interjection on terminology*:
+> I might make some mistakes here, but my current definitions are:
+> For type
+```scala
+enum T[A,B] {
+  case C1[U, V](x: U) extends T[V, V]
+}
+
+val y: T[Int, Int]
+```
+> `A` and `B` are GADT-type type parmeters (parameters = names) which are instantiated with GADT-type type arguments (concrete types, for example `Int` for `z`).
+> `U` and `V` are GADT-constructor type parameters and `x` is a constructor value/data parameter.
+
 The source language does a peculiar design choice - the GADT is parametrized with a list of type arguments, and so is the constructor, but the constructor only takes a single value argument.
 
 This is completely valid, as that single value argument can be a tuple containing any necessary values we may wish to store (or a Unit if we do not wish to store anything) and it helps a lot in the formalization, as handling lists is always more problematic than having just a single value there.
 
-#### GADT type-parameters
+#### GADT-type type parameters
 
 Theoretically, one can reduce the amount of GADT type parameters to just one and simply store tuple-types there.
 For example, let's look at equality:
@@ -157,25 +170,50 @@ ev match {
 }
 ```
 
-> **Important Objection**: It seems like the source language does not define type equality in such a way that equality of two tuple-types can automatically entail equality of their respective elements (see Figure 7 in the paper), but I may understand something wrongly here. I definitely need to revise this aspect of the paper as it will soon be very important when defining the type-equality entailment relation. TODO
+> **Important Objection**: ~~It seems like the source language does not define type equality in such a way that equality of two tuple-types can automatically entail equality of their respective elements (see Figure 7 in the paper), but I may understand something wrongly here. I definitely need to revise this aspect of the paper as it will soon be very important when defining the type-equality entailment relation.~~
+> I was wrong here, things like tuple-type equality are of course handled by rules 6 and 7 from figure 7 in the paper.
 
 
 #### Constructors
 
-I conjecture that constructors must allow for multiple type arguments to not reduce the expressivity greatly.
+I conjecture that constructors must allow for multiple type parameters to not reduce the expressivity greatly.
 
-We could also use type-tuples in the constructors, but we cannot since we do not have subtyping or type-classes in the source language, we cannot restrict the type arguments in any way.
+We could also use type-tuples in the constructors, but we cannot since we do not have subtyping or type-classes in the source language, we cannot restrict the type parameters in any way.
 
-For example:
-```
-enum Foo[A] {
-  case Bar[C] extends Foo[C * C]
+For example, let's say we want to encode vectors with typelevel length, classically that would be:
+```scala
+trait Z
+trait S[N]
+
+enum Vector[A, Len] {
+  case VNil[A]() extends Vector[A, Z]
+  case VCons[A, N](head: A, tail: Vector[A, N]) extends Vector[A, S[N]]
 }
+```
 
+The second constructor must have two type parameters - one for type of stored value and another for the length marker and we cannot avoid that.
 
-something match {
-  case Case[T] =>  // hmmm [that example is a work in progress]
+We can try emulating this using tuple types, but we will face limitations of the source language:
+
+```scala
+trait Z
+trait S[N]
+
+enum Vector[T] {
+  case VNil[A]() extends Vector[A * Z]
+  case VCons[U where U <: A * Z for some A, Z](head: A, tail: Vector[A * N]) extends Vector[A * S[N]]
+  // or
+  case VCons[U <: . * .](head: {fst U}, tail: Vector[U]) extends Vector[{fst U} * S[{snd U}]]
 }
 ```
 
-> hmm TODO maybe it is not a problem? but I'm pretty sure intuitively that this limits our possibilities. Counterexamples should be explored.
+As seen above we could parametrize the constructor with just one type, but in the second constructor, we need some way to deconstruct this type-tuple:
+- we could require that it is a subtype of a tuple-type for some two introduced type-variables
+- or we could guarantee that it is a tuple-type and use typelevel-functions `fst` and `snd`.
+Both of these solutions are not available in the source language (specifically we cannot define typelevel functions nor qualify the constructor's type-parameters to be a subtype of something - the type-parameters can be arbitrary), so we cannot emulate this trick. Thus, if we would restrict ourselves to only a single type-parameter in the GADT constructor, the resulting language would be less expressive than the original source language, in a significant way.
+
+#### Summary
+
+As shown above, we need to allow multiple type-parameters in GADT constructors to avoid hindering lanugage expressivity (and for example, still be able to encode one of the examples I often use, the Vector with typelevel length).
+
+Allowing multiple GADt-constructor type parameters (i.e. a parameter list) is necessary and it already requires proofs on lists of types, and this is the construct that will increase the complexity most (for example it also requires an `open_te_list` operation which substitutes N DeBruijn variables with free variables and an analogous subst to handle typing and reducing the pattern match clauses over each constructor). So it may be worth considering if keeping the GADT-type parameters having multiple arguments is also worth it - it does not add much additional complexity, but allows us to more closely replicate the original calculus, keeping the differences to minimum.

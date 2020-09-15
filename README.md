@@ -5,7 +5,7 @@ This is my private repo where I put Work In Progress works on my master's thesis
 - [lambda 2Gmu](./lambda2Gmu/) - my formalization of the source calculus
 - [Source calculus differences](notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
 
-
+> It is a good idea to install an extension rendering TeX markers ([for example](https://chrome.google.com/webstore/detail/tex-all-the-things/cbimabofgmfdkicghcadidpemeenbffn?hl=en)) when browsing Markdown documents on GitHub in this repository.
 
 ## Useful links
 
