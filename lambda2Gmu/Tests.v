@@ -20,10 +20,11 @@ Ltac fs := exact \{}. (* There must be a better way *)
 Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
   econstructor.
   - intros.
-    constructor*. cbv. case_if. econstructor. econstructor.
-    intros. cbv. case_if. econstructor.
+    constructor*. cbv. econstructor.
+    + econstructor.
+    + intros. cbv. econstructor.
   - intros.
-    econstructor. cbn. case_if. intros.
+    econstructor. cbn. intros.
     econstructor. eauto. constructor*.
     repeat constructor*.
   Unshelve.
@@ -49,13 +50,9 @@ Qed.
 
 Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
 Lemma id_app_types : {empty, empty} ⊢ id_app ∈ typ_unit.
-  econstructor; repeat econstructor; cbn; try case_if.
-  - econstructor.
-  - intros. econstructor.
-  - intros.
-    instantiate (1 := (@0 ==> @0)).
+  econstructor; repeat econstructor; cbn; try case_if; swap 1 2.
+  - instantiate (1 := (@0 ==> @0)).
     simpl_op.
-    crush_simple_type.
   - crush_simple_type.
     Unshelve.
     fs.
@@ -88,10 +85,10 @@ Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#
 
 Lemma loop_type : {empty, empty} ⊢ loop ∈ (typ_unit ==> typ_unit).
   cbv.
-  econstructor; intros; econstructor; cbn; repeat case_if; econstructor.
+  econstructor; intros; econstructor; cbn; repeat case_if; econstructor; swap 2 3.
   - econstructor.
-  - intros. econstructor; cbn; try case_if; econstructor.
-  - cbn; case_if; repeat constructor*.
+  - repeat constructor*.
+  - intros. econstructor; cbn; econstructor.
   - repeat constructor*.
     Unshelve. fs. fs.
 Qed.

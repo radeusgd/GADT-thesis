@@ -156,31 +156,89 @@ Ltac rewritemapmap :=
   | H: List.map ?f ?ls = (List.map ?g (List.map ?h ?ls)) |- _ => rename H into H'; rewrite List.map_map in H'
   end.
 
-Lemma open_tt_rec_type_core : forall T j V U i, i <> j ->
-  (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) ->
-  T = open_tt_rec i U T.
-Proof.
-  induction T using typ_ind' ; introv Neq Heq; simpl in *; inversion Heq; f_equal*.
-  - case_nat*. case_nat*.
-  - apply map_id.
-    introv Lin.
-    handleforall.
-    eapply Hforall.
-    + auto.
-    + exact Neq.
-    + rewritemapmap.
-      eapply ext_in_map in Hmapmap. exact Hmapmap.
-      auto.
+Require Import Coq.Init.Nat.
+Require Import Coq.Arith.Compare_dec.
+Require Import Coq.Arith.EqNat.
+Ltac decide_compare i j :=
+  let CMP := fresh "CMP" in
+  let EQ := fresh "EQ" in
+  remember (i ?= j) as CMP eqn: EQ;
+  symmetry in EQ;
+  destruct CMP;
+  match goal with
+  | H: (i ?= j) = Eq |- _ => apply nat_compare_eq in H
+  | H: (i ?= j) = Lt |- _ => apply nat_compare_lt in H
+  | H: (i ?= j) = Gt |- _ => apply nat_compare_gt in H
+  end.
+
+Ltac crush_compare :=
+  match goal with
+  | H: context [(?i ?= ?j)] |- _ => decide_compare i j; eauto
+  | |- context [(?i ?= ?j)] => decide_compare i j; eauto
+  end.
+
+Lemma test_compare : forall i j, i <> j -> (match compare i j with | Lt => 0 | Gt => 0 | Eq => 1 end) = 0.
+  intros.
+  crush_compare.
+  intuition.
 Qed.
 
+Ltac decide_eq i j :=
+  let CMP := fresh "CMP" in
+  let EQ := fresh "EQ" in
+  remember (i =? j) as CMP eqn: EQ;
+  symmetry in EQ;
+  destruct CMP;
+  match goal with
+  | H: (i =? j) = true |- _ => apply beq_nat_true in H
+  | H: (i =? j) = false |- _ => apply beq_nat_false in H
+  end.
+
+Ltac crush_eq :=
+  match goal with
+  | H: context [(?i =? ?j)] |- _ => decide_eq i j; eauto
+  | |- context [(?i =? ?j)] => decide_eq i j; eauto
+  end.
+
+Lemma test_eq : forall i j, i <> j -> (if i =? j then 1 else 0) = 0.
+  intros.
+  crush_eq.
+  intuition.
+Qed.
+
+(* Lemma open_tt_rec_type_core : forall T j V U i, i <> j -> *)
+(*   (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) -> *)
+(*   T = open_tt_rec i U T. *)
+(* Proof. *)
+(*   induction T using typ_ind' ; introv Neq Heq; simpl in *; inversion Heq; f_equal*. *)
+(*   - crush_compare; crush_compare. *)
+(*     + intuition. *)
+(*     + subst. admit. *)
+(*     + subst. admit. *)
+(*     + admit. *)
+(*   - apply map_id. *)
+(*     introv Lin. *)
+(*     handleforall. *)
+(*     eapply Hforall. *)
+(*     + auto. *)
+(*     + exact Neq. *)
+(*     + rewritemapmap. *)
+(*       eapply ext_in_map in Hmapmap. exact Hmapmap. *)
+(*       auto. *)
+(* Admitted. *)
+
+(* TODO FIXME:
+   The above lemma is outdated, it may need to be reformulated.
+*)
 Lemma open_tt_rec_type : forall T U,
   type T -> forall k, T = open_tt_rec k U T.
 Proof.
-  induction 1; intros; simpl; f_equal*. unfolds open_tt.
-  - pick_fresh X. apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)).
+  induction 1; intros; simpl; f_equal*.
+  - unfolds open_tt.
+    pick_fresh X. (* apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)). *) admit.
   - apply map_id.
     auto.
-Qed.
+Admitted.
 
 (** Substitution for a fresh name is identity. *)
 
@@ -238,7 +296,7 @@ Lemma subst_tt_open_tt_rec : forall T1 T2 X P n, type P ->
 Proof.
   introv WP. generalize n.
   induction T1 using typ_ind' ; intros k; simpls; f_equal*.
-  - case_nat*.
+  - crush_compare.
   - case_var*. rewrite* <- open_tt_rec_type.
   - rewrite* List.map_map.
     rewrite* List.map_map.
@@ -287,14 +345,15 @@ Proof.
 Qed.
 
 
-Lemma open_typlist_rec_type_core : forall l j Q i P,
-    open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) ->
-    i <> j ->
-    l = open_typlist_rec i P l.
-  induction l; intros; simpl in *; inversion H; f_equal*;
-    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
-                        apply* (@open_tt_rec_type_core t j) end.
-Qed.
+(* TODO same as above *)
+(* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
+(*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
+(*     i <> j -> *)
+(*     l = open_typlist_rec i P l. *)
+(*   induction l; intros; simpl in *; inversion H; f_equal*; *)
+(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
+(*                         apply* (@open_tt_rec_type_core t j) end. *)
+(* Qed. *)
 
 Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) ->
@@ -303,46 +362,46 @@ Proof.
   induction e; intros; simpl in *; inversion H0; f_equal*;
     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
                         apply* (@open_tt_rec_type_core t j) end.
-  - apply* open_typlist_rec_type_core.
-Qed.
+  (* - apply* open_typlist_rec_type_core. *)
+Admitted.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
-  intros e U WF. induction WF; intro k; simpl;
-                   f_equal*; try solve [ apply* open_tt_rec_type ].
-  - destruct k.
-    + eapply open_typlist_rec_type_core.
-      2: {
-        auto.
-      }
-      unfold open_typlist_rec.
-      rewrite List.map_map.
-      apply List.map_ext_in.
-      introv Tin.
-      apply open_tt_rec_type.
-      instantiate (1:=U).
-      rewrite* <- open_tt_rec_type.
-    + eapply open_typlist_rec_type_core.
-      2: {
-        instantiate (1:=0). auto.
-      }
-      unfold open_typlist_rec.
-      rewrite List.map_map.
-      apply List.map_ext_in.
-      introv Tin.
-      apply open_tt_rec_type.
-      instantiate (1:=U).
-      rewrite* <- open_tt_rec_type.
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
-  - unfolds open_te. pick_fresh X.
-    apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
-Qed.
+  (* intros e U WF. induction WF; intro k; simpl; *)
+  (*                  f_equal*; try solve [ apply* open_tt_rec_type ]. *)
+  (* - destruct k. *)
+  (*   + eapply open_typlist_rec_type_core. *)
+  (*     2: { *)
+  (*       auto. *)
+  (*     } *)
+  (*     unfold open_typlist_rec. *)
+  (*     rewrite List.map_map. *)
+  (*     apply List.map_ext_in. *)
+  (*     introv Tin. *)
+  (*     apply open_tt_rec_type. *)
+  (*     instantiate (1:=U). *)
+  (*     rewrite* <- open_tt_rec_type. *)
+  (*   + eapply open_typlist_rec_type_core. *)
+  (*     2: { *)
+  (*       instantiate (1:=0). auto. *)
+  (*     } *)
+  (*     unfold open_typlist_rec. *)
+  (*     rewrite List.map_map. *)
+  (*     apply List.map_ext_in. *)
+  (*     introv Tin. *)
+  (*     apply open_tt_rec_type. *)
+  (*     instantiate (1:=U). *)
+  (*     rewrite* <- open_tt_rec_type. *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)). *)
+  (* - unfolds open_te. pick_fresh X. *)
+  (*   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)). *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core v1 0 (trm_fvar x)). *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)). *)
+Admitted.
 
 (** Substitution for a fresh name is identity. *)
 
@@ -400,7 +459,7 @@ Lemma open_ee_rec_term_core : forall e j v u i, i <> j ->
   e = open_ee_rec i u e.
 Proof.
   induction e; introv Neq H; simpl in *; inversion H; f_equal*.
-  case_nat*. case_nat*.
+  crush_eq. crush_eq. subst. intuition.
 Qed.
 
 Lemma open_ee_rec_type_core : forall e j V u i,
@@ -443,7 +502,7 @@ Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
 Proof.
   intros. unfold open_ee. generalize 0.
   induction t1; intro n0; simpls; f_equal*.
-  - case_nat*.
+  - crush_eq.
   - case_var*. rewrite* <- open_ee_rec_term.
 Qed.
 
@@ -473,7 +532,7 @@ Lemma subst_te_open_ee_var : forall Z P x e,
   (subst_te Z P e) open_ee_var x = subst_te Z P (e open_ee_var x).
 Proof.
   introv. unfold open_ee. generalize 0.
-  induction e; intros; simpl; f_equal*. case_nat*.
+  induction e; intros; simpl; f_equal*. crush_eq.
 Qed.
 
 (** Interactions between term substitutions in terms and opening
@@ -633,6 +692,7 @@ Qed.
 Lemma open_tt_var_preserves_size : forall T X n,
     typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
   induction T using typ_ind' ; introv; try solve [cbn; try case_if; cbn; eauto].
+  - cbn. crush_compare.
   - cbn.
     rewrite List.map_map.
     assert ((List.map typ_size ls) = (List.map (fun x : typ => typ_size (open_tt_rec n0 (typ_fvar X) x)) ls)) as Hmapeq.

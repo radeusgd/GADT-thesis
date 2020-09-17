@@ -31,6 +31,7 @@ Set Implicit Arguments.
 Require Import TLC.LibLN.
 Require Import TLC.LibTactics.
 Require Import List.
+Require Import Coq.Init.Nat.
 Notation "[ ]" := nil (format "[ ]").
 Notation "[ x ]" := (cons x nil).
 Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)).
@@ -203,7 +204,13 @@ Fixpoint trm_size (e : trm) : nat :=
 
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
   match t with
-  | typ_bvar i => If k = i then u else (typ_bvar i) (* TODO shouldnt some decrement happen here? *)
+  (* | typ_bvar i => If (k < i) then (typ_bvar (i - 1)) else If k = i then u else (typ_bvar i) (* TODO shouldnt some decrement happen here?; YES *) *)
+  | typ_bvar i => match Nat.compare k i with
+                 | Lt => typ_bvar (i-1)
+                 | Eq => u
+                 | Gt => typ_bvar i
+                 end
+  (*                                       (* We only decrement type variables though as values are substituted one by one only *) *)
   | typ_fvar x => typ_fvar x
   | typ_unit => typ_unit
   | typ_tuple t1 t2 => typ_tuple (open_tt_rec k u t1) (open_tt_rec k u t2)
@@ -213,7 +220,6 @@ Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
 end.
 
 Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k u) ts.
-
 
 Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   let fix open_te_clauses k u (cs : list Clause) : list Clause :=
@@ -245,7 +251,8 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
     | nil => nil
     end in
   match e with
-  | trm_bvar i    => If k = i then u else (trm_bvar i)
+  (* | trm_bvar i    => If k = i then u else (trm_bvar i) *)
+  | trm_bvar i    => if (k =? i) then u else (trm_bvar i)
   | trm_fvar x    => trm_fvar x
   | trm_constructor tparams C e1 => trm_constructor tparams C (open_ee_rec k u e1)
   | trm_unit => trm_unit
@@ -273,9 +280,6 @@ Definition open_tt T U := open_tt_rec 0 U T.
 Definition open_te t U := open_te_rec 0 U t.
 Definition open_ee t u := open_ee_rec 0 u t.
 
-Lemma open_typlist_test : open_typlist_rec 0 (typ_unit) [typ_bvar 0; typ_tuple (typ_bvar 0) (typ_bvar 1)] = [typ_unit; typ_tuple (typ_unit) (typ_bvar 1)].
-  cbv; repeat case_if. auto.
-Qed.
 (* (** We define notations for [open_rec] and [open]. *) *)
 
 (* Notation "{ k ~> u } t" := (open_rec k u t) (at level 67). *)
@@ -295,16 +299,41 @@ Notation "T 'open_tt_var' X" := (open_tt T (typ_fvar X)) (at level 67).
 Notation "t 'open_te_var' X" := (open_te t (typ_fvar X)) (at level 67).
 Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
 
+Definition open_tt_many (T : typ) (args : list typ) := fold_left open_tt args T.
+Definition open_tt_many_var (T : typ) (args : list var) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T.
+
+
+Definition open_te_many (e : trm) (args : list typ) := fold_left open_te args e.
+(* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
+(*   match args with *)
+(*   | [] => T *)
+(*   | h :: t => open_tt_many (open_tt T h) t *)
+(*   end. *)
+
+
 Lemma open_tt_test : open_tt (typ_all (typ_bvar 1)) (typ_unit) = typ_all typ_unit.
-  cbv. case_if*.
+  cbv. auto.
 Qed.
 
 Lemma open_te_test : open_te (trm_abs (typ_bvar 0) (trm_bvar 0)) (typ_unit) = trm_abs typ_unit (trm_bvar 0).
-  cbv. case_if*.
+  cbv. auto.
 Qed.
 
 Lemma open_ee_test : open_ee (trm_abs (typ_bvar 0) (trm_bvar 1)) (trm_unit) = trm_abs (typ_bvar 0) (trm_unit).
-  cbv. case_if*.
+  cbv. auto.
+Qed.
+
+Lemma open_typlist_test : open_typlist_rec 0 (typ_unit) [typ_bvar 0; typ_tuple (typ_bvar 0) (typ_bvar 1)] = [typ_unit; typ_tuple (typ_unit) (typ_bvar 0)].
+  cbv; repeat case_if. auto.
+Qed.
+
+Axiom T : var.
+Lemma open_tt_many_test : open_tt_many (typ_tuple (typ_bvar 0) (typ_bvar 1)) [typ_unit; typ_fvar T] = typ_tuple typ_unit (typ_fvar T).
+  cbv. auto.
+Qed.
+
+Lemma open_te_many_test : open_te_many (trm_abs (typ_tuple (typ_bvar 0) (typ_bvar 1)) (trm_bvar 0)) [typ_unit; typ_fvar T] = (trm_abs (typ_tuple typ_unit (typ_fvar T)) (trm_bvar 0)).
+  cbv. auto.
 Qed.
 
 (** Types as locally closed pre-types *)
@@ -459,13 +488,6 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
     wft Σ E (typ_gadt Tparams Name)
 .
 
-Definition open_tt_many (T : typ) (args : list typ) := fold_left open_tt args T.
-Definition open_tt_many_var (T : typ) (args : list var) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T.
-(* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
-(*   match args with *)
-(*   | [] => T *)
-(*   | h :: t => open_tt_many (open_tt T h) t *)
-(*   end. *)
 
 Definition add_types (E : ctx) (args : list var) :=
   fold_left (fun E T => E & withtyp T) args E.
@@ -656,6 +678,7 @@ Fixpoint fv_trm (e : trm) {struct e} : vars :=
 Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
   match T with
   | typ_bvar J => typ_bvar J
+  (* | typ_fvar X => If X = Z then U else (typ_fvar X) *)
   | typ_fvar X => If X = Z then U else (typ_fvar X)
   | typ_unit   => typ_unit
   | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2
