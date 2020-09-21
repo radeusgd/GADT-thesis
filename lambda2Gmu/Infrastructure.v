@@ -1,12 +1,14 @@
 Set Implicit Arguments.
 Require Import Definitions.
 Require Import TLC.LibLN.
+Require Import TLC.LibEnv.
+Require Import TLC.LibLogic.
 Require Import Psatz.
-Require Import List.
 Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.EqNat.
 Require Import Coq.Arith.Wf_nat.
+Require List.
 (* large portions of this are based on the TLC formalisation of FSub *)
 Hint Constructors type term wft typing red value.
 
@@ -221,168 +223,6 @@ Proof. induction l; intros [=] ? []; subst; auto. Qed.
 
 (** Substitution on indices is identity on well-formed terms. *)
 
-
-(* Lemma open_tt_rec_type_core : forall T j V U i, i <> j -> *)
-(*   (open_tt_rec j V T) = open_tt_rec i U (open_tt_rec j V T) -> *)
-(*   T = open_tt_rec i U T. *)
-(* Proof. *)
-(*   induction T using typ_ind' ; introv Neq Heq; simpl in *; inversion Heq; f_equal*. *)
-(*   - crush_compare; crush_compare. *)
-(*     + intuition. *)
-(*     + subst. admit. *)
-(*     + subst. admit. *)
-(*     + admit. *)
-(*   - apply map_id. *)
-(*     introv Lin. *)
-(*     handleforall. *)
-(*     eapply Hforall. *)
-(*     + auto. *)
-(*     + exact Neq. *)
-(*     + rewritemapmap. *)
-(*       eapply ext_in_map in Hmapmap. exact Hmapmap. *)
-(*       auto. *)
-(* Admitted. *)
-
-Fixpoint open_bvar_level_count_typ (T : typ) : nat :=
-  match T with
-  | typ_bvar J => J + 1
-  | typ_fvar X => 0
-  | typ_unit   => 0
-  | T1 ** T2   => max (open_bvar_level_count_typ T1) (open_bvar_level_count_typ T2)
-  | T1 ==> T2   => max (open_bvar_level_count_typ T1) (open_bvar_level_count_typ T2)
-  | typ_all T1 => (open_bvar_level_count_typ T1) - 1
-  | typ_gadt Ts _ => fold_left (fun acc T => max acc (open_bvar_level_count_typ T)) Ts 0
-  end.
-
-Lemma fold_open_tt : forall T X,
-    open_tt_rec 0 (typ_fvar X) T = T open_tt_var X.
-  eauto.
-Qed.
-
-Lemma max_zero : forall a b,
-    max a b = 0 ->
-    a = 0 /\ b = 0.
-  introv Hmax; split; try lia.
-Qed.
-
-Lemma max_lesser : forall a b k,
-    k >= max a b ->
-    k >= a /\ k >= b.
-  intros; try lia.
-Qed.
-
-(*
-  T : typ
-  IHT : forall X : var,
-        open_bvar_level_count_typ (T open_tt_var X) = 0 ->
-        open_bvar_level_count_typ T <= 1
-  X : var
-  Hopen : open_bvar_level_count_typ (open_tt_rec 1 (typ_fvar X) T) - 1 = 0
-  ============================
-  open_bvar_level_count_typ T - 1 <= 1
- *)
-
-Require Import TLC.LibLogic.
-
-(* (* Lemma opening_decrease_core : forall T X k, *) *)
-(* (*     open_bvar_level_count_typ (open_tt_rec k (typ_fvar X) T) >= open_bvar_level_count_typ T - 1. *) *)
-(* (*   induction T using typ_ind'; introv. *) *)
-(* (*   - unfolds open_tt; unfolds open_tt_rec. *) *)
-(* (*     crush_compare; subst; cbn. *) *)
-(* (*     +  *) *)
-(* (*   - cbn; eauto. *) *)
-(* (*   - cbn; eauto. *) *)
-(* (*   - lets* IH1: IHT1 X. *) *)
-(* (*     lets* IH2: IHT2 X. *) *)
-(* (*     cbn. unfolds open_tt. lia. *) *)
-(* (*   - lets* IH1: IHT1 X. *) *)
-(* (*     lets* IH2: IHT2 X. *) *)
-(* (*     cbn. unfolds open_tt. lia. *) *)
-(* (*   - cbn. *) *)
-(* (*     lets* IH: IHT X. *) *)
-(* (*   Abort. *) *)
-
-(* Lemma opening_decrease : forall T X, *)
-(*     open_bvar_level_count_typ (T open_tt_var X) >= open_bvar_level_count_typ T - 1. *)
-(*   induction T using typ_ind'; introv. *)
-(*   - unfolds open_tt; unfolds open_tt_rec; *)
-(*       crush_compare; subst; cbn; lia. *)
-(*   - cbn; eauto. *)
-(*   - cbn; eauto. *)
-(*   - lets* IH1: IHT1 X. *)
-(*     lets* IH2: IHT2 X. *)
-(*     cbn. unfolds open_tt. lia. *)
-(*   - lets* IH1: IHT1 X. *)
-(*     lets* IH2: IHT2 X. *)
-(*     cbn. unfolds open_tt. lia. *)
-(*   - cbn. *)
-(*     lets* IH: IHT X. *)
-(* Admitted. *)
-
-
-(* Lemma contraposed_closed_bvar_level : forall T, *)
-(*     open_bvar_level_count_typ T > 0 -> not(type T). *)
-(*   introv Hopen. *)
-(*   intro Htype. *)
-(*   induction Htype; try (cbn in Hopen; lia). *)
-(*   - pick_fresh X. *)
-(*     assert (Htyp: type (T2 open_tt_var X)); eauto. *)
-(*     assert (Hcount: open_bvar_level_count_typ (T2 open_tt_var X) > 0 -> False); eauto. *)
-(*     + apply* H0. *)
-(*     + apply Hcount. *)
-(*       cbn in Hopen. *)
-
-(*       assert (open_bvar_level_count_typ (T2 open_tt_var X) >= open_bvar_level_count_typ T2 - 1). *)
-(*       * admit. *)
-(*       * lia. *)
-(*   - cbn in Hopen. *)
-(*     (* ughh complicated arighmetic proof *) *)
-(*     admit. *)
-(* Admitted. *)
-
-(* Lemma closed_bvar_level : forall T, *)
-(*     type T -> open_bvar_level_count_typ T = 0. *)
-(*   intro T. *)
-(*   apply contrapose_inv. *)
-(*   intro Hneq. *)
-(*   apply contraposed_closed_bvar_level. *)
-(*   lia. *)
-(* Qed. *)
-
-(* Lemma closed_after_level : forall T k U, *)
-(*     k >= open_bvar_level_count_typ T -> *)
-(*     T = open_tt_rec k U T. *)
-(*   induction T using typ_ind'; introv Hk; eauto. *)
-(*   - cbn in Hk. *)
-(*     assert (Hkk: k > n); try lia. *)
-(*     cbn. crush_compare. *)
-(*   - cbn in Hk. *)
-(*     apply max_lesser in Hk. *)
-(*     destruct Hk as [Hk1 Hk2]. *)
-(*     cbn. *)
-(*     eapply IHT1 in Hk1. *)
-(*     eapply IHT2 in Hk2. *)
-(*     erewrite <- Hk1. *)
-(*     erewrite <- Hk2. *)
-(*     trivial. *)
-(*   - cbn in Hk. *)
-(*     apply max_lesser in Hk. *)
-(*     destruct Hk as [Hk1 Hk2]. *)
-(*     cbn. *)
-(*     eapply IHT1 in Hk1. *)
-(*     eapply IHT2 in Hk2. *)
-(*     erewrite <- Hk1. *)
-(*     erewrite <- Hk2. *)
-(*     trivial. *)
-(*   - cbn in Hk. *)
-(*     cbn. *)
-(*     lets* IH: IHT (S k) U. *)
-(*     assert (S k >= open_bvar_level_count_typ T); try lia. *)
-(*     apply IH in H. rewrite <- H. trivial. *)
-(*   - admit. *)
-(* Admitted. *)
-
-Print Forall.
 Fixpoint closed_in_surroundings (k : nat) (T : typ) {struct T} : Prop :=
   match T with
   | typ_bvar J => J < k
@@ -391,83 +231,132 @@ Fixpoint closed_in_surroundings (k : nat) (T : typ) {struct T} : Prop :=
   | T1 ** T2   => closed_in_surroundings k T1 /\ closed_in_surroundings k T2
   | T1 ==> T2   => closed_in_surroundings k T1 /\ closed_in_surroundings k T2
   | typ_all T1 => closed_in_surroundings (S k) T1
-  | typ_gadt Ts _ => fold_left (fun acc T => acc /\ closed_in_surroundings k T) Ts True
+  | typ_gadt Ts _ => List.fold_left (fun acc T => acc /\ closed_in_surroundings k T) Ts True
   end.
 
-Lemma fold_or_is_forall : forall A Ts (P : A -> Prop),
-    fold_left (fun acc T => acc /\ P T) Ts True ->
-    Forall P Ts.
+Lemma fold_helper : forall A Ts (P : A -> Prop) Q,
+  List.fold_left (fun acc T => acc /\ P T) Ts Q -> Q.
+  induction Ts; introv Hfold; cbn in Hfold; eauto.
+  lets* IH: IHTs Hfold.
+Qed.
+
+
+Lemma fold_and_is_forall : forall A Ts (P : A -> Prop),
+    List.fold_left (fun acc T => acc /\ P T) Ts True <->
+    List.Forall P Ts.
   intros.
-  induction Ts; eauto.
-Admitted.
+  induction Ts.
+  - cbn.
+    intuition.
+  - intuition.
+    + econstructor.
+      * cbn in H1.
+        assert (True /\ P a).
+        -- apply* fold_helper.
+        -- destruct* H2.
+      * apply H.
+        cbn in H1.
+        lets* Hf: fold_helper H1.
+        destruct Hf.
+        lets* HTPa: prop_eq_True H3.
+        assert (HTT: (True /\ True) = True); eauto.
+        rewrite <- HTT.
+        rewrite <- HTPa at 2.
+        trivial.
+    + cbn.
+      inversions H1.
+      lets* HTPa: prop_eq_True H4.
+      rewrite HTPa.
+      assert (HTT: (True /\ True) = True); eauto.
+      rewrite HTT.
+      auto.
+Qed.
+
+Ltac crush_open :=
+  (try unfold open_tt); (try unfold open_tt_rec); crush_compare.
+
+Lemma opening_adds_one : forall T X k n,
+    closed_in_surroundings n (open_tt_rec k (typ_fvar X) T) ->
+    closed_in_surroundings (max (S n) (S k)) T.
+  induction T using typ_ind'; introv Hc; try solve [cbn; eauto].
+  - cbn in Hc.
+    crush_compare; cbn; try lia.
+    cbn in Hc. lia.
+  - cbn in *.
+    destruct Hc as [Hc1 Hc2].
+    splits*.
+  - cbn in *.
+    destruct Hc as [Hc1 Hc2].
+    splits*.
+  - cbn.
+    lets* IH: IHT X (S k) (S n).
+  - cbn. cbn in Hc.
+    apply fold_and_is_forall.
+    apply fold_and_is_forall in Hc.
+    rewrite List.Forall_forall.
+    rewrite List.Forall_forall in Hc.
+    rewrite List.Forall_forall in H.
+    introv Hin.
+    lets* HAA: H Hin X k n0.
+    apply HAA.
+    apply* Hc.
+    apply* List.in_map.
+Qed.
+
+Lemma type_closed : forall T,
+    type T -> closed_in_surroundings 0 T.
+  induction 1; cbn; eauto.
+  - pick_fresh X.
+    lets* Hoao: opening_adds_one T2 X 0 0.
+  - apply fold_and_is_forall.
+    rewrite List.Forall_forall.
+    auto.
+Qed.
 
 Lemma closed_id : forall T U n k,
     closed_in_surroundings n T ->
     k >= n ->
     T = open_tt_rec k U T.
-Admitted.
-
-Lemma type_closed : forall T,
-    type T -> closed_in_surroundings 0 T.
-Admitted.
-
-(* TODO continue from here *)
+  induction T using typ_ind'; introv Hc Hk; eauto.
+  - cbn. crush_compare.
+    + subst. cbn in Hc. lia.
+    + cbn in Hc. lia.
+  - cbn in *.
+    destruct Hc as [Hc1 Hc2].
+    lets* IH1: IHT1 U n k Hc1.
+    lets* IH2: IHT2 U n k Hc2.
+    rewrite* <- IH1.
+    rewrite* <- IH2.
+  - cbn in *.
+    destruct Hc as [Hc1 Hc2].
+    lets* IH1: IHT1 U n k Hc1.
+    lets* IH2: IHT2 U n k Hc2.
+    rewrite* <- IH1.
+    rewrite* <- IH2.
+  - cbn. cbn in Hc.
+    lets* IH: IHT U (S n) (S k).
+    rewrite* <- IH. lia.
+  - cbn.
+    f_equal.
+    cbn in Hc.
+    apply fold_and_is_forall in Hc.
+    rewrite List.Forall_forall in Hc.
+    rewrite <- List.map_id at 1.
+    apply List.map_ext_in.
+    rewrite List.Forall_forall in H.
+    intros T Hin.
+    lets* IH: H Hin.
+Qed.
 
 Lemma open_tt_rec_type : forall T U,
   type T -> forall k, T = open_tt_rec k U T.
 Proof.
-  introv Htype.
-  lets* Hlevel: closed_bvar_level T.
-  apply Hlevel in Htype.
-  intros.
-  apply closed_after_level.
-  rewrite Htype.
-  lia.
+  introv Htype. intros.
+  lets* Hc: closed_id T U 0 k.
+  apply Hc.
+  - apply* type_closed.
+  - lia.
 Qed.
-
-
-  (* induction T using strong_induction_on_typ_size; *)
-  (*   intros; subst. *)
-  (* Ltac inv_typ := match goal with | H: type ?T |- _ => inversions H end. *)
-  (* destruct T; try solve [ *)
-  (*                   inv_typ *)
-  (*                 | cbv; auto *)
-  (*                 ]. *)
-  (* - inv_typ. *)
-  (*   cbn. *)
-  (*   lets* IH1: H T1 U k; try (cbn; lia). *)
-  (*   lets* IH2: H T2 U k; try (cbn; lia). *)
-  (*   rewrite <- IH1. *)
-  (*   rewrite <- IH2. *)
-  (*   trivial. *)
-  (* - inv_typ. *)
-  (*   cbn. *)
-  (*   lets* IH1: H T1 U k; try (cbn; lia). *)
-  (*   lets* IH2: H T2 U k; try (cbn; lia). *)
-  (*   rewrite <- IH1. *)
-  (*   rewrite <- IH2. *)
-  (*   trivial. *)
-  (* - inv_typ. *)
-  (*   cbn. *)
-  (*   pick_fresh X. *)
-  (*   assert (Htype: type (T open_tt_var X)); eauto. *)
-  (*   lets* IH: H (T open_tt_var X) U (k). *)
-  (*   + cbn. *)
-  (*     lets* Hsize: open_tt_var_preserves_size T X 0. *)
-  (*     unfolds open_tt. *)
-  (*     rewrite <- Hsize. *)
-  (*     lia. *)
-  (*   + admit. *)
-  (* - inv_typ. *)
-  (*   cbn. *)
-  (*   admit. *)
-  (* (* induction 1; intros; simpl; f_equal*. *) *)
-  (* (* - unfolds open_tt. *) *)
-  (* (*   pick_fresh X. (* apply* (@open_tt_rec_type_core T2 0 (typ_fvar X)). *) *) *)
-  (* (*   admit. *) *)
-  (* (* - apply map_id. *) *)
-  (* (*   auto. *) *)
-(* Admitted. *)
 
 (** Substitution for a fresh name is identity. *)
 
