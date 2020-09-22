@@ -223,127 +223,80 @@ Proof. induction l; intros [=] ? []; subst; auto. Qed.
 
 (** Substitution on indices is identity on well-formed terms. *)
 
-Fixpoint closed_in_surroundings (k : nat) (T : typ) {struct T} : Prop :=
-  match T with
-  | typ_bvar J => J < k
-  | typ_fvar X => True
-  | typ_unit   => True
-  | T1 ** T2   => closed_in_surroundings k T1 /\ closed_in_surroundings k T2
-  | T1 ==> T2   => closed_in_surroundings k T1 /\ closed_in_surroundings k T2
-  | typ_all T1 => closed_in_surroundings (S k) T1
-  | typ_gadt Ts _ => List.fold_left (fun acc T => acc /\ closed_in_surroundings k T) Ts True
-  end.
-
-Lemma fold_helper : forall A Ts (P : A -> Prop) Q,
-  List.fold_left (fun acc T => acc /\ P T) Ts Q -> Q.
-  induction Ts; introv Hfold; cbn in Hfold; eauto.
-  lets* IH: IHTs Hfold.
-Qed.
-
-
-Lemma fold_and_is_forall : forall A Ts (P : A -> Prop),
-    List.fold_left (fun acc T => acc /\ P T) Ts True <->
-    List.Forall P Ts.
-  intros.
-  induction Ts.
-  - cbn.
-    intuition.
-  - intuition.
-    + econstructor.
-      * cbn in H1.
-        assert (True /\ P a).
-        -- apply* fold_helper.
-        -- destruct* H2.
-      * apply H.
-        cbn in H1.
-        lets* Hf: fold_helper H1.
-        destruct Hf.
-        lets* HTPa: prop_eq_True H3.
-        assert (HTT: (True /\ True) = True); eauto.
-        rewrite <- HTT.
-        rewrite <- HTPa at 2.
-        trivial.
-    + cbn.
-      inversions H1.
-      lets* HTPa: prop_eq_True H4.
-      rewrite HTPa.
-      assert (HTT: (True /\ True) = True); eauto.
-      rewrite HTT.
-      auto.
-Qed.
+Inductive typ_closed_in_surroundings : nat -> typ -> Prop :=
+| closed_typ_bvar : forall J k, J < k -> typ_closed_in_surroundings k (typ_bvar J)
+| closed_typ_fvar : forall X k, typ_closed_in_surroundings k (typ_fvar X)
+| closed_typ_unit : forall k, typ_closed_in_surroundings k (typ_unit)
+| closed_typ_tuple : forall T1 T2 k,
+    typ_closed_in_surroundings k T1 ->
+    typ_closed_in_surroundings k T2 ->
+    typ_closed_in_surroundings k (T1 ** T2)
+| closed_typ_arrow : forall T1 T2 k,
+    typ_closed_in_surroundings k T1 ->
+    typ_closed_in_surroundings k T2 ->
+    typ_closed_in_surroundings k (T1 ==> T2)
+| closed_typ_all : forall T k,
+    typ_closed_in_surroundings (S k) T ->
+    typ_closed_in_surroundings k (typ_all T)
+| closed_typ_gadt : forall Ts N k,
+    List.Forall (typ_closed_in_surroundings k) Ts ->
+    typ_closed_in_surroundings k (typ_gadt Ts N).
 
 Ltac crush_open :=
   (try unfold open_tt); (try unfold open_tt_rec); crush_compare.
 
 Lemma opening_adds_one : forall T X k n,
-    closed_in_surroundings n (open_tt_rec k (typ_fvar X) T) ->
-    closed_in_surroundings (max (S n) (S k)) T.
-  induction T using typ_ind'; introv Hc; try solve [cbn; eauto].
+    typ_closed_in_surroundings n (open_tt_rec k (typ_fvar X) T) ->
+    typ_closed_in_surroundings (max (S n) (S k)) T.
+  induction T using typ_ind'; introv Hc; try solve [inversions Hc; constructor*].
   - cbn in Hc.
-    crush_compare; cbn; try lia.
-    cbn in Hc. lia.
-  - cbn in *.
-    destruct Hc as [Hc1 Hc2].
-    splits*.
-  - cbn in *.
-    destruct Hc as [Hc1 Hc2].
-    splits*.
-  - cbn.
+    crush_compare; cbn in *; econstructor; try lia.
+    inversions Hc. lia.
+  - econstructor.
+    cbn in *.
+    inversions Hc.
     lets* IH: IHT X (S k) (S n).
-  - cbn. cbn in Hc.
-    apply fold_and_is_forall.
-    apply fold_and_is_forall in Hc.
-    rewrite List.Forall_forall.
-    rewrite List.Forall_forall in Hc.
-    rewrite List.Forall_forall in H.
-    introv Hin.
-    lets* HAA: H Hin X k n0.
-    apply HAA.
-    apply* Hc.
+  - constructor*.
+    inversions Hc.
+    rewrite List.Forall_forall in *.
+    intros T Hin.
+    lets* IH: H T Hin X k n0.
+    apply* IH.
+    apply* H2.
     apply* List.in_map.
 Qed.
 
 Lemma type_closed : forall T,
-    type T -> closed_in_surroundings 0 T.
-  induction 1; cbn; eauto.
+    type T -> typ_closed_in_surroundings 0 T.
+  induction 1; constructor*.
   - pick_fresh X.
     lets* Hoao: opening_adds_one T2 X 0 0.
-  - apply fold_and_is_forall.
-    rewrite List.Forall_forall.
+  - rewrite List.Forall_forall.
     auto.
 Qed.
 
 Lemma closed_id : forall T U n k,
-    closed_in_surroundings n T ->
+    typ_closed_in_surroundings n T ->
     k >= n ->
     T = open_tt_rec k U T.
-  induction T using typ_ind'; introv Hc Hk; eauto.
-  - cbn. crush_compare.
-    + subst. cbn in Hc. lia.
-    + cbn in Hc. lia.
-  - cbn in *.
-    destruct Hc as [Hc1 Hc2].
-    lets* IH1: IHT1 U n k Hc1.
-    lets* IH2: IHT2 U n k Hc2.
-    rewrite* <- IH1.
-    rewrite* <- IH2.
-  - cbn in *.
-    destruct Hc as [Hc1 Hc2].
-    lets* IH1: IHT1 U n k Hc1.
-    lets* IH2: IHT2 U n k Hc2.
-    rewrite* <- IH1.
-    rewrite* <- IH2.
-  - cbn. cbn in Hc.
-    lets* IH: IHT U (S n) (S k).
+  induction T using typ_ind'; introv Hc Hk; eauto;
+    try solve [
+          cbn; crush_compare; inversions Hc; lia
+        | cbn; inversions Hc;
+          lets* IH1: IHT1 U n k;
+          lets* IH2: IHT2 U n k;
+          rewrite* <- IH1;
+          rewrite* <- IH2
+          ].
+  - lets* IH: IHT U (S n) (S k).
+    cbn. inversions Hc.
     rewrite* <- IH. lia.
   - cbn.
     f_equal.
-    cbn in Hc.
-    apply fold_and_is_forall in Hc.
-    rewrite List.Forall_forall in Hc.
+    inversions Hc.
+    rewrite List.Forall_forall in *.
     rewrite <- List.map_id at 1.
     apply List.map_ext_in.
-    rewrite List.Forall_forall in H.
     intros T Hin.
     lets* IH: H Hin.
 Qed.
@@ -464,14 +417,14 @@ Qed.
 
 
 (* TODO same as above *)
-(* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
-(*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
-(*     i <> j -> *)
-(*     l = open_typlist_rec i P l. *)
-(*   induction l; intros; simpl in *; inversion H; f_equal*; *)
-(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
-(*                         apply* (@open_tt_rec_type_core t j) end. *)
-(* Qed. *)
+Lemma open_typlist_rec_type_core : forall l j Q i P,
+    open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) ->
+    i <> j ->
+    l = open_typlist_rec i P l.
+  induction l; intros; simpl in *; inversion H; f_equal*;
+    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
+                        apply* (@open_tt_rec_type_core t j) end.
+Admitted.
 
 Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) ->
@@ -480,45 +433,46 @@ Proof.
   induction e; intros; simpl in *; inversion H0; f_equal*;
     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
                         apply* (@open_tt_rec_type_core t j) end.
-  (* - apply* open_typlist_rec_type_core. *)
+  - admit.
+    (* apply* open_typlist_rec_type_core. *)
 Admitted.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
-  (* intros e U WF. induction WF; intro k; simpl; *)
-  (*                  f_equal*; try solve [ apply* open_tt_rec_type ]. *)
-  (* - destruct k. *)
-  (*   + eapply open_typlist_rec_type_core. *)
-  (*     2: { *)
-  (*       auto. *)
-  (*     } *)
-  (*     unfold open_typlist_rec. *)
-  (*     rewrite List.map_map. *)
-  (*     apply List.map_ext_in. *)
-  (*     introv Tin. *)
-  (*     apply open_tt_rec_type. *)
-  (*     instantiate (1:=U). *)
-  (*     rewrite* <- open_tt_rec_type. *)
-  (*   + eapply open_typlist_rec_type_core. *)
-  (*     2: { *)
-  (*       instantiate (1:=0). auto. *)
-  (*     } *)
-  (*     unfold open_typlist_rec. *)
-  (*     rewrite List.map_map. *)
-  (*     apply List.map_ext_in. *)
-  (*     introv Tin. *)
-  (*     apply open_tt_rec_type. *)
-  (*     instantiate (1:=U). *)
-  (*     rewrite* <- open_tt_rec_type. *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)). *)
-  (* - unfolds open_te. pick_fresh X. *)
-  (*   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)). *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core v1 0 (trm_fvar x)). *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)). *)
+  intros e U WF. induction WF; intro k; simpl;
+                   f_equal*; try solve [ apply* open_tt_rec_type ].
+  - destruct k.
+    + eapply open_typlist_rec_type_core.
+      2: {
+        auto.
+      }
+      unfold open_typlist_rec.
+      rewrite List.map_map.
+      apply List.map_ext_in.
+      introv Tin.
+      apply open_tt_rec_type.
+      instantiate (1:=U).
+      rewrite* <- open_tt_rec_type.
+    + eapply open_typlist_rec_type_core.
+      2: {
+        instantiate (1:=0). auto.
+      }
+      unfold open_typlist_rec.
+      rewrite List.map_map.
+      apply List.map_ext_in.
+      introv Tin.
+      apply open_tt_rec_type.
+      instantiate (1:=U).
+      rewrite* <- open_tt_rec_type.
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
+  - unfolds open_te. pick_fresh X.
+    apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
+  - unfolds open_ee. pick_fresh x.
+    apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
 Admitted.
 
 (** Substitution for a fresh name is identity. *)
