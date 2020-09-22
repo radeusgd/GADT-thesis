@@ -417,62 +417,116 @@ Qed.
 
 
 (* TODO same as above *)
-Lemma open_typlist_rec_type_core : forall l j Q i P,
-    open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) ->
-    i <> j ->
-    l = open_typlist_rec i P l.
-  induction l; intros; simpl in *; inversion H; f_equal*;
-    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
-                        apply* (@open_tt_rec_type_core t j) end.
+(* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
+(*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
+(*     i <> j -> *)
+(*     l = open_typlist_rec i P l. *)
+(*   induction l; intros; simpl in *; inversion H; f_equal*; *)
+(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
+(*                         apply* (@open_tt_rec_type_core t j) end. *)
+(* Admitted. *)
+
+(* Lemma open_te_rec_type_core : forall e j Q i P, i <> j -> *)
+(*   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) -> *)
+(*   e = open_te_rec i P e. *)
+(* Proof. *)
+(*   induction e; intros; simpl in *; inversion H0; f_equal*; *)
+(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
+(*                         apply* (@open_tt_rec_type_core t j) end. *)
+(*   - admit. *)
+(*     (* apply* open_typlist_rec_type_core. *) *)
+(* Admitted. *)
+
+(* this one describes terms being closed in relation to type-variables, not term-varaibles*)
+Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
+| closed_trm_bvar : forall i k, te_closed_in_surroundings k (trm_bvar i)
+| closed_trm_fvar : forall x k, te_closed_in_surroundings k (trm_fvar x)
+| closed_trm_unit : forall k, te_closed_in_surroundings k (trm_unit)
+| closed_trm_fst : forall e k, te_closed_in_surroundings k e -> te_closed_in_surroundings k (trm_fst e)
+| closed_trm_snd : forall e k, te_closed_in_surroundings k e -> te_closed_in_surroundings k (trm_snd e)
+| closed_trm_tuple : forall e1 e2 k, te_closed_in_surroundings k e1 ->
+                                te_closed_in_surroundings k e2 ->
+                                te_closed_in_surroundings k (trm_tuple e1 e2)
+| closed_trm_abs : forall e T k, te_closed_in_surroundings k e ->
+                            typ_closed_in_surroundings k T ->
+                            te_closed_in_surroundings k (trm_abs T e)
+| closed_trm_app : forall e1 e2 k, te_closed_in_surroundings k e1 ->
+                              te_closed_in_surroundings k e2 ->
+                              te_closed_in_surroundings k (trm_app e1 e2)
+| closed_trm_tabs : forall e k, te_closed_in_surroundings (S k) e ->
+                           te_closed_in_surroundings k (trm_tabs e)
+| closed_trm_tapp : forall e T k, te_closed_in_surroundings k e ->
+                            typ_closed_in_surroundings k T ->
+                            te_closed_in_surroundings k (trm_tapp e T)
+| closed_trm_fix : forall e T k, te_closed_in_surroundings k e ->
+                            typ_closed_in_surroundings k T ->
+                            te_closed_in_surroundings k (trm_fix T e)
+| closed_trm_let : forall e1 e2 k, te_closed_in_surroundings k e1 ->
+                              te_closed_in_surroundings k e2 ->
+                              te_closed_in_surroundings k (trm_let e1 e2)
+| closed_term_constructor : forall Ts N e k,
+    List.Forall (typ_closed_in_surroundings k) Ts ->
+    te_closed_in_surroundings k e ->
+    te_closed_in_surroundings k (trm_constructor Ts N e).
+
+Lemma te_opening_te_adds_one : forall e X k n,
+    te_closed_in_surroundings n (open_te_rec k (typ_fvar X) e) ->
+    te_closed_in_surroundings (max (S n) (S k)) e.
+  induction e; introv Hc; try solve [inversions Hc; constructor*].
 Admitted.
 
-Lemma open_te_rec_type_core : forall e j Q i P, i <> j ->
-  open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) ->
-  e = open_te_rec i P e.
-Proof.
-  induction e; intros; simpl in *; inversion H0; f_equal*;
-    try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t =>
-                        apply* (@open_tt_rec_type_core t j) end.
-  - admit.
-    (* apply* open_typlist_rec_type_core. *)
+Lemma te_opening_ee_preserves : forall e x k n,
+    te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
+    te_closed_in_surroundings n e.
+Admitted.
+
+Lemma term_te_closed : forall e,
+    term e -> te_closed_in_surroundings 0 e.
+  induction 1; try constructor*.
+Admitted.
+
+Lemma te_closed_id : forall e T n k,
+    te_closed_in_surroundings n e ->
+    k >= n ->
+    e = open_te_rec k T e.
 Admitted.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
-  intros e U WF. induction WF; intro k; simpl;
-                   f_equal*; try solve [ apply* open_tt_rec_type ].
-  - destruct k.
-    + eapply open_typlist_rec_type_core.
-      2: {
-        auto.
-      }
-      unfold open_typlist_rec.
-      rewrite List.map_map.
-      apply List.map_ext_in.
-      introv Tin.
-      apply open_tt_rec_type.
-      instantiate (1:=U).
-      rewrite* <- open_tt_rec_type.
-    + eapply open_typlist_rec_type_core.
-      2: {
-        instantiate (1:=0). auto.
-      }
-      unfold open_typlist_rec.
-      rewrite List.map_map.
-      apply List.map_ext_in.
-      introv Tin.
-      apply open_tt_rec_type.
-      instantiate (1:=U).
-      rewrite* <- open_tt_rec_type.
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core e1 0 (trm_fvar x)).
-  - unfolds open_te. pick_fresh X.
-    apply* (@open_te_rec_type_core e1 0 (typ_fvar X)).
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core v1 0 (trm_fvar x)).
-  - unfolds open_ee. pick_fresh x.
-    apply* (@open_te_rec_term_core e2 0 (trm_fvar x)).
+  (* intros e U WF. induction WF; intro k; simpl; *)
+  (*                  f_equal*; try solve [ apply* open_tt_rec_type ]. *)
+  (* - destruct k. *)
+  (*   + eapply open_typlist_rec_type_core. *)
+  (*     2: { *)
+  (*       auto. *)
+  (*     } *)
+  (*     unfold open_typlist_rec. *)
+  (*     rewrite List.map_map. *)
+  (*     apply List.map_ext_in. *)
+  (*     introv Tin. *)
+  (*     apply open_tt_rec_type. *)
+  (*     instantiate (1:=U). *)
+  (*     rewrite* <- open_tt_rec_type. *)
+  (*   + eapply open_typlist_rec_type_core. *)
+  (*     2: { *)
+  (*       instantiate (1:=0). auto. *)
+  (*     } *)
+  (*     unfold open_typlist_rec. *)
+  (*     rewrite List.map_map. *)
+  (*     apply List.map_ext_in. *)
+  (*     introv Tin. *)
+  (*     apply open_tt_rec_type. *)
+  (*     instantiate (1:=U). *)
+  (*     rewrite* <- open_tt_rec_type. *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)). *)
+  (* - unfolds open_te. pick_fresh X. *)
+  (*   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)). *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core v1 0 (trm_fvar x)). *)
+  (* - unfolds open_ee. pick_fresh x. *)
+  (*   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)). *)
 Admitted.
 
 (** Substitution for a fresh name is identity. *)
