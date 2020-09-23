@@ -416,7 +416,6 @@ Proof.
 Qed.
 
 
-(* TODO same as above *)
 (* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
 (*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
 (*     i <> j -> *)
@@ -472,62 +471,77 @@ Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 Lemma te_opening_te_adds_one : forall e X k n,
     te_closed_in_surroundings n (open_te_rec k (typ_fvar X) e) ->
     te_closed_in_surroundings (max (S n) (S k)) e.
-  induction e; introv Hc; try solve [inversions Hc; constructor*].
-Admitted.
+  induction e; introv Hc; inversions Hc;
+    try solve [
+          constructor*
+        | constructor*; apply* opening_adds_one
+        ].
+  - constructor*.
+    rewrite List.Forall_forall in *.
+    intros T Hin.
+    apply* opening_adds_one.
+    apply* H2.
+    unfold open_typlist_rec.
+    apply* List.in_map.
+  - econstructor. apply* IHe.
+Qed.
 
 Lemma te_opening_ee_preserves : forall e x k n,
     te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
     te_closed_in_surroundings n e.
-Admitted.
+  induction e; introv Hc; try solve [inversions Hc; constructor*].
+Qed.
 
 Lemma term_te_closed : forall e,
     term e -> te_closed_in_surroundings 0 e.
-  induction 1; try constructor*.
-Admitted.
+  induction 1; try solve [
+                     constructor*
+                   | match goal with
+                     | H: forall x : var, x \notin ?L ->
+                                     te_closed_in_surroundings 0 (?e1 open_ee_var x)
+                                     |- _ =>
+                       constructor*; try solve [
+                                           pick_fresh X; apply* te_opening_ee_preserves; lets* He: H X
+                                         | apply* type_closed]
+                     end
+                   ].
+  - constructor*.
+    rewrite List.Forall_forall. intros T Hin.
+    apply* type_closed.
+  - constructor*.
+    pick_fresh X.
+    lets* Hopen: te_opening_te_adds_one e1 X 0 0.
+  -  constructor*. apply* type_closed.
+Qed.
 
 Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
     k >= n ->
     e = open_te_rec k T e.
-Admitted.
+  induction e; introv Hc Hk; eauto; inversions Hc; cbn; f_equal;
+    try (match goal with
+         | IH: forall T n k, ?P1 -> ?P2 -> ?e1 = open_te_rec k T ?e1 |- _ => apply* IH
+         end);
+    try apply* closed_id;
+    try lia.
+  unfold open_typlist_rec.
+  rewrite <- List.map_id at 1.
+  apply* List.map_ext_in.
+  intro U.
+  rewrite List.Forall_forall in *.
+  lets* HC: H2 U.
+  lets*: closed_id U T n k.
+Qed.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
 Proof.
-  (* intros e U WF. induction WF; intro k; simpl; *)
-  (*                  f_equal*; try solve [ apply* open_tt_rec_type ]. *)
-  (* - destruct k. *)
-  (*   + eapply open_typlist_rec_type_core. *)
-  (*     2: { *)
-  (*       auto. *)
-  (*     } *)
-  (*     unfold open_typlist_rec. *)
-  (*     rewrite List.map_map. *)
-  (*     apply List.map_ext_in. *)
-  (*     introv Tin. *)
-  (*     apply open_tt_rec_type. *)
-  (*     instantiate (1:=U). *)
-  (*     rewrite* <- open_tt_rec_type. *)
-  (*   + eapply open_typlist_rec_type_core. *)
-  (*     2: { *)
-  (*       instantiate (1:=0). auto. *)
-  (*     } *)
-  (*     unfold open_typlist_rec. *)
-  (*     rewrite List.map_map. *)
-  (*     apply List.map_ext_in. *)
-  (*     introv Tin. *)
-  (*     apply open_tt_rec_type. *)
-  (*     instantiate (1:=U). *)
-  (*     rewrite* <- open_tt_rec_type. *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core e1 0 (trm_fvar x)). *)
-  (* - unfolds open_te. pick_fresh X. *)
-  (*   apply* (@open_te_rec_type_core e1 0 (typ_fvar X)). *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core v1 0 (trm_fvar x)). *)
-  (* - unfolds open_ee. pick_fresh x. *)
-  (*   apply* (@open_te_rec_term_core e2 0 (trm_fvar x)). *)
-Admitted.
+  introv Hterm. intros.
+  lets* Hc: te_closed_id e U 0 k.
+  apply Hc.
+  - apply* term_te_closed.
+  - lia.
+Qed.
 
 (** Substitution for a fresh name is identity. *)
 
