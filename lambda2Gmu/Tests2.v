@@ -1,4 +1,5 @@
 Require Import Definitions.
+Require Import Psatz.
 Require Import TLC.LibLN.
 Require Import TLC.LibEnv.
 
@@ -10,8 +11,8 @@ Ltac fs := exact \{}. (* There must be a better way *)
 
 Axiom Nat : var.
 Definition NatDef := GADT 0 [
-                            GADTconstr 0 typ_unit (typ_gadt [] Nat);
-                            GADTconstr 0 (typ_gadt [] Nat) (typ_gadt [] Nat)
+                            GADTconstr 0 typ_unit [];
+                            GADTconstr 0 (typ_gadt [] Nat) []
                           ].
 
 Ltac ininv :=
@@ -28,21 +29,13 @@ Lemma oknat : okGadt natSigma.
   - intros; repeat ininv.
     + econstructor.
       * intros. destruct Alphas; inversions H; econstructor.
-      * intros. destruct Alphas; inversions H; econstructor.
-        intros.
-        inversion H.
-        auto. auto.
-      * auto.
+      * intros. intuition.
     + econstructor.
       * intros. destruct Alphas; inversions H; econstructor.
         intros.
         inversion H.
         auto. auto.
-      * intros. destruct Alphas; inversions H; econstructor.
-        intros.
-        inversion H.
-        auto. auto.
-      * auto.
+      * intros. intuition.
         Unshelve. fs. fs.
 Qed.
 
@@ -54,11 +47,11 @@ Lemma zero_type : {natSigma, empty} ⊢ zero ∈ typ_gadt [] Nat.
   cbv.
   econstructor; eauto.
   - cbn.
-    instantiate (3:=0).
-    cbn.
-    eauto.
-  - econstructor.
-    econstructor. auto.
+    econstructor; econstructor; apply* oknat.
+  - cbn.
+    instantiate (2:=0).
+    assert (Hz: forall x, x * 0 = 0); try (intros; lia).
+    rewrite* Hz.
   - cbv. eauto.
 Qed.
 
@@ -67,7 +60,9 @@ Definition one := trm_constructor [] (Nat, 1) zero.
 Lemma one_type : {natSigma, empty} ⊢ one ∈ typ_gadt [] Nat.
   cbv.
   econstructor; eauto.
-  - cbn.
+  - cbn. econstructor.
+    + econstructor. econstructor. apply* oknat.
+    + 
     instantiate (3:=0).
     cbn.
     eauto.

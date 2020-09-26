@@ -479,11 +479,10 @@ Inductive GADTConstructorDef : Set :=
   (* a constructor of type ∀(α...). τ → (β...) T)
      arity specifies how many type parameters (α) there are, they are referred to inside the types by DeBruijn indices
      τ is the type of argument (one arg only, use tuples for more; it can refer to α)
-     β are the instantiated type parameters of the returned GADT type (they can refer to α)
-     T is the base GADT type name that is returned by this constructor
-*)
-  GADTconstr (arity : nat) (argtype : typ) (rettype : typ).
-(* TODO maybe rettype could be deconstructed to ensure syntactically it's a type application? or e separate well-formedness Prop could be defined *)
+     β are the instantiated type parameters of the returned GADT type (they can refer to α) - βs are represented by rettypes
+     T is the base GADT type name that is returned by this constructor, it is not included in the constructor definition as it is implicit from where this definition is
+   *)
+  GADTconstr (arity : nat) (argtype : typ) (rettypes : list typ).
 
 Inductive GADTDef : Set :=
   GADT (arity : nat) (constructors : list GADTConstructorDef).
@@ -539,30 +538,33 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
 Definition add_types (E : ctx) (args : list var) :=
   fold_left (fun E T => E & withtyp T) args E.
 
-Inductive okDef : GADTEnv -> GADTName -> GADTConstructorDef -> Prop :=
-  (* TODO are these conditions enough? *)
-| ok_def : forall arity argT retTparams Σ T L retT,
+Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
+(* TODO are these conditions enough? *)
+| ok_constr_def : forall Tarity Carity argT Σ L retTs,
+  (* TODO the L may need to be moved inside the Alphas-props *)
     (forall Alphas,
-        length Alphas = arity ->
+        length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         wft Σ (add_types empty Alphas) (open_tt_many_var argT Alphas)
     ) ->
     (forall Alphas,
-        length Alphas = arity ->
+        length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
-        wft Σ (add_types empty Alphas) (open_tt_many_var retT Alphas)
+        (forall retT,
+            In retT retTs ->
+            wft Σ (add_types empty Alphas) (open_tt_many_var retT Alphas))
     ) ->
-    retT = (typ_gadt retTparams T) ->
     (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
-    okDef Σ T (GADTconstr arity argT retT).
-
+    okConstructorDef Σ Tarity (GADTconstr Carity argT retTs).
 
 Inductive okGadt : GADTEnv -> Prop :=
 | okg_empty : okGadt empty
 | okg_push : forall Σ Defs Name arity,
     okGadt Σ ->
     Name # Σ ->
-    (forall Def, In Def Defs -> okDef (Σ & Name ~ (GADT arity Defs)) Name Def) ->
+    (forall Def,
+        In Def Defs ->
+        okConstructorDef (Σ & Name ~ (GADT arity Defs)) arity Def) ->
     okGadt (Σ & Name ~ GADT arity Defs)
 .
 
@@ -586,13 +588,15 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     binds x (bind_var T) E ->
     okt Σ E ->
     {Σ, E} ⊢ (trm_fvar x) ∈ T
-| typing_cons : forall Σ E Ts Name Ctor e1 Tarity Ctors Carity CargType CretType T',
+| typing_cons : forall Σ E Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
+    {Σ, E} ⊢ e1 ∈ Targ ->
     binds Name (GADT Tarity Ctors) Σ ->
-    nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretType) ->
+    nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
     length Ts = Carity ->
-    {Σ, E} ⊢ e1 ∈ open_tt_many CargType Ts ->
-    T' = open_tt_many CretType Ts ->
-    {Σ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ T'
+    Targ = open_tt_many CargType Ts ->
+    (* alternatively: Tret = open_tt_many (typ_gadt (List.map (fun T => open_tt_many T Ts) CretTypes) Name) Ts -> *)
+    Tret = open_tt_many (typ_gadt CretTypes Name) Ts ->
+    {Σ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
 | typing_abs : forall L Σ E V e1 T1,
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
     {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
