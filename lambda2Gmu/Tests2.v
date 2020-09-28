@@ -60,16 +60,15 @@ Definition one := trm_constructor [] (Nat, 1) zero.
 Lemma one_type : {natSigma, empty} ⊢ one ∈ typ_gadt [] Nat.
   cbv.
   econstructor; eauto.
-  - cbn. econstructor.
+  - cbn. econstructor; eauto.
     + econstructor. econstructor. apply* oknat.
-    + 
-    instantiate (3:=0).
+    + cbn. f_equal.
+    instantiate (2:=0).
     cbn.
     eauto.
-  - econstructor; eauto.
-    + instantiate (2:=0). cbn. eauto.
-    + econstructor. econstructor. auto.
-  - cbv. eauto.
+  - cbn; f_equal.
+    instantiate (2:=0). eauto.
+  - cbn. eauto.
 Qed.
 
 Definition succ := trm_abs (typ_gadt [] Nat) (trm_constructor [] (Nat, 1) (#0)).
@@ -79,14 +78,14 @@ Lemma succ_type : {natSigma, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt
   econstructor.
   intros.
   econstructor; eauto.
-  - cbn. instantiate (3:=0); cbn. eauto.
-  - cbv. case_if.
+  - cbn.
     econstructor; eauto.
     econstructor; eauto.
-    econstructor. apply oknat.
-    econstructor; eauto.
-    intros. inversions H0.
-  - cbn. auto.
+    + econstructor; eauto using oknat.
+    + econstructor; eauto.
+      intros. contradiction.
+  - instantiate (2:=0); cbn. eauto.
+  - cbv. auto.
 Qed.
 
 (** Gathering free names already used in the proofs *)
@@ -116,7 +115,7 @@ Definition const := trm_abs NAT (trm_abs NAT (#1)).
 Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
   cbv.
   econstructor. introv xiL.
-  econstructor. cbn. case_if.
+  econstructor. cbn.
   introv xiL0.
   Unshelve. 3: { exact \{x}. }
   econstructor.
@@ -146,12 +145,9 @@ Lemma const_test_evals : evals const_test one.
   cbv.
   eapply eval_step.
   - repeat econstructor; intuition.
-    case_if. econstructor.
   - eapply eval_step.
     + repeat econstructor; intuition.
-      case_if. econstructor; cbv; try econstructor; intuition.
-      econstructor.
-    + case_if. cbv.
+    + cbv.
       apply eval_finish.
       Unshelve. fs. fs. fs.
 Qed.
