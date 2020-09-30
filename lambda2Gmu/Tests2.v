@@ -20,6 +20,11 @@ Ltac ininv :=
   | H: List.In _ _ |- _ =>
     inversions H
   end.
+Ltac destruct_const_len_list :=
+  repeat (match goal with
+          | H: length ?L = ?n |- _ =>
+            destruct L; inversions H
+          end).
 
 Definition natSigma := (empty & Nat ~ NatDef).
 
@@ -28,13 +33,14 @@ Lemma oknat : okGadt natSigma.
   - constructor.
   - intros; repeat ininv.
     + econstructor.
-      * intros. destruct Alphas; inversions H; econstructor.
+      * intros.
+        destruct_const_len_list. cbn. econstructor.
       * intros. intuition.
     + econstructor.
-      * intros. destruct Alphas; inversions H; econstructor.
+      * intros.
+        destruct_const_len_list; cbn; econstructor; eauto.
         intros.
-        inversion H.
-        auto. auto.
+        contradiction.
       * intros. intuition.
         Unshelve. fs. fs.
 Qed.

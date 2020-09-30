@@ -37,10 +37,9 @@ Lemma oklist : okGadt listSigma.
       * intros. destruct_const_len_list.
         econstructor.
       * intros. destruct_const_len_list.
-        inversions H1.
-        -- econstructor.
-           cbn. eauto.
-        -- inversions H.
+        repeat ininv.
+        econstructor.
+        cbn. eauto.
     + econstructor.
       * intros. destruct_const_len_list. econstructor; cbn; econstructor; eauto.
         introv Hin.

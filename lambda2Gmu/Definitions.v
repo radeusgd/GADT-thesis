@@ -538,16 +538,27 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
 Definition add_types (E : ctx) (args : list var) :=
   fold_left (fun E T => E & withtyp T) args E.
 
+(* Inductive DistinctFset : fset var -> Prop := *)
+(* | distinct_empty : DistinctFset \{} *)
+(* | distinct_append : forall h t, h \notin t -> DistinctFset t -> DistinctFset (\{ h } \u t). *)
+
+(* Definition DistinctList (L : list var) : Prop := DistinctFset (from_list L). *)
+Inductive DistinctList : list var -> Prop :=
+| distinctive_empty : DistinctList []
+| distinctive_cons : forall h t, (List.In h t -> False) -> DistinctList (h :: t).
+
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
 | ok_constr_def : forall Tarity Carity argT Σ L retTs,
   (* TODO the L may need to be moved inside the Alphas-props *)
     (forall Alphas,
+        DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         wft Σ (add_types empty Alphas) (open_tt_many_var argT Alphas)
     ) ->
     (forall Alphas,
+        DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         (forall retT,
