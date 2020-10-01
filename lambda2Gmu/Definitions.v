@@ -545,7 +545,7 @@ Definition add_types (E : ctx) (args : list var) :=
 (* Definition DistinctList (L : list var) : Prop := DistinctFset (from_list L). *)
 Inductive DistinctList : list var -> Prop :=
 | distinctive_empty : DistinctList []
-| distinctive_cons : forall h t, (List.In h t -> False) -> DistinctList (h :: t).
+| distinctive_cons : forall h t, (~ List.In h t) -> DistinctList (h :: t).
 
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
