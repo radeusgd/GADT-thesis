@@ -605,6 +605,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
     length Ts = Carity ->
     Targ = open_tt_many CargType Ts ->
+    (forall T, In T Ts -> wft Σ E T) ->
     (* alternatively: Tret = open_tt_many (typ_gadt (List.map (fun T => open_tt_many T Ts) CretTypes) Name) Ts -> *)
     Tret = open_tt_many (typ_gadt CretTypes Name) Ts ->
     {Σ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
