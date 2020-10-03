@@ -25,7 +25,8 @@ Ltac gather_vars :=
   let C := gather_vars_with (fun x : trm => fv_trm x) in
   let E := gather_vars_with (fun x : typ => fv_typ x) in
   let F := gather_vars_with (fun x : ctx => dom x) in
-  constr:(A \u B \u C \u E \u F).
+  let G := gather_vars_with (fun x : list var => from_list x) in
+  constr:(A \u B \u C \u E \u F \u G).
 
 (** "pick_fresh x" tactic create a fresh variable with name x *)
 
@@ -1065,6 +1066,87 @@ Proof.
 Qed.
 Hint Resolve okt_is_ok.
 
+Lemma aa : forall N M (X Y : typ) sig,
+    sig = (N ~ X & M ~ Y) ->
+    (forall m z, binds m z sig -> (z = X \/ z = Y)).
+  intros; subst.
+  apply binds_push_inv in H0.
+  destruct H0.
+  - intuition.
+  - destruct H.
+    apply binds_single_inv in H0.
+    intuition.
+Qed.
+
+Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType CretTypes,
+    binds Name (GADT Tarity Ctors) Σ ->
+    List.nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
+    okGadt Σ ->
+    okConstructorDef Σ Tarity (GADTconstr Carity CargType CretTypes).
+  introv Hbind Hlist HokG.
+  inversion HokG as [Hok HokG'].
+  apply* HokG'.
+  apply* List.nth_error_In.
+Qed.
+
+(* Lemma wft_open_gadt : forall , *)
+(*   forall T : typ, List.In T Ts -> wft Σ E T *)
+(*   Hokt : okt Σ E *)
+(*   Hterm : term e1 *)
+(*   Hwft : wft Σ E (open_tt_many CargType Ts) *)
+(*   HG : okGadt Σ *)
+(*        wft Σ (add_types empty Alphas) (open_tt_many_var retT Alphas) -> *)
+(*   wft Σ E (open_tt_many (typ_gadt CretTypes Name) Ts) *)
+
+Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
+    open_tt_many OTs (typ_gadt GTs N) =
+    typ_gadt (List.map (open_tt_many OTs) GTs) N.
+Admitted.
+
+Require Import TLC.LibFset TLC.LibList.
+(* different Fset impl? taken from repo: *)
+Lemma from_list_spec : forall A (x : A) L,
+  x \in from_list L -> LibList.mem x L.
+Proof using.
+  unfold from_list. induction L; rew_listx.
+  - rewrite in_empty. auto.
+  - rewrite in_union, in_singleton.
+    intro HH.
+    destruct HH; eauto.
+Qed.
+
+Lemma from_list_spec2 : forall A (x : A) L,
+    List.In x L -> x \in from_list L.
+Proof using.
+  unfold from_list. induction L; rew_listx.
+  - rewrite in_empty. auto.
+  - rewrite in_union, in_singleton.
+    intro HH.
+    destruct HH; eauto.
+Qed.
+
+Lemma exist_alphas : forall L len,
+    exists (Alphas : list var),
+      length Alphas = len /\ DistinctList Alphas /\ forall A, List.In A Alphas -> A \notin L.
+  induction len.
+  - exists (@List.nil var). splits*.
+    + econstructor.
+    + intuition.
+  - inversion IHlen as [Alphas' [Hlen [Hdis Hnot]]].
+    let x := gather_vars in idtac x.
+    pick_fresh A.
+    exists (List.cons A Alphas').
+    splits*.
+    + cbn. eauto.
+    + econstructor.
+      intro.
+      assert (Hnot2: A \notin from_list Alphas'); eauto.
+      apply Hnot2.
+      apply* from_list_spec2.
+    + introv AiA.
+      inversions AiA; eauto.
+Qed.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -1079,16 +1161,23 @@ Proof.
                    ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
-  - destruct IHtyping as [Hokt [Hterm Hwft]].
+  - subst. destruct IHtyping as [Hokt [Hterm Hwft]].
     subst.
     splits*.
-    + constructor*.
-      introv Tin.
-      unfold open_tt_many in *.
+    lets* HG: okt_implies_okgadt Hokt.
+    lets* GADTC: gadt_constructor_ok HG.
+    inversions GADTC.
+    rewrite rewrite_open_tt_many_gadt.
+    econstructor; eauto.
+    + introv TiL.
+      lets* TiL2: TiL. apply List.in_map_iff in TiL2.
+      inversion TiL2 as [CretT [Heq CiC]]. subst.
+      lets* EAlphas: exist_alphas (length Ts).
+      inversion EAlphas as [Alphas [A1 [A2 A3]]].
+      lets* HH: H10 Alphas CiC.
       admit.
-    + assert (okGadt Σ) as Hgadt.
-      * apply* okt_implies_okgadt.
-      * admit.
+      admit.
+    + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
     specializes IH y. destructs~ IH.

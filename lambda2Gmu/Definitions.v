@@ -346,11 +346,11 @@ Notation "T 'open_tt_var' X" := (open_tt T (typ_fvar X)) (at level 67).
 Notation "t 'open_te_var' X" := (open_te t (typ_fvar X)) (at level 67).
 Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
 
-Definition open_tt_many (T : typ) (args : list typ) := fold_left open_tt args T.
-Definition open_tt_many_var (T : typ) (args : list var) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T.
+Definition open_tt_many (args : list typ) (T : typ) := fold_left open_tt args T.
+Definition open_tt_many_var (args : list var) (T : typ) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T.
 
 
-Definition open_te_many (e : trm) (args : list typ) := fold_left open_te args e.
+Definition open_te_many (args : list typ) (e : trm) := fold_left open_te args e.
 (* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
 (*   match args with *)
 (*   | [] => T *)
@@ -375,11 +375,11 @@ Lemma open_typlist_test : open_typlist_rec 0 (typ_unit) [typ_bvar 0; typ_tuple (
 Qed.
 
 Axiom T : var.
-Lemma open_tt_many_test : open_tt_many (typ_tuple (typ_bvar 0) (typ_bvar 1)) [typ_unit; typ_fvar T] = typ_tuple typ_unit (typ_fvar T).
+Lemma open_tt_many_test : open_tt_many [typ_unit; typ_fvar T] (typ_tuple (typ_bvar 0) (typ_bvar 1)) = typ_tuple typ_unit (typ_fvar T).
   cbv. auto.
 Qed.
 
-Lemma open_te_many_test : open_te_many (trm_abs (typ_tuple (typ_bvar 0) (typ_bvar 1)) (trm_bvar 0)) [typ_unit; typ_fvar T] = (trm_abs (typ_tuple typ_unit (typ_fvar T)) (trm_bvar 0)).
+Lemma open_te_many_test : open_te_many [typ_unit; typ_fvar T] (trm_abs (typ_tuple (typ_bvar 0) (typ_bvar 1)) (trm_bvar 0)) = (trm_abs (typ_tuple typ_unit (typ_fvar T)) (trm_bvar 0)).
   cbv. auto.
 Qed.
 
@@ -534,7 +534,6 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
     wft Σ E (typ_gadt Tparams Name)
 .
 
-
 Definition add_types (E : ctx) (args : list var) :=
   fold_left (fun E T => E & withtyp T) args E.
 
@@ -550,34 +549,43 @@ Inductive DistinctList : list var -> Prop :=
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
 | ok_constr_def : forall Tarity Carity argT Σ L retTs,
-  (* TODO the L may need to be moved inside the Alphas-props *)
-    (forall Alphas,
+    (* TODO the L may need to be moved inside the Alphas-props *)
+    length retTs = Tarity ->
+    (forall Alphas E,
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
-        wft Σ (add_types empty Alphas) (open_tt_many_var argT Alphas)
+        wft Σ (add_types E Alphas) (open_tt_many_var Alphas argT)
     ) ->
-    (forall Alphas,
+    (forall Alphas E,
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         (forall retT,
             In retT retTs ->
-            wft Σ (add_types empty Alphas) (open_tt_many_var retT Alphas))
+            wft Σ (add_types E Alphas) (open_tt_many_var Alphas retT))
     ) ->
     (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
     okConstructorDef Σ Tarity (GADTconstr Carity argT retTs).
 
-Inductive okGadt : GADTEnv -> Prop :=
-| okg_empty : okGadt empty
-| okg_push : forall Σ Defs Name arity,
-    okGadt Σ ->
-    Name # Σ ->
+Definition okGadt (Σ : GADTEnv) : Prop :=
+  ok Σ /\
+  forall Name Arity Defs,
+    binds Name (GADT Arity Defs) Σ ->
     (forall Def,
         In Def Defs ->
-        okConstructorDef (Σ & Name ~ (GADT arity Defs)) arity Def) ->
-    okGadt (Σ & Name ~ GADT arity Defs)
-.
+        okConstructorDef Σ Arity Def).
+
+(* Inductive okGadt : GADTEnv -> Prop := *)
+(* | okg_empty : okGadt empty *)
+(* | okg_push : forall Σ Defs Name arity, *)
+(*     okGadt Σ -> *)
+(*     Name # Σ -> *)
+(*     (forall Def, *)
+(*         In Def Defs -> *)
+(*         okConstructorDef (Σ & Name ~ (GADT arity Defs)) arity Def) -> *)
+(*     okGadt (Σ & Name ~ GADT arity Defs) *)
+(* . *)
 
 Inductive okt : GADTEnv -> ctx -> Prop :=
 | okt_empty : forall Σ,
@@ -587,6 +595,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
     okt Σ E -> X # E -> okt Σ (E & withtyp X)
 | okt_typ : forall Σ E x T,
     okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & x ~: T).
+
 
 Reserved Notation "{ Σ , E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
@@ -604,10 +613,10 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     binds Name (GADT Tarity Ctors) Σ ->
     nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
     length Ts = Carity ->
-    Targ = open_tt_many CargType Ts ->
+    Targ = open_tt_many Ts CargType ->
     (forall T, In T Ts -> wft Σ E T) ->
     (* alternatively: Tret = open_tt_many (typ_gadt (List.map (fun T => open_tt_many T Ts) CretTypes) Name) Ts -> *)
-    Tret = open_tt_many (typ_gadt CretTypes Name) Ts ->
+    Tret = open_tt_many Ts (typ_gadt CretTypes Name) ->
     {Σ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
 | typing_abs : forall L Σ E V e1 T1,
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
