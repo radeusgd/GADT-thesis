@@ -405,6 +405,114 @@ Proof.
   rewrite* subst_tt_fresh. simpl. case_var*.
 Qed.
 
+(* possibly move to Defs *)
+Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
+  match (Xs, Us) with
+  (* | ((List.cons X Xt), (List.cons U Ut)) => subst_tt X U (subst_tt_many Xt Ut T) *)
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_tt_many Xt Ut (subst_tt X U T)
+  | _ => T
+  end.
+
+(* Lemma subst_tt_open_tt_many : forall Xs T U X, *)
+(*     type U -> *)
+(*     X \notin fv_typ T -> *)
+(*     open_tt_many_var Xs (open_tt T U) = subst_tt X U (open_tt_many_var Xs (T open_tt_var X)). *)
+(*   induction Xs as [ | Xh Xt]; introv Ht Hfv. *)
+(*   - cbn. apply* subst_tt_intro. *)
+(*   - unfold open_tt_many_var. *)
+(*     cbn. *)
+(*     fold (open_tt_many_var Xt (open_tt T U open_tt_var Xh)). *)
+(*     fold (open_tt_many_var Xt ((T open_tt_var X) open_tt_var Xh)). *)
+(*     assert (Heq: open_tt T U open_tt_var Xh = (T open_tt_var X) open_tt_var Xh). *)
+(*     + admit. *)
+(*     + rewrite <- Heq. apply IHXt. *)
+(*     lets*: IHXt  *)
+(* Admitted. *)
+
+Hint Immediate subset_refl subset_empty_l subset_union_weak_l subset_union_weak_r subset_union_2 union_comm union_assoc union_same.
+
+Lemma subset_union_3 : forall T (A B C : fset T),
+    (A \u B) \u C = (A \u C) \u (B \u C).
+  intros.
+  assert (CuC: C \u C = C); try apply union_same.
+  rewrite <- CuC at 1.
+  rewrite <- union_assoc.
+  rewrite union_comm.
+  rewrite union_assoc.
+  rewrite <- union_assoc.
+  rewrite union_comm.
+  assert (CuA: C \u A = A \u C); try apply union_comm.
+  rewrite* CuA.
+Qed.
+
+
+Lemma fold_map : forall A B bs G F a0,
+    List.fold_left (fun (a : A) (b : B) => G a b) (List.map F bs) a0 =
+    List.fold_left (fun (a : A) (b : B) => G a (F b)) bs a0.
+  induction bs; intros.
+  - cbn. eauto.
+  - cbn.
+    apply* IHbs.
+Qed.
+
+Lemma fv_smaller : forall T U k,
+    fv_typ (open_tt_rec k U T) \c (fv_typ T \u fv_typ U).
+  induction T using typ_ind'; introv;
+    try solve [
+          unfold open_tt_rec; crush_compare
+        | cbn; eauto
+        | cbn; fold (open_tt T1 U); fold (open_tt T2 U);
+          rewrite subset_union_3;
+          apply* subset_union_2
+        ].
+  cbn.
+  rewrite List.Forall_forall in *.
+  rewrite fold_map.
+  admit.
+Admitted.
+(* WIP *)
+Lemma subst_tt_intro_many : forall Xs T Us,
+    length Xs = length Us ->
+    (forall X, List.In X Xs -> X \notin fv_typ T) ->
+    (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
+    (forall U, List.In U Us -> type U) ->
+    open_tt_many Us T = subst_tt_many Xs Us (open_tt_many_var Xs T).
+  induction Xs as [| Xh Xt]; introv Hleneq HXfv HXUfv XUtyp.
+  - destruct Us.
+    + cbv. trivial.
+    + inversions Hleneq.
+  - destruct Us as [| Uh Ut].
+    + inversions Hleneq.
+    + cbn.
+      fold (open_tt_many_var Xt (T open_tt_var Xh)).
+      assert ((subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh))) = open_tt_many_var Xt (open_tt T Uh)).
+      * admit.
+      * rewrite H.
+        apply* IHXt.
+        -- introv XiX.
+           
+        -- introv HX HU. apply* HXUfv; cbn; right*.
+        -- introv HU. apply* XUtyp. cbn; right*.
+        
+      fold (open_tt_many Ut (open_tt T Uh)).
+      fold (open_tt_many_var Xt (T open_tt_var Xh)).
+      assert (open_tt_many Ut T = subst_tt_many Xt Ut (open_tt_many_var Xt T)).
+      apply* IHXt.
+      * admit.
+      * admit.
+      * rewrite H.
+        fold (open_tt_many_var Xt T).
+
+      rapply IHXt.
+      assert (Hsub: open_tt_many_var Xs (open_tt T t) = subst_tt a t (open_tt_many_var Xs (T open_tt_var a))).
+      * admit.
+      * rewrite <- Hsub.
+        apply* IHXs.
+        -- introv Hin.
+           admit.
+        -- introv Hin. apply* XUtyp. cbn. right*.
+Admitted.
+
 
 (* ********************************************************************** *)
 (** ** Properties of type substitution in terms *)
@@ -1147,6 +1255,11 @@ Lemma exist_alphas : forall L len,
       inversions AiA; eauto.
 Qed.
 
+Lemma length_equality : forall A (a : list A),
+    length a = Datatypes.length a.
+  induction a; cbn; eauto.
+Qed.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -1175,8 +1288,9 @@ Proof.
       lets* EAlphas: exist_alphas (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
       lets* HH: H10 Alphas CiC.
-      admit.
-      admit.
+      * repeat rewrite <- length_equality.
+        eauto.
+      * admit.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
@@ -1201,7 +1315,9 @@ Proof.
     + apply* term_tabs. intros. apply* IH1.
     + apply_fresh* wft_all as Y.
       add_notin Y L. lets HF: IH1 Y Fr1. destruct* HF.
-  - subst. splits*. destruct IHtyping as [? [? Hwft]]. inversions Hwft.
+  - subst. splits*. destruct IHtyping as [? [? Hwft]].
+    copyTo Hwft Hwft2.
+    inversions Hwft.
     match goal with
     | IH: forall X : var, X \notin L -> ?conclusion |- _ =>
       pick_fresh Y; add_notin Y L; lets HW: IH Y Fr0

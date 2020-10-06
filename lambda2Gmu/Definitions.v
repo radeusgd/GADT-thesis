@@ -82,7 +82,7 @@ Section typ_ind'.
       P t1 -> P t2 -> P (typ_arrow t1 t2).
   Hypothesis typ_all_case : forall (t1 : typ),
       P t1 -> P (typ_all t1).
-  Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName),
+ Hypothesis typ_gadt_case : forall (ls : list typ) (n : GADTName),
       Forall P ls -> P (typ_gadt ls n).
 
   Fixpoint typ_ind' (t : typ) : P t :=
@@ -346,9 +346,16 @@ Notation "T 'open_tt_var' X" := (open_tt T (typ_fvar X)) (at level 67).
 Notation "t 'open_te_var' X" := (open_te t (typ_fvar X)) (at level 67).
 Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
 
-Definition open_tt_many (args : list typ) (T : typ) := fold_left open_tt args T.
-Definition open_tt_many_var (args : list var) (T : typ) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T.
+(* Definition open_tt_many (args : list typ) (T : typ) := fold_left open_tt args T. *)
+(* Definition open_tt_many_var (args : list var) (T : typ) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T. *)
 
+Fixpoint open_tt_many (args : list typ) (T : typ) :=
+  match args with
+  | ha :: ta => open_tt_many ta (open_tt T ha)
+  | [] => T
+  end.
+
+Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ_fvar args) T.
 
 Definition open_te_many (args : list typ) (e : trm) := fold_left open_te args e.
 (* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
@@ -375,6 +382,9 @@ Lemma open_typlist_test : open_typlist_rec 0 (typ_unit) [typ_bvar 0; typ_tuple (
 Qed.
 
 Axiom T : var.
+(* Lemma open_tt_many_test : open_tt_many [typ_unit; typ_fvar T] (typ_tuple (typ_bvar 0) (typ_bvar 1)) = typ_tuple typ_unit (typ_fvar T). *)
+(*   cbv. auto. *)
+(* Qed. *)
 Lemma open_tt_many_test : open_tt_many [typ_unit; typ_fvar T] (typ_tuple (typ_bvar 0) (typ_bvar 1)) = typ_tuple typ_unit (typ_fvar T).
   cbv. auto.
 Qed.
