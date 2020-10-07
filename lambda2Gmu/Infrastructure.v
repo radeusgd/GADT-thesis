@@ -455,6 +455,22 @@ Lemma fold_map : forall A B bs G F a0,
     apply* IHbs.
 Qed.
 
+Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset var) (z' : fset var),
+    List.fold_left (fun (a : fset var) (b : B) => a \u P b) ls (z \u z')
+    =
+    List.fold_left (fun (a : fset var) (b : B) => a \u P b) ls z \u z'.
+  induction ls; introv.
+  - cbn. eauto.
+  - cbn.
+    assert (Horder: ((z \u z') \u P a) = ((z \u P a) \u z')).
+    + rewrite union_comm.
+      rewrite union_assoc.
+      rewrite (union_comm (P a) z).
+      eauto.
+    + rewrite Horder.
+      apply* IHls.
+Qed.
+
 Lemma fv_smaller : forall T U k,
     fv_typ (open_tt_rec k U T) \c (fv_typ T \u fv_typ U).
   induction T using typ_ind'; introv;
@@ -468,9 +484,50 @@ Lemma fv_smaller : forall T U k,
   cbn.
   rewrite List.Forall_forall in *.
   rewrite fold_map.
-  admit.
-Admitted.
-(* WIP *)
+  induction ls.
+  - cbn. eauto.
+  - cbn.
+    rewrite union_fold_detach.
+    rewrite union_fold_detach.
+    rewrite subset_union_3.
+    apply subset_union_2.
+    + apply* IHls.
+      introv xils.
+      apply* H. cbn; right*.
+    + apply* H. constructor*.
+Qed.
+
+(* Lemma subst_open_commutes_opens_ALOT : forall Ys Zs X U T, *)
+(*     X \notin fv_typ T -> *)
+(*     type U -> *)
+(*   subst_tt X U (open_tt_many_var Ys (T open_tt_var Xh)) = *)
+(*   open_tt_many_var Xt (open_tt T Uh). *)
+
+
+Lemma subst_open_commutes_opens_2 : forall Xt Xh Uh T,
+    Xh \notin fv_typ T ->
+    type Uh ->
+  subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh)) =
+  open_tt_many_var Xt (subst_tt Xh Uh (T open_tt_var Xh)).
+  induction Xt; introv Hfv HUtyp.
+  - cbn. eauto.
+  - cbn.
+    fold (open_tt_many_var Xt (subst_tt Xh Uh (T open_tt_var Xh) open_tt_var a)).
+    rewrite <- subst_tt_open_tt_var.
+    lets* IH': IHXt Xh Uh (T open_tt_var Xh).
+Abort.
+
+Lemma subst_open_commutes_opens : forall Xt Xh Uh T,
+    Xh \notin fv_typ T ->
+    type Uh ->
+  subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh)) =
+  open_tt_many_var Xt (open_tt T Uh).
+  induction Xt; introv Hfv HUtyp.
+  - cbn. symmetry. apply* subst_tt_intro.
+  - cbn.
+    fold (open_tt_many_var Xt (open_tt T Uh open_tt_var a)).
+    fold (open_tt_many_var Xt ((T open_tt_var Xh) open_tt_var a)).
+Abort.
 Lemma subst_tt_intro_many : forall Xs T Us,
     length Xs = length Us ->
     (forall X, List.In X Xs -> X \notin fv_typ T) ->
@@ -490,7 +547,7 @@ Lemma subst_tt_intro_many : forall Xs T Us,
       * rewrite H.
         apply* IHXt.
         -- introv XiX.
-           
+           admit.
         -- introv HX HU. apply* HXUfv; cbn; right*.
         -- introv HU. apply* XUtyp. cbn; right*.
         
