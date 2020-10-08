@@ -29,10 +29,32 @@ Ltac destruct_const_len_list :=
             destruct L; inversions H
           end).
 
+(* TODO merge this into a separate lib *)
+Ltac solve_bind_core :=
+  lazymatch goal with
+  | |- binds ?Var ?What (?Left & ?Right) =>
+    match goal with
+    | |- binds Var What (Left & Var ~ ?Sth) =>
+      apply* binds_concat_right; apply* binds_single_eq
+    | _ => apply* binds_concat_left
+    end
+  end.
+
+Ltac solve_dom :=
+  simpl_dom; notin_solve; try (apply notin_singleton).
+Ltac solve_bind :=
+  (repeat solve_bind_core); try (solve_dom).
+
 Lemma oklist : okGadt listSigma.
+  unfold listSigma. unfold ListDef.
   constructor*.
-  - constructor.
+  introv Hbinds Hin.
+  apply binds_concat_inv in Hbinds.
+  (* TODO fix binds *)
+  - constructor*.
   - intros; repeat ininv.
+  .
+    econstructor.
     + econstructor.
       * intros. destruct_const_len_list.
         econstructor.

@@ -14,6 +14,14 @@ Hint Constructors type term wft typing red value.
 
 Hint Resolve typing_var typing_app typing_tapp.
 
+Ltac listin :=
+  match goal with
+  | |- List.In ?e (?h :: ?t) =>
+    cbn; solve [right* | left*]
+  end.
+
+Hint Extern 4 (List.In _ (_ :: _)) => (cbn; solve [left* | right*]) : listin.
+
 Lemma value_is_term : forall e, value e -> term e.
   induction e; intro Hv; inversion Hv; eauto.
 Qed.
@@ -312,15 +320,6 @@ Proof.
   - lia.
 Qed.
 
-(** Substitution for a fresh name is identity. *)
-
-
-  (* H0 : Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls \{} *)
-  (* x : typ *)
-  (* Lin : List.In x ls *)
-  (* ============================ *)
-  (* Z \notin fv_typ x *)
-
 Lemma fv_fold_base : forall x ls base,
     x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
     x \notin base.
@@ -413,22 +412,6 @@ Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
   | _ => T
   end.
 
-(* Lemma subst_tt_open_tt_many : forall Xs T U X, *)
-(*     type U -> *)
-(*     X \notin fv_typ T -> *)
-(*     open_tt_many_var Xs (open_tt T U) = subst_tt X U (open_tt_many_var Xs (T open_tt_var X)). *)
-(*   induction Xs as [ | Xh Xt]; introv Ht Hfv. *)
-(*   - cbn. apply* subst_tt_intro. *)
-(*   - unfold open_tt_many_var. *)
-(*     cbn. *)
-(*     fold (open_tt_many_var Xt (open_tt T U open_tt_var Xh)). *)
-(*     fold (open_tt_many_var Xt ((T open_tt_var X) open_tt_var Xh)). *)
-(*     assert (Heq: open_tt T U open_tt_var Xh = (T open_tt_var X) open_tt_var Xh). *)
-(*     + admit. *)
-(*     + rewrite <- Heq. apply IHXt. *)
-(*     lets*: IHXt  *)
-(* Admitted. *)
-
 Hint Immediate subset_refl subset_empty_l subset_union_weak_l subset_union_weak_r subset_union_2 union_comm union_assoc union_same.
 
 Lemma subset_union_3 : forall T (A B C : fset T),
@@ -497,44 +480,64 @@ Lemma fv_smaller : forall T U k,
     + apply* H. constructor*.
 Qed.
 
-(* Lemma subst_open_commutes_opens_ALOT : forall Ys Zs X U T, *)
-(*     X \notin fv_typ T -> *)
-(*     type U -> *)
-(*   subst_tt X U (open_tt_many_var Ys (T open_tt_var Xh)) = *)
-(*   open_tt_many_var Xt (open_tt T Uh). *)
-
-
-Lemma subst_open_commutes_opens_2 : forall Xt Xh Uh T,
-    Xh \notin fv_typ T ->
-    type Uh ->
-  subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh)) =
-  open_tt_many_var Xt (subst_tt Xh Uh (T open_tt_var Xh)).
-  induction Xt; introv Hfv HUtyp.
+Lemma subst_commutes_with_unrelated_opens : forall Xs T V Y,
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    subst_tt Y V (open_tt_many_var Xs T) =
+    (open_tt_many_var Xs (subst_tt Y V T)).
+  induction Xs as [| Xh Xt]; introv Hneq Htyp.
   - cbn. eauto.
   - cbn.
-    fold (open_tt_many_var Xt (subst_tt Xh Uh (T open_tt_var Xh) open_tt_var a)).
-    rewrite <- subst_tt_open_tt_var.
-    lets* IH': IHXt Xh Uh (T open_tt_var Xh).
-Abort.
+    fold (open_tt_many_var Xt (T open_tt_var Xh)).
+    fold (open_tt_many_var Xt (subst_tt Y V T open_tt_var Xh)).
+    rewrite* subst_tt_open_tt_var; eauto with listin.
+Qed.
 
-Lemma subst_open_commutes_opens : forall Xt Xh Uh T,
-    Xh \notin fv_typ T ->
-    type Uh ->
-  subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh)) =
-  open_tt_many_var Xt (open_tt T Uh).
-  induction Xt; introv Hfv HUtyp.
-  - cbn. symmetry. apply* subst_tt_intro.
+Lemma subst_intro_commutes_opens : forall Xs T Y V,
+    Y \notin fv_typ T ->
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    open_tt_many_var Xs (open_tt T V) =
+    subst_tt Y V (open_tt_many_var Xs (T open_tt_var Y)).
+  induction Xs as [| Xh Xt]; introv Hfv Hneq Htyp.
+  - cbn. apply* subst_tt_intro.
   - cbn.
-    fold (open_tt_many_var Xt (open_tt T Uh open_tt_var a)).
-    fold (open_tt_many_var Xt ((T open_tt_var Xh) open_tt_var a)).
-Abort.
+    fold (open_tt_many_var Xt (open_tt T V open_tt_var Xh)).
+    fold (open_tt_many_var Xt ((T open_tt_var Y) open_tt_var Xh)).
+    rewrite* subst_commutes_with_unrelated_opens.
+    f_equal.
+    rewrite* <- subst_tt_open_tt_var.
+    + rewrite* <- subst_tt_intro.
+    + apply* Hneq. cbn; eauto.
+    + eauto with listin.
+Qed.
+
+Lemma sublist_tail_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
+  (forall U : A, List.In U (Uh :: Ut) -> P U) ->
+  forall U : A, List.In U Ut -> P U.
+  introv Hbigger Hin.
+  apply* Hbigger.
+  cbn.
+  eauto.
+Qed.
+
+Lemma sublist_head_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
+  (forall U : A, List.In U (Uh :: Ut) -> P U) ->
+  P Uh.
+  introv Hbigger.
+  apply* Hbigger.
+  cbn.
+  eauto.
+Qed.
+
 Lemma subst_tt_intro_many : forall Xs T Us,
     length Xs = length Us ->
+    DistinctList Xs ->
     (forall X, List.In X Xs -> X \notin fv_typ T) ->
     (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
     (forall U, List.In U Us -> type U) ->
     open_tt_many Us T = subst_tt_many Xs Us (open_tt_many_var Xs T).
-  induction Xs as [| Xh Xt]; introv Hleneq HXfv HXUfv XUtyp.
+  induction Xs as [| Xh Xt]; introv Hleneq Hdistinct HXfv HXUfv XUtyp.
   - destruct Us.
     + cbv. trivial.
     + inversions Hleneq.
@@ -542,34 +545,22 @@ Lemma subst_tt_intro_many : forall Xs T Us,
     + inversions Hleneq.
     + cbn.
       fold (open_tt_many_var Xt (T open_tt_var Xh)).
-      assert ((subst_tt Xh Uh (open_tt_many_var Xt (T open_tt_var Xh))) = open_tt_many_var Xt (open_tt T Uh)).
-      * admit.
-      * rewrite H.
-        apply* IHXt.
-        -- introv XiX.
-           admit.
-        -- introv HX HU. apply* HXUfv; cbn; right*.
-        -- introv HU. apply* XUtyp. cbn; right*.
-        
-      fold (open_tt_many Ut (open_tt T Uh)).
-      fold (open_tt_many_var Xt (T open_tt_var Xh)).
-      assert (open_tt_many Ut T = subst_tt_many Xt Ut (open_tt_many_var Xt T)).
-      apply* IHXt.
-      * admit.
-      * admit.
-      * rewrite H.
-        fold (open_tt_many_var Xt T).
-
-      rapply IHXt.
-      assert (Hsub: open_tt_many_var Xs (open_tt T t) = subst_tt a t (open_tt_many_var Xs (T open_tt_var a))).
-      * admit.
-      * rewrite <- Hsub.
-        apply* IHXs.
-        -- introv Hin.
-           admit.
-        -- introv Hin. apply* XUtyp. cbn. right*.
-Admitted.
-
+      rewrite* <- subst_intro_commutes_opens; eauto with listin.
+      * apply* IHXt; try solve [intuition; eauto with listin].
+        -- inversion* Hdistinct.
+        -- introv XiXt.
+           lets* Hless: fv_smaller T Uh 0.
+           fold (open_tt T Uh) in Hless.
+           intro Hin.
+           apply Hless in Hin.
+           rewrite in_union in Hin.
+           destruct Hin as [Hin | Hin].
+           ++ apply* HXfv. listin.
+           ++ apply* HXUfv; listin.
+      * inversions Hdistinct.
+        introv XiXt.
+        intro. subst. contradiction.
+Qed.
 
 (* ********************************************************************** *)
 (** ** Properties of type substitution in terms *)
@@ -1303,7 +1294,7 @@ Lemma exist_alphas : forall L len,
     exists (List.cons A Alphas').
     splits*.
     + cbn. eauto.
-    + econstructor.
+    + constructor*.
       intro.
       assert (Hnot2: A \notin from_list Alphas'); eauto.
       apply Hnot2.

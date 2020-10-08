@@ -122,6 +122,7 @@ Proof.
   introv HTyp. gen F.
   inductions HTyp; introv Ok; eauto.
   - apply* typing_var. apply* binds_weaken.
+  - admit.
   - renameIHs IH IHeq.
     apply_fresh* typing_abs as x.
     forwards~ K: (IH x).
@@ -152,7 +153,7 @@ Proof.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-Qed.
+Admitted.
 
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
 
