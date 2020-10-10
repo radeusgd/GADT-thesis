@@ -26,6 +26,13 @@ Lemma value_is_term : forall e, value e -> term e.
   induction e; intro Hv; inversion Hv; eauto.
 Qed.
 
+
+Fixpoint fv_typs (Ts : list typ) : fset var :=
+  match Ts with
+  | [] => \{}
+  | List.cons Th Tts => fv_typ Th \u fv_typs Tts
+  end.
+
 (** Gathering free names already used in the proofs *)
 Ltac gather_vars :=
   let A := gather_vars_with (fun x : vars => x) in
@@ -34,7 +41,8 @@ Ltac gather_vars :=
   let E := gather_vars_with (fun x : typ => fv_typ x) in
   let F := gather_vars_with (fun x : ctx => dom x) in
   let G := gather_vars_with (fun x : list var => from_list x) in
-  constr:(A \u B \u C \u E \u F \u G).
+  let H := gather_vars_with (fun x : list typ => fv_typs x) in
+  constr:(A \u B \u C \u E \u F \u G \u H).
 
 (** "pick_fresh x" tactic create a fresh variable with name x *)
 
@@ -1222,17 +1230,17 @@ Proof.
 Qed.
 Hint Resolve okt_is_ok.
 
-Lemma aa : forall N M (X Y : typ) sig,
-    sig = (N ~ X & M ~ Y) ->
-    (forall m z, binds m z sig -> (z = X \/ z = Y)).
-  intros; subst.
-  apply binds_push_inv in H0.
-  destruct H0.
-  - intuition.
-  - destruct H.
-    apply binds_single_inv in H0.
-    intuition.
-Qed.
+(* Lemma aa : forall N M (X Y : typ) sig, *)
+(*     sig = (N ~ X & M ~ Y) -> *)
+(*     (forall m z, binds m z sig -> (z = X \/ z = Y)). *)
+(*   intros; subst. *)
+(*   apply binds_push_inv in H0. *)
+(*   destruct H0. *)
+(*   - intuition. *)
+(*   - destruct H. *)
+(*     apply binds_single_inv in H0. *)
+(*     intuition. *)
+(* Qed. *)
 
 Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType CretTypes,
     binds Name (GADT Tarity Ctors) Σ ->
@@ -1317,14 +1325,75 @@ Lemma length_equality : forall A (a : list A),
 Qed.
 
 
-Lemma wft_open_many : forall E Σ Alphas Ts U,
-  length Alphas = length Ts ->
-  DistinctList Alphas ->
-  (forall T : typ, List.In T Ts -> wft Σ E T) ->
-  wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) ->
-  wft Σ E (open_tt_many Ts U).
+Fixpoint subst_tb_many (As : list var) (Us : list typ) (b : bind) : bind :=
+  match (As, Us) with
+  | (List.cons Ah At, List.cons Uh Ut) => subst_tb_many At Ut (subst_tb Ah Uh b)
+  | _ => b
+  end.
+
+Lemma wft_subst_tb_many : forall Σ (F E : env bind) (As : list var) (Us : list typ) (T : typ),
+    length As = length Us ->
+      wft Σ (add_types E As & F) T ->
+      (forall U, List.In U Us -> wft Σ E U) ->
+      ok (E & EnvOps.map (subst_tb_many As Us) F) ->
+      wft Σ (E & EnvOps.map (subst_tb_many As Us) F) (subst_tt_many As Us T).
   (* TODO *)
 Admitted.
+
+Lemma wft_open_many : forall E Σ Alphas Ts U,
+    ok E ->
+    length Alphas = length Ts ->
+    DistinctList Alphas ->
+    (forall A : var, List.In A Alphas -> A \notin fv_typ U) ->
+    (forall (A : var) (T : typ), List.In A Alphas -> List.In T Ts -> A \notin fv_typ T) ->
+    (forall T : typ, List.In T Ts -> wft Σ E T) ->
+    wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) ->
+    wft Σ E (open_tt_many Ts U).
+  introv Hok Hlen Hdistinct FU FT WT WU.
+  rewrite* (@subst_tt_intro_many Alphas).
+  - lets Htb: (@wft_subst_tb_many Σ EnvOps.empty).
+    specializes_vars Htb.
+    clean_empty Htb.
+    apply* Htb.
+  - repeat rewrite <- length_equality. eauto.
+Qed.
+
+(* Lemma wft_open_many : forall E Σ Alphas Ts U, *)
+(*   length Alphas = length Ts -> *)
+(*   DistinctList Alphas -> *)
+(*   (forall T : typ, List.In T Ts -> wft Σ E T) -> *)
+(*   wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) -> *)
+(*   wft Σ E (open_tt_many Ts U). *)
+(*   induction Alphas as [| Ah At]; *)
+(*     introv Hlen Hdistinct HwftT Hopened; *)
+(*     destruct Ts; try solve [inversion Hlen]. *)
+(*   - cbn in *. eauto. *)
+(*   - cbn. *)
+(*     cbn in Hopened. *)
+(*     fold (open_tt_many_var At (U open_tt_var Ah)) in Hopened. *)
+(*     apply* IHAt. *)
+(*     + inversion* Hdistinct. *)
+(*     + eauto with listin. *)
+(*     + admit. *)
+(* Admitted. *)
+
+Lemma fv_typs_notin : forall Ts T X,
+    List.In T Ts ->
+    X \notin fv_typs Ts ->
+    X \notin fv_typ T.
+  introv Hin Hall.
+  induction Ts as [| Th Tt].
+  - inversion Hin.
+  - lets* Hem: (classicT (Th = T)).
+    destruct Hem.
+    + subst.
+      cbn in Hall.
+      eauto.
+    + inversion Hin.
+      * contradiction.
+      * apply* IHTt.
+        cbn in Hall. eauto.
+Qed.
 
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
@@ -1351,12 +1420,18 @@ Proof.
     + introv TiL.
       lets* TiL2: TiL. apply List.in_map_iff in TiL2.
       inversion TiL2 as [CretT [Heq CiC]]. subst.
-      lets* EAlphas: exist_alphas (length Ts).
+      let usedvars := gather_vars in
+      lets* EAlphas: exist_alphas (usedvars) (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
       lets* HH: H10 Alphas CiC.
       * repeat rewrite <- length_equality.
         eauto.
       * apply* wft_open_many.
+        -- intros.
+           lets* FA: A3 A.
+        -- intros.
+           lets* FA: A3 A.
+           apply* fv_typs_notin.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
@@ -1416,7 +1491,7 @@ Proof.
     + econstructor. auto.
       introv HxiL. lets HF: IH1 x HxiL. destruct* HF.
     + apply_folding E wft_strengthen.
-Admitted.
+Qed.
 
 (** The value relation is restricted to well-formed objects. *)
 
