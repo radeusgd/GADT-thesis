@@ -1257,7 +1257,15 @@ Qed.
 Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
     open_tt_many OTs (typ_gadt GTs N) =
     typ_gadt (List.map (open_tt_many OTs) GTs) N.
-Admitted.
+  induction OTs as [| OTh OTt]; introv.
+  - cbn. rewrite* List.map_id.
+  - cbn.
+    assert (List.map (fun T : typ => open_tt_many OTt (open_tt T OTh)) GTs = List.map (open_tt_many OTt) (List.map (open_tt_rec 0 OTh) GTs)).
+    + rewrite List.map_map.
+      apply* List.map_ext.
+    + rewrite H.
+      apply IHOTt.
+Qed.
 
 Require Import TLC.LibFset TLC.LibList.
 (* different Fset impl? taken from repo: *)
@@ -1308,6 +1316,16 @@ Lemma length_equality : forall A (a : list A),
   induction a; cbn; eauto.
 Qed.
 
+
+Lemma wft_open_many : forall E Σ Alphas Ts U,
+  length Alphas = length Ts ->
+  DistinctList Alphas ->
+  (forall T : typ, List.In T Ts -> wft Σ E T) ->
+  wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) ->
+  wft Σ E (open_tt_many Ts U).
+  (* TODO *)
+Admitted.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -1338,7 +1356,7 @@ Proof.
       lets* HH: H10 Alphas CiC.
       * repeat rewrite <- length_equality.
         eauto.
-      * admit.
+      * apply* wft_open_many.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
