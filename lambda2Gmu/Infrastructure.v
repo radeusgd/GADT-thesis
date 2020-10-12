@@ -1331,13 +1331,64 @@ Fixpoint subst_tb_many (As : list var) (Us : list typ) (b : bind) : bind :=
   | _ => b
   end.
 
-Lemma wft_subst_tb_many : forall Σ (F E : env bind) (As : list var) (Us : list typ) (T : typ),
+(* stdlib lemma but in TLC version *)
+Lemma map_map : forall (A B C:Type)(f:A->B)(g:B->C) l,
+    map g (map f l) = map (fun x => g (f x)) l.
+  induction l; cbn; f_equal; eauto.
+Qed.
+
+Lemma wft_weaken_many : forall Σ As E F T,
+    wft Σ (E & F) T ->
+    ok ((add_types E As) & F) ->
+    wft Σ ((add_types E As) & F) T.
+  induction As; introv HwT Hok.
+  - cbn. eauto.
+  - cbn.
+    rewrite <- concat_assoc.
+    apply* IHAs.
+    rewrite concat_assoc.
+    apply* wft_weaken.
+    admit.
+    admit.
+Admitted.
+
+Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) (F E : env bind) (T : typ),
     length As = length Us ->
       wft Σ (add_types E As & F) T ->
       (forall U, List.In U Us -> wft Σ E U) ->
       ok (E & EnvOps.map (subst_tb_many As Us) F) ->
       wft Σ (E & EnvOps.map (subst_tb_many As Us) F) (subst_tt_many As Us T).
-  (* TODO *)
+  induction As as [|Ah Ats];
+    introv Hlen HwftT WwftUs Hok;
+    destruct Us as [|Uh Uts]; inversion Hlen.
+  - cbn.
+    rewrite map_def.
+    rewrite LibList.map_id_ext.
+    + cbn in HwftT. eauto.
+    + intro x.
+      destruct x. cbn. eauto.
+  - cbn.
+    assert (Hsimpl:
+        EnvOps.map (fun b : bind => subst_tb_many Ats Uts (subst_tb Ah Uh b)) F =
+        EnvOps.map (subst_tb_many Ats Uts) (EnvOps.map (subst_tb Ah Uh) F)
+      ).
+    + rewrite map_def.
+      rewrite map_map.
+      cbn.
+      eauto.
+    + rewrite Hsimpl.
+      apply* IHAts.
+      * cbn in HwftT.
+        apply* wft_subst_tb.
+        lets* W: wft_weaken_many Σ Ats E (@EnvOps.empty bind) Uh.
+        clean_empty W.
+        apply* W.
+        -- eauto with listin.
+        -- admit.
+        -- admit.
+      * eauto with listin.
+      * cbn in Hok.
+        rewrite Hsimpl in Hok. eauto.
 Admitted.
 
 Lemma wft_open_many : forall E Σ Alphas Ts U,
@@ -1351,7 +1402,7 @@ Lemma wft_open_many : forall E Σ Alphas Ts U,
     wft Σ E (open_tt_many Ts U).
   introv Hok Hlen Hdistinct FU FT WT WU.
   rewrite* (@subst_tt_intro_many Alphas).
-  - lets Htb: (@wft_subst_tb_many Σ EnvOps.empty).
+  - lets Htb: (@wft_subst_tb_many Σ Alphas Ts EnvOps.empty).
     specializes_vars Htb.
     clean_empty Htb.
     apply* Htb.

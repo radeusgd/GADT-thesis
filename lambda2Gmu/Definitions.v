@@ -547,7 +547,7 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
 Fixpoint add_types (E : ctx) (args : list var) :=
   match args with
   | [] => E
-  | h :: t => add_types (E & withtyp T) t
+  | Th :: Tts => (add_types E Tts & withtyp Th)
   end.
 
 (* Inductive DistinctFset : fset var -> Prop := *)
