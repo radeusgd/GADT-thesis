@@ -1305,7 +1305,6 @@ Lemma exist_alphas : forall L len,
     + econstructor.
     + intuition.
   - inversion IHlen as [Alphas' [Hlen [Hdis Hnot]]].
-    let x := gather_vars in idtac x.
     pick_fresh A.
     exists (List.cons A Alphas').
     splits*.
@@ -1337,72 +1336,160 @@ Lemma map_map : forall (A B C:Type)(f:A->B)(g:B->C) l,
   induction l; cbn; f_equal; eauto.
 Qed.
 
-Lemma wft_weaken_many : forall Σ As E F T,
-    wft Σ (E & F) T ->
-    ok ((add_types E As) & F) ->
-    wft Σ ((add_types E As) & F) T.
-  induction As; introv HwT Hok.
+Lemma adding_free_is_ok : forall A E F,
+    ok (E & F) ->
+    A # E ->
+    A # F ->
+    ok (E & (withtyp A) & F)%env.
+  induction F using env_ind; introv Hok HE HF.
+  - rewrite concat_empty_r.
+    constructor*.
+  - rewrite concat_assoc.
+    rewrite concat_assoc in Hok.
+    apply ok_push_inv in Hok.
+    econstructor.
+    + apply* IHF.
+    + simpl_dom.
+      rewrite notin_union.
+      rewrite notin_union.
+      split*.
+Qed.
+
+Lemma adding_free_is_ok_many : forall As E F,
+    ok (E & F) ->
+    DistinctList As ->
+    (forall A, List.In A As -> A \notin dom E) ->
+    (forall A, List.In A As -> A \notin dom F) ->
+    ok (add_types E As & F).
+  induction As as [| Ah Ats]; introv Hok HD HE HF.
   - cbn. eauto.
   - cbn.
     rewrite <- concat_assoc.
-    apply* IHAs.
-    rewrite concat_assoc.
-    apply* wft_weaken.
-    admit.
-    admit.
-Admitted.
+    apply IHAts; eauto with listin.
+    + rewrite concat_assoc.
+      apply adding_free_is_ok; eauto with listin.
+    + inversion* HD.
+    + introv Hin.
+      simpl_dom.
+      rewrite notin_union.
+      split.
+      * apply* notin_singleton.
+        inversions HD.
+        intro; subst. contradiction.
+      * eauto with listin.
+Qed.
 
-Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) (F E : env bind) (T : typ),
+Lemma wft_weaken_many : forall Σ As E F T,
+    ok (E & F) ->
+    wft Σ (E & F) T ->
+    (* ok ((add_types E As) & F) -> *)
+    (forall A, List.In A As -> A \notin dom E) ->
+    (forall A, List.In A As -> A \notin dom F) ->
+    DistinctList As ->
+    wft Σ ((add_types E As) & F) T.
+  induction As; introv Hok HwT HE HF HAs.
+  - cbn. eauto.
+  - cbn.
+    rewrite <- concat_assoc.
+    apply* IHAs; try eauto with listin.
+    + rewrite concat_assoc.
+      eapply adding_free_is_ok; eauto with listin.
+    + rewrite concat_assoc.
+      apply* wft_weaken.
+      eapply adding_free_is_ok; eauto with listin.
+    + introv Hin.
+      simpl_dom.
+      rewrite notin_union.
+      split.
+      * apply* notin_singleton.
+        inversions HAs.
+        intro; subst. contradiction.
+      * eauto with listin.
+    + inversion* HAs.
+Qed.
+
+Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) (E : env bind) (T : typ),
     length As = length Us ->
-      wft Σ (add_types E As & F) T ->
+      wft Σ (add_types E As) T ->
       (forall U, List.In U Us -> wft Σ E U) ->
-      ok (E & EnvOps.map (subst_tb_many As Us) F) ->
-      wft Σ (E & EnvOps.map (subst_tb_many As Us) F) (subst_tt_many As Us T).
+      (forall A, List.In A As -> A \notin dom E) ->
+      DistinctList As ->
+      ok E ->
+      wft Σ E (subst_tt_many As Us T).
   induction As as [|Ah Ats];
-    introv Hlen HwftT WwftUs Hok;
+    introv Hlen HwftT WwftUs HE HD Hok;
     destruct Us as [|Uh Uts]; inversion Hlen.
   - cbn.
-    rewrite map_def.
-    rewrite LibList.map_id_ext.
-    + cbn in HwftT. eauto.
-    + intro x.
-      destruct x. cbn. eauto.
-  - cbn.
-    assert (Hsimpl:
-        EnvOps.map (fun b : bind => subst_tb_many Ats Uts (subst_tb Ah Uh b)) F =
-        EnvOps.map (subst_tb_many Ats Uts) (EnvOps.map (subst_tb Ah Uh) F)
-      ).
-    + rewrite map_def.
-      rewrite map_map.
-      cbn.
-      eauto.
-    + rewrite Hsimpl.
-      apply* IHAts.
-      * cbn in HwftT.
-        apply* wft_subst_tb.
-        lets* W: wft_weaken_many Σ Ats E (@EnvOps.empty bind) Uh.
+    cbn in HwftT. eauto.
+  - cbn. inversions HD.
+    apply IHAts; eauto with listin.
+    + cbn in HwftT.
+      lets* HS: wft_subst_tb Σ (@EnvOps.empty bind).
+      specializes_vars HS.
+      clean_empty HS.
+      apply* HS.
+      * lets* W: wft_weaken_many Σ Ats E (@EnvOps.empty bind) Uh.
         clean_empty W.
-        apply* W.
-        -- eauto with listin.
-        -- admit.
-        -- admit.
-      * eauto with listin.
-      * cbn in Hok.
-        rewrite Hsimpl in Hok. eauto.
-Admitted.
+        apply W; eauto with listin.
+      * lets* OK: adding_free_is_ok_many Ats E (@EnvOps.empty bind).
+        clean_empty OK.
+        apply OK; eauto with listin.
+Qed.
+
+(* Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) (F E : env bind) (T : typ), *)
+(*     length As = length Us -> *)
+(*       wft Σ (add_types E As & F) T -> *)
+(*       (forall U, List.In U Us -> wft Σ E U) -> *)
+(*       (forall A, List.In A As -> A \notin dom E) -> *)
+(*       (forall A, List.In A As -> A \notin dom F) -> *)
+(*       DistinctList As -> *)
+(*       ok (E & EnvOps.map (subst_tb_many As Us) F) -> *)
+(*       wft Σ (E & EnvOps.map (subst_tb_many As Us) F) (subst_tt_many As Us T). *)
+(*   induction As as [|Ah Ats]; *)
+(*     introv Hlen HwftT WwftUs HE HF HD Hok; *)
+(*     destruct Us as [|Uh Uts]; inversion Hlen. *)
+(*   - cbn. *)
+(*     rewrite map_def. *)
+(*     rewrite LibList.map_id_ext. *)
+(*     + cbn in HwftT. eauto. *)
+(*     + intro x. *)
+(*       destruct x. cbn. eauto. *)
+(*   - cbn. *)
+(*     assert (Hsimpl: *)
+(*         EnvOps.map (fun b : bind => subst_tb_many Ats Uts (subst_tb Ah Uh b)) F = *)
+(*         EnvOps.map (subst_tb_many Ats Uts) (EnvOps.map (subst_tb Ah Uh) F) *)
+(*       ). *)
+(*     + rewrite map_def. *)
+(*       rewrite map_map. *)
+(*       cbn. *)
+(*       eauto. *)
+(*     + rewrite Hsimpl. *)
+(*       apply* IHAts. *)
+(*       * cbn in HwftT. *)
+(*         apply* wft_subst_tb. *)
+(*         -- lets* W: wft_weaken_many Σ Ats E (@EnvOps.empty bind) Uh. *)
+(*            clean_empty W. *)
+(*            apply* W; eauto with listin. *)
+(*            inversion* HD. *)
+(*         -- f *)
+(*       * eauto with listin. *)
+(*       * cbn in Hok. *)
+(*         rewrite Hsimpl in Hok. eauto. *)
+(* Admitted. *)
 
 Lemma wft_open_many : forall E Σ Alphas Ts U,
     ok E ->
     length Alphas = length Ts ->
     DistinctList Alphas ->
+    (forall A : var, List.In A Alphas -> A \notin dom E) ->
     (forall A : var, List.In A Alphas -> A \notin fv_typ U) ->
     (forall (A : var) (T : typ), List.In A Alphas -> List.In T Ts -> A \notin fv_typ T) ->
     (forall T : typ, List.In T Ts -> wft Σ E T) ->
     wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) ->
     wft Σ E (open_tt_many Ts U).
-  introv Hok Hlen Hdistinct FU FT WT WU.
+  introv Hok Hlen Hdistinct FE FU FT WT WU.
   rewrite* (@subst_tt_intro_many Alphas).
-  - lets Htb: (@wft_subst_tb_many Σ Alphas Ts EnvOps.empty).
+  - lets Htb: (@wft_subst_tb_many Σ Alphas Ts).
     specializes_vars Htb.
     clean_empty Htb.
     apply* Htb.
@@ -1477,12 +1564,9 @@ Proof.
       lets* HH: H10 Alphas CiC.
       * repeat rewrite <- length_equality.
         eauto.
-      * apply* wft_open_many.
-        -- intros.
-           lets* FA: A3 A.
-        -- intros.
-           lets* FA: A3 A.
-           apply* fv_typs_notin.
+      * apply* wft_open_many;
+          intros; lets* FA: A3 A.
+        apply* fv_typs_notin.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
