@@ -1,21 +1,11 @@
-Require Import Definitions.
-Require Import TLC.LibLN.
-Require Import Infrastructure.
-
-Notation "@ n" := (typ_bvar n) (at level 42).
-Notation "# n" := (trm_bvar n) (at level 42).
+Require Import TestCommon.
 
 Definition id := trm_tabs (trm_abs (@0) (#0)).
 Definition id_typ := typ_all (@0 ==> @0).
-Inductive evals : trm -> trm -> Prop :=
-| eval_step : forall a b c, a --> b -> evals b c -> evals a c
-| eval_finish : forall a, evals a a.
-
 
 Ltac simpl_op := cbn; try case_if; auto.
 (* Ltac solve_simple_type := repeat ((* let L := gather_vars in try apply typing_abs with L; *) intros; econstructor; eauto; cbn; try case_if; eauto). *)
 Ltac crush_simple_type := repeat (cbv; (try case_if); econstructor; eauto).
-Ltac fs := exact \{}. (* There must be a better way *)
 
 Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
   econstructor.
@@ -27,8 +17,9 @@ Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
     econstructor. cbn. intros.
     econstructor. eauto. constructor*.
     repeat constructor*.
-  Unshelve.
-  fs. fs.
+    intros.
+    binds_inv.
+    Unshelve. fs. fs.
 Qed.
 
 Lemma well_formed_id :
@@ -53,9 +44,13 @@ Lemma id_app_types : {empty, empty} ⊢ id_app ∈ typ_unit.
   econstructor; repeat econstructor; cbn; try case_if; swap 1 2.
   - instantiate (1 := (@0 ==> @0)).
     simpl_op.
+    repeat (intros; econstructor); simpl_op.
+    + intros; binds_inv.
+    + eauto.
+  - intros; binds_inv.
   - crush_simple_type.
     Unshelve.
-    fs.
+    fs. fs.
 Qed.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
@@ -70,9 +65,12 @@ Lemma let_id_app_types : {empty, empty} ⊢ let_id_app ∈ typ_unit.
   unfold let_id_app.
   econstructor.
   - eapply well_typed_id.
-  - crush_simple_type.
+  - repeat (intros; econstructor); simpl_op; intros; try binds_inv.
+    + solve_bind.
+    + cbn. f_equal.
     Unshelve.
     fs. fs.
+    fs.
 Qed.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
@@ -88,8 +86,10 @@ Lemma loop_type : {empty, empty} ⊢ loop ∈ (typ_unit ==> typ_unit).
   econstructor; intros; econstructor; cbn; repeat case_if; econstructor; swap 2 3.
   - econstructor.
   - repeat constructor*.
+    intros; binds_inv.
   - intros. econstructor; cbn; econstructor.
   - repeat constructor*.
+    intros; binds_inv.
     Unshelve. fs. fs.
 Qed.
 
@@ -99,6 +99,7 @@ Lemma divergent_type : {empty, empty} ⊢ divergent ∈ typ_unit.
   econstructor; swap 1 2.
   - apply loop_type.
   - repeat econstructor.
+    intros; binds_inv.
 Qed.
 
 Lemma divergent_diverges : evals divergent divergent.

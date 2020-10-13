@@ -4,7 +4,7 @@ Require Import TLC.LibLN.
 Require Import TLC.LibEnv.
 
 (* TODO merge prelude with Tests.v *)
-
+(*
 Notation "@ n" := (typ_bvar n) (at level 42).
 Notation "# n" := (trm_bvar n) (at level 42).
 Ltac fs := exact \{}. (* There must be a better way *)
@@ -77,3 +77,4 @@ Qed.
 Definition nil T := trm_constructor [T] (List, 0) trm_unit.
 Definition cons T h t := trm_constructor [T] (List, 1) (trm_tuple h t).
 
+*)

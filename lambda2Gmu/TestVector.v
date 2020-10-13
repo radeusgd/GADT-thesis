@@ -1,8 +1,4 @@
-Require Import Definitions.
-Require Import Infrastructure.
-Require Import Psatz.
-Require Import TLC.LibLN.
-Require Import TLC.LibEnv.
+Require Import TestCommon.
 
 (*
 
@@ -52,12 +48,6 @@ another showcase of GADT abilities will be a typesafe zip function that only all
   def zip[A,B,N](va: Vector[A,N])(vb: Vector[B,N]): Vector[(A,B), N]
 *)
 
-(* TODO merge prelude with Tests.v *)
-
-Notation "@ n" := (typ_bvar n) (at level 42).
-Notation "# n" := (trm_bvar n) (at level 42).
-Ltac fs := exact \{}. (* There must be a better way *)
-
 (* type level natural numbers *)
 Axiom Zero : var.
 Axiom Succ : var.
@@ -79,81 +69,51 @@ Definition sigma :=
   & Succ ~ GADT 1 []
   & Vector ~ VectorDef.
 
-Ltac ininv :=
-  match goal with
-  | H: List.In _ _ |- _ =>
-    inversions H
-  end.
-
-Ltac destruct_const_len_list :=
-  repeat (match goal with
-          | H: length ?L = ?n |- _ =>
-            destruct L; inversions H
-          end).
-
-Ltac solve_dom :=
-  simpl_dom; notin_solve; try (apply notin_singleton; lets*: all_distinct).
-
-Ltac distinct2 :=
-  match goal with
-  | H1: DistinctList ?L |- _ =>
-    inversions H1;
-    match goal with
-    | H2: ~ List.In ?v ?L1 |- _ =>
-      cbn in H2; eauto
-    end
-  end.
-
-Ltac solve_bind_core :=
-  lazymatch goal with
-  | |- binds ?Var ?What (?Left & ?Right) =>
-    match goal with
-    | |- binds Var What (Left & Var ~ ?Sth) =>
-      apply* binds_concat_right; apply* binds_single_eq
-    | _ => apply* binds_concat_left
-    end
-  end.
-
-Ltac solve_bind :=
-  (repeat solve_bind_core); try (solve_dom).
-
 Lemma oksigma : okGadt sigma.
+  unfold sigma.
   constructor*.
-  - repeat constructor*; try (introv Hfalse; inversions Hfalse).
-    solve_dom.
-  - solve_dom.
-  - intros; repeat ininv.
+  - repeat constructor*; try (introv Hfalse; inversions Hfalse);
+      solve_dom all_distinct.
+  - intros.
+    binds_inv; inversions EQ; repeat ininv.
     + econstructor.
       * intros. destruct_const_len_list.
         econstructor.
       * intros. destruct_const_len_list.
         repeat ininv.
         -- econstructor.
-           cbn. eauto.
-        -- econstructor.
+      * intros.
+        destruct_const_len_list.
+        repeat ininv.
+        -- cbn. econstructor. solve_bind.
+        -- cbn. econstructor.
            ++ cbn; contradiction.
-           ++ solve_bind.
+           ++ solve_bind; solve_dom all_distinct.
            ++ cbn; eauto.
     + econstructor.
       * intros. destruct_const_len_list. econstructor; cbn; econstructor; eauto.
-        -- solve_bind. distinct2.
-        -- intros.
-           repeat ininv.
-           ++ econstructor. solve_bind.
-              distinct2.
-           ++ econstructor.
-              solve_bind.
       * intros. destruct_const_len_list.
         repeat ininv.
         -- cbn. econstructor.
            solve_bind; distinct2.
-        -- cbn.
-           econstructor.
-           ++ intros; repeat ininv.
-              econstructor. solve_bind.
-           ++ solve_bind.
-           ++ cbn. eauto.
-        Unshelve. fs. fs.
+           ++ econstructor; solve_bind; cbn; eauto.
+              intros.
+              inversions H0.
+              ** econstructor. solve_bind.
+              ** inversions H2.
+                 --- econstructor. solve_bind.
+                     solve_dom all_distinct.
+                     distinct2.
+                 --- contradiction.
+      * intros. destruct_const_len_list.
+        cbn. repeat ininv.
+        -- econstructor. solve_bind.
+        -- cbn. econstructor; cbn; solve_bind; eauto.
+           ++ intros.
+              inversions H0.
+              ** econstructor. solve_bind. solve_dom all_distinct. distinct2.
+              ** contradiction.
+           ++ solve_dom all_distinct.
 Qed.
 
 Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
@@ -169,11 +129,16 @@ Lemma nil_type : {sigma, empty} ⊢ (trm_tabs (nil (@0))) ∈ typ_all (typ_gadt 
       subst; try econstructor; contradiction.
   - introv xiL.
     repeat (try apply oksigma; econstructor); cbn.
-    + solve_dom.
+    + solve_dom all_distinct.
     + solve_bind.
     + cbv.
       f_equal.
     + cbn. auto.
+    + intros.
+      (* some of these should get automated... *)
+      inversions H.
+      * econstructor. solve_bind.
+      * contradiction.
       Unshelve. fs.
 Qed.
 
@@ -226,7 +191,7 @@ Lemma cons_type : {sigma, empty} ⊢ (trm_tabs (trm_tabs (trm_abs (@1) (trm_abs 
                 | econstructor; solve_bind; rewrite notin_eqv in *; eauto
                 ]
             ].
-      Unshelve. fs. fs. fs. fs. fs. fs. fs. fs.
+      Unshelve. fs. fs. fs. fs. fs. fs. fs.
 Qed.
 
 Definition GZ := typ_gadt [] Zero.
@@ -241,6 +206,19 @@ Lemma uvec2_type : {sigma, empty} ⊢ uvec2 ∈ typ_gadt [typ_unit; GS (GS GZ)] 
     cbn. f_equal.
   }
   - cbv.
-    repeat ((try apply oksigma); eauto; econstructor).
+    repeat ((try apply oksigma); eauto; econstructor);
+      intros; repeat ininv; econstructor.
+    + intros; contradiction.
+    + solve_bind; solve_dom all_distinct.
+    + cbn; trivial.
+  - intros. repeat ininv.
+    + econstructor.
+    + econstructor.
+      * intros; repeat ininv; econstructor.
+        -- intros; contradiction.
+        -- solve_bind; solve_dom all_distinct.
+        -- cbn; trivial.
+      * solve_bind; solve_dom all_distinct.
+      * cbn; trivial.
   - cbv. f_equal.
 Qed.

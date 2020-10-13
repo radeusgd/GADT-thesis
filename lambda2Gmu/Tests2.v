@@ -1,13 +1,4 @@
-Require Import Definitions.
-Require Import Psatz.
-Require Import TLC.LibLN.
-Require Import TLC.LibEnv.
-
-(* TODO merge with Tests.v *)
-
-Notation "@ n" := (typ_bvar n) (at level 42).
-Notation "# n" := (trm_bvar n) (at level 42).
-Ltac fs := exact \{}. (* There must be a better way *)
+Require Import TestCommon.
 
 Axiom Nat : var.
 Definition NatDef := GADT 0 [
@@ -15,34 +6,27 @@ Definition NatDef := GADT 0 [
                             GADTconstr 0 (typ_gadt [] Nat) []
                           ].
 
-Ltac ininv :=
-  match goal with
-  | H: List.In _ _ |- _ =>
-    inversions H
-  end.
-Ltac destruct_const_len_list :=
-  repeat (match goal with
-          | H: length ?L = ?n |- _ =>
-            destruct L; inversions H
-          end).
-
 Definition natSigma := (empty & Nat ~ NatDef).
 
 Lemma oknat : okGadt natSigma.
+  unfold natSigma; unfold NatDef.
   constructor*.
-  - constructor.
-  - intros; repeat ininv.
+  - intros.
+    binds_inv.
+    inversions EQ.
+    repeat ininv.
     + econstructor.
+      * cbn. eauto.
       * intros.
         destruct_const_len_list. cbn. econstructor.
       * intros. intuition.
     + econstructor.
+      * cbn; eauto.
       * intros.
         destruct_const_len_list; cbn; econstructor; eauto.
         intros.
         contradiction.
       * intros. intuition.
-        Unshelve. fs. fs.
 Qed.
 
 Hint Immediate oknat.
@@ -58,7 +42,8 @@ Lemma zero_type : {natSigma, empty} ⊢ zero ∈ typ_gadt [] Nat.
     instantiate (2:=0).
     assert (Hz: forall x, x * 0 = 0); try (intros; lia).
     rewrite* Hz.
-  - cbv. eauto.
+  - cbv. intros. contradiction.
+  - cbv. f_equal.
 Qed.
 
 Require Import Psatz.
@@ -69,12 +54,14 @@ Lemma one_type : {natSigma, empty} ⊢ one ∈ typ_gadt [] Nat.
   - cbn. econstructor; eauto.
     + econstructor. econstructor. apply* oknat.
     + cbn. f_equal.
-    instantiate (2:=0).
-    cbn.
-    eauto.
+      instantiate (2:=0).
+      cbn.
+      eauto.
+    + intros; contradiction.
   - cbn; f_equal.
     instantiate (2:=0). eauto.
-  - cbn. eauto.
+  - intros; contradiction.
+  - cbv; f_equal.
 Qed.
 
 Definition succ := trm_abs (typ_gadt [] Nat) (trm_constructor [] (Nat, 1) (#0)).
@@ -91,31 +78,10 @@ Lemma succ_type : {natSigma, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt
     + econstructor; eauto.
       intros. contradiction.
   - instantiate (2:=0); cbn. eauto.
+  - intros. contradiction.
   - cbv. auto.
 Qed.
 
-(** Gathering free names already used in the proofs *)
-Ltac gather_vars :=
-  let A := gather_vars_with (fun x : vars => x) in
-  let B := gather_vars_with (fun x : var => \{x}) in
-  let C := gather_vars_with (fun x : trm => fv_trm x) in
-  let E := gather_vars_with (fun x : typ => fv_typ x) in
-  let F := gather_vars_with (fun x : ctx => dom x) in
-  constr:(A \u B \u C \u E \u F).
-
-(** "pick_fresh x" tactic create a fresh variable with name x *)
-
-Ltac pick_fresh x :=
-  let L := gather_vars in (pick_fresh_gen L x).
-
-(** "apply_fresh T as x" is used to apply inductive rule which
-   use an universal quantification over a cofinite set *)
-
-Tactic Notation "apply_fresh" constr(T) "as" ident(x) :=
-  apply_fresh_base T gather_vars x.
-
-Tactic Notation "apply_fresh" "*" constr(T) "as" ident(x) :=
-  apply_fresh T as x; auto_star.
 Definition NAT := (typ_gadt [] Nat).
 Definition const := trm_abs NAT (trm_abs NAT (#1)).
 Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
@@ -129,6 +95,7 @@ Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
   - econstructor; eauto.
     + econstructor; eauto.
       * econstructor; eauto.
+        apply oknat.
       * econstructor; intuition.
     + econstructor; eauto.
       intuition.
@@ -157,5 +124,3 @@ Lemma const_test_evals : evals const_test one.
       apply eval_finish.
       Unshelve. fs. fs. fs.
 Qed.
-
-
