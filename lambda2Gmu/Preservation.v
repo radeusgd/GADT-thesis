@@ -72,16 +72,30 @@ Hint Resolve okt_strengthen_simple.
 
 (** ** Environment is unchanged by substitution from a fresh name *)
 
+Lemma in_fold_exists : forall TV TT P ls Z X,
+    X \in List.fold_left (fun (fv : fset TV) (T : TT) => fv \u P T) ls Z ->
+          (exists T, List.In T ls /\ X \in P T) \/ X \in Z.
+  induction ls; introv Hin.
+  - right.
+    cbn in *. eauto.
+  - cbn in Hin.
+    lets* IH: IHls (Z \u P a) X Hin.
+    destruct IH as [IH | IH].
+    + destruct IH as [T [Tin PT]].
+      left. exists T. eauto with listin.
+    + rewrite in_union in IH.
+      destruct IH as [IH | IH]; eauto with listin.
+Qed.
+
 Lemma notin_fv_tt_open : forall Y X T,
   X \notin fv_typ (T open_tt_var Y) ->
   X \notin fv_typ T.
 Proof.
- introv. unfold open_tt. generalize 0.
- induction T; simpl; intros k Fr; eauto.
- - specializes IHT1 k. specializes IHT2 k. auto.
- - specializes IHT1 k. specializes IHT2 k. auto.
- - admit.
-Admitted.
+  unfold open_tt.
+  introv FO.
+  lets* characterized: fv_open T (typ_fvar Y) 0.
+  destruct characterized as [Hc | Hc]; rewrite Hc in FO; eauto.
+Qed.
 
 Lemma notin_fv_wf : forall Σ E X T,
   wft Σ E T -> X # E -> X \notin fv_typ T.
@@ -90,8 +104,13 @@ Proof.
     introv Fr; simpl; eauto.
   - rewrite notin_singleton. intro. subst. applys binds_fresh_inv Hbinds Fr.
   - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
-  - admit.
-Admitted.
+  - intro Hin.
+    lets* Hex: in_fold_exists Hin.
+    destruct Hex as [Hex | Hex].
+    + destruct Hex as [T [Tin fvT]].
+      lets* Hf: H0 T Tin.
+    + apply* in_empty_inv.
+Qed.
 
 Lemma map_subst_tb_id : forall Σ G Z P,
   okt Σ G -> Z # G -> G = map (subst_tb Z P) G.

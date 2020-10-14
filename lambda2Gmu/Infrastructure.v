@@ -422,7 +422,7 @@ Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
 
 Hint Immediate subset_refl subset_empty_l subset_union_weak_l subset_union_weak_r subset_union_2 union_comm union_assoc union_same.
 
-Lemma subset_union_3 : forall T (A B C : fset T),
+Lemma union_distribute : forall T (A B C : fset T),
     (A \u B) \u C = (A \u C) \u (B \u C).
   intros.
   assert (CuC: C \u C = C); try apply union_same.
@@ -462,30 +462,89 @@ Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset v
       apply* IHls.
 Qed.
 
-Lemma fv_smaller : forall T U k,
-    fv_typ (open_tt_rec k U T) \c (fv_typ T \u fv_typ U).
+Lemma fv_open : forall T U k,
+    fv_typ (open_tt_rec k U T) = (fv_typ T \u fv_typ U)
+    \/ fv_typ (open_tt_rec k U T) = fv_typ T.
   induction T using typ_ind'; introv;
     try solve [
-          unfold open_tt_rec; crush_compare
+          unfold open_tt_rec; crush_compare; cbn; eauto using union_empty_l
         | cbn; eauto
         | cbn; fold (open_tt T1 U); fold (open_tt T2 U);
-          rewrite subset_union_3;
+          rewrite union_distribute;
           apply* subset_union_2
         ].
-  cbn.
-  rewrite List.Forall_forall in *.
-  rewrite fold_map.
-  induction ls.
-  - cbn. eauto.
   - cbn.
-    rewrite union_fold_detach.
-    rewrite union_fold_detach.
-    rewrite subset_union_3.
-    apply subset_union_2.
-    + apply* IHls.
-      introv xils.
-      apply* H. cbn; right*.
-    + apply* H. constructor*.
+    lets* IH1: IHT1 U k.
+    lets* IH2: IHT2 U k.
+    destruct IH1 as [IH1 | IH1];
+      destruct IH2 as [IH2 | IH2];
+      rewrite IH1; rewrite IH2; eauto.
+    + left. rewrite (union_distribute (fv_typ T1) (fv_typ T2)). eauto.
+    + left.
+      rewrite <- union_assoc.
+      rewrite <- union_assoc.
+      rewrite (union_comm (fv_typ T2) (fv_typ U)).
+      trivial.
+    + rewrite union_assoc. eauto.
+  - cbn.
+    lets* IH1: IHT1 U k.
+    lets* IH2: IHT2 U k.
+    destruct IH1 as [IH1 | IH1];
+      destruct IH2 as [IH2 | IH2];
+      rewrite IH1; rewrite IH2; eauto.
+    + left. rewrite (union_distribute (fv_typ T1) (fv_typ T2)). eauto.
+    + left.
+      rewrite <- union_assoc.
+      rewrite <- union_assoc.
+      rewrite (union_comm (fv_typ T2) (fv_typ U)).
+      trivial.
+    + rewrite union_assoc. eauto.
+  - cbn.
+    induction ls.
+    + cbn. eauto.
+    + assert (Has: List.Forall
+           (fun T : typ =>
+            forall (U : typ) (k : nat),
+            fv_typ (open_tt_rec k U T) = fv_typ T \u fv_typ U \/
+            fv_typ (open_tt_rec k U T) = fv_typ T) ls).
+      * rewrite List.Forall_forall in *.
+        eauto with listin.
+      * lets* IH: IHls Has.
+        destruct IH as [IH | IH].
+        -- left.
+           cbn.
+           repeat rewrite union_fold_detach in *.
+           rewrite IH.
+           rewrite <- union_assoc.
+           rewrite List.Forall_forall in *.
+           lets* Ha: H a U k; eauto with listin.
+           destruct Ha as [Ha | Ha].
+           ++ rewrite union_distribute.
+              rewrite union_assoc.
+              f_equal. eauto.
+           ++ rewrite <- union_assoc.
+              rewrite (union_comm (fv_typ a) (fv_typ U)).
+              f_equal. f_equal. eauto.
+        -- rewrite List.Forall_forall in *.
+           lets* Ha: H a U k; eauto with listin.
+           destruct Ha as [Ha | Ha].
+           ++ left.
+              cbn.
+              repeat rewrite union_fold_detach.
+              rewrite IH.
+              rewrite <- union_assoc.
+              f_equal. eauto.
+           ++ right.
+              cbn.
+              repeat rewrite union_fold_detach.
+              f_equal; eauto.
+Qed.
+
+Lemma fv_smaller : forall T U k,
+    fv_typ (open_tt_rec k U T) \c (fv_typ T \u fv_typ U).
+  introv.
+  lets* characterized: fv_open T U k.
+  destruct characterized as [Hc | Hc]; rewrite Hc; eauto.
 Qed.
 
 Lemma subst_commutes_with_unrelated_opens : forall Xs T V Y,
