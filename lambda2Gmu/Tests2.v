@@ -15,18 +15,14 @@ Lemma oknat : okGadt natSigma.
     binds_inv.
     inversions EQ.
     repeat ininv.
-    + econstructor.
-      * cbn. eauto.
-      * intros.
-        destruct_const_len_list. cbn. econstructor.
-      * intros. intuition.
-    + econstructor.
-      * cbn; eauto.
-      * intros.
-        destruct_const_len_list; cbn; econstructor; eauto.
-        intros.
-        contradiction.
-      * intros. intuition.
+    + econstructor; cbn; eauto; try solve [intros; intuition].
+      intros.
+      destruct_const_len_list. cbn. econstructor.
+    + econstructor; cbn; eauto; try solve [intros; intuition].
+      intros.
+      destruct_const_len_list; cbn; econstructor; eauto.
+      intros.
+      contradiction.
 Qed.
 
 Hint Immediate oknat.

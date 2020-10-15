@@ -393,6 +393,39 @@ Lemma open_te_many_test : open_te_many [typ_unit; typ_fvar T] (trm_abs (typ_tupl
   cbv. auto.
 Qed.
 
+Fixpoint fv_typ (T : typ) {struct T} : vars :=
+  match T with
+  | typ_bvar J => \{}
+  | typ_fvar X => \{X}
+  | typ_unit   => \{}
+  | T1 ** T2   => fv_typ T1 \u fv_typ T2
+  | T1 ==> T2   => fv_typ T1 \u fv_typ T2
+  | typ_all T1 => fv_typ T1
+  | typ_gadt Ts _ => fold_left (fun fv T => fv \u fv_typ T) Ts \{}
+  end.
+
+(* TODO shall we differentiate free type and term variables? *)
+
+Fixpoint fv_trm (e : trm) {struct e} : vars :=
+  match e with
+  | trm_bvar i => \{}
+  | trm_fvar x => \{x}
+  | trm_unit   => \{}
+  | trm_tuple e1 e2 => fv_trm e1 \u fv_trm e2
+  | trm_fst e1 => fv_trm e1
+  | trm_snd e1 => fv_trm e1
+  | trm_abs T1 e1 => fv_typ T1 \u fv_trm e1
+  | trm_app e1 e2 => fv_trm e1 \u fv_trm e2
+  | trm_tabs e1 => fv_trm e1
+  | trm_tapp e1 T1 => fv_typ T1 \u fv_trm e1
+  | trm_fix T1 e1 => fv_typ T1 \u fv_trm e1
+  | trm_let e1 e2 => fv_trm e1 \u fv_trm e2
+  (* | trm_matchgadt _ _ => \{} (* TODO GADT support *) *)
+  | trm_constructor Ts _ e1 =>
+    fold_left (fun fv T => fv \u fv_typ T) Ts (fv_trm e1)
+  end.
+
+
 (** Types as locally closed pre-types *)
 
 Inductive type : typ -> Prop :=
@@ -578,6 +611,8 @@ Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
             In retT retTs ->
             wft Σ (add_types E Alphas) (open_tt_many_var Alphas retT))
     ) ->
+    fv_typ argT = \{} ->
+    (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* the types have no free variables, but can of course reference other GADTs since these are not counted as free vars *)
     (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
     okConstructorDef Σ Tarity (GADTconstr Carity argT retTs).
 
@@ -727,38 +762,6 @@ Inductive red : trm -> trm -> Prop :=
     e1 --> e1' ->
     trm_let e1 e2 --> trm_let e1' e2
 where "e1 --> e2" := (red e1 e2).
-
-Fixpoint fv_typ (T : typ) {struct T} : vars :=
-  match T with
-  | typ_bvar J => \{}
-  | typ_fvar X => \{X}
-  | typ_unit   => \{}
-  | T1 ** T2   => fv_typ T1 \u fv_typ T2
-  | T1 ==> T2   => fv_typ T1 \u fv_typ T2
-  | typ_all T1 => fv_typ T1
-  | typ_gadt Ts _ => fold_left (fun fv T => fv \u fv_typ T) Ts \{}
-  end.
-
-(* TODO shall we differentiate free type and term variables? *)
-
-Fixpoint fv_trm (e : trm) {struct e} : vars :=
-  match e with
-  | trm_bvar i => \{}
-  | trm_fvar x => \{x}
-  | trm_unit   => \{}
-  | trm_tuple e1 e2 => fv_trm e1 \u fv_trm e2
-  | trm_fst e1 => fv_trm e1
-  | trm_snd e1 => fv_trm e1
-  | trm_abs T1 e1 => fv_typ T1 \u fv_trm e1
-  | trm_app e1 e2 => fv_trm e1 \u fv_trm e2
-  | trm_tabs e1 => fv_trm e1
-  | trm_tapp e1 T1 => fv_typ T1 \u fv_trm e1
-  | trm_fix T1 e1 => fv_typ T1 \u fv_trm e1
-  | trm_let e1 e2 => fv_trm e1 \u fv_trm e2
-  (* | trm_matchgadt _ _ => \{} (* TODO GADT support *) *)
-  | trm_constructor Ts _ e1 =>
-    fold_left (fun fv T => fv \u fv_typ T) Ts (fv_trm e1)
-  end.
 
 Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
   match T with

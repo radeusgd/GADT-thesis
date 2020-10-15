@@ -141,7 +141,9 @@ Proof.
   introv HTyp. gen F.
   inductions HTyp; introv Ok; eauto.
   - apply* typing_var. apply* binds_weaken.
-  - admit.
+  - econstructor; eauto.
+    introv Tin.
+    apply* wft_weaken.
   - renameIHs IH IHeq.
     apply_fresh* typing_abs as x.
     forwards~ K: (IH x).
@@ -172,7 +174,7 @@ Proof.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-Admitted.
+Qed.
 
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
 
@@ -220,6 +222,77 @@ Qed.
 
 Hint Resolve okt_subst_tb.
 
+
+Lemma subst_commutes_with_unrelated_opens_2 : forall Us T V Y,
+    (forall U, List.In U Us -> Y \notin fv_typ U) ->
+    type V ->
+    subst_tt Y V (open_tt_many Us T) =
+    (open_tt_many Us (subst_tt Y V T)).
+  (* induction Xs as [| Xh Xt]; introv Hneq Htyp. *)
+  (* - cbn. eauto. *)
+  (* - cbn. *)
+  (*   fold (open_tt_many_var Xt (T open_tt_var Xh)). *)
+  (*   fold (open_tt_many_var Xt (subst_tt Y V T open_tt_var Xh)). *)
+  (*   rewrite* subst_tt_open_tt_var; eauto with listin. *)
+Admitted.
+
+Lemma todo : forall Ts Z P U,
+    Z \notin fv_typ U ->
+    subst_tt Z P (open_tt_many Ts U) =
+    open_tt_many (List.map (subst_tt Z P) Ts) U.
+  induction Ts as [| Th Tts]; introv FV.
+  + cbn. apply* subst_tt_fresh.
+  + cbn.
+    rewrite <- IHTts.
+    (* rewrite IHTts. *)
+    
+    (* rewrite <- (@subst_tt_fresh Z P U). *)
+    (* rewrite subst_tt_open_tt. *)
+    (*   -- rewrite <- subst_commutes_with_unrelated_opens_2. *)
+    (*      ++ f_equal. *)
+    (* apply IHTs. *)
+    (* rewrite <- (@subst_tt_fresh Z P U). *)
+    (* rewrite <- subst_tt_open_tt. *)
+Admitted.
+
+
+Lemma fold_empty : forall Ts,
+  (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
+  List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
+  induction Ts as [ | Th]; introv Fv; cbn; eauto.
+  lets* Hempty: Fv Th.
+  rewrite Hempty; eauto with listin.
+  rewrite union_empty_r.
+  eauto with listin.
+Qed.
+
+Lemma okt_strengthen_2 : forall Σ E Z P F,
+    wft Σ E P ->
+    okt Σ (E & (withtyp Z) & F) ->
+    okt Σ (E & (EnvOps.map (subst_tb Z P) F)).
+  introv WP O. induction F using env_ind.
+  - rewrite concat_empty_r in *. lets*: (okt_push_typ_inv O).
+    rewrite map_empty.
+    rew_env_concat. eauto.
+  - rewrite concat_assoc in *.
+    lets Hinv: okt_push_inv O; inversions Hinv.
+    + lets (?&?): (okt_push_typ_inv O).
+      rewrite map_concat.
+      rewrite map_single.
+      rewrite concat_assoc.
+      applys~ okt_sub.
+    + match goal with
+      | H: exists T, v = bind_var T |- _ =>
+        rename H into Hexists_bindvar end.
+      inversions Hexists_bindvar.
+      lets (?&?&?): (okt_push_var_inv O).
+      rewrite map_concat.
+      rewrite map_single.
+      rewrite concat_assoc.
+      applys~ okt_typ.
+      applys* wft_subst_tb.
+Qed.
+
 Lemma typing_through_subst_te : forall Σ E F Z e T P,
     {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
     wft Σ E P ->
@@ -234,7 +307,25 @@ Proof.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
     match goal with
     | Hbinds: binds _ _ _ |- _ => binds_cases Hbinds; unsimpl_map_bind* end.
-  - admit.
+  - assert (Hokconstr: okConstructorDef Σ Tarity (GADTconstr (length Ts) CargType CretTypes)).
+    + apply* gadt_constructor_ok. apply* okt_implies_okgadt.
+      lets*: typing_regular Typ.
+    + inversion Hokconstr as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
+      econstructor; eauto.
+      * apply* List.map_length.
+      * apply* todo. eauto.
+        rewrite Farg. eauto.
+      * introv Timaped.
+        lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
+        apply Hinmap in Timaped.
+        destruct Timaped as [T' [Teq T'in]].
+        subst.
+        apply* wft_subst_tb.
+        apply* okt_is_ok.
+        apply* okt_strengthen_2.
+        lets* reg: typing_regular Typ.
+      * apply* todo.
+        cbn. rewrite* fold_empty.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
@@ -261,7 +352,7 @@ Proof.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih2.
-Admitted.
+Qed.
 
 Ltac IHR e :=
   match goal with

@@ -76,44 +76,29 @@ Lemma oksigma : okGadt sigma.
       solve_dom all_distinct.
   - intros.
     binds_inv; inversions EQ; repeat ininv.
-    + econstructor.
+    + econstructor; cbn; intuition; subst; intuition.
       * intros. destruct_const_len_list.
         econstructor.
-      * intros. destruct_const_len_list.
+      * intros. destruct_const_len_list. cbn.
         repeat ininv.
-        -- econstructor.
+        econstructor. solve_bind.
       * intros.
         destruct_const_len_list.
-        repeat ininv.
-        -- cbn. econstructor. solve_bind.
-        -- cbn. econstructor.
-           ++ cbn; contradiction.
-           ++ solve_bind; solve_dom all_distinct.
-           ++ cbn; eauto.
-    + econstructor.
+        cbn. econstructor; solve_bind;
+               cbn; eauto; try (solve_dom all_distinct); intuition.
+    + econstructor; cbn; intuition; subst; intuition.
       * intros. destruct_const_len_list. econstructor; cbn; econstructor; eauto.
-      * intros. destruct_const_len_list.
-        repeat ininv.
-        -- cbn. econstructor.
-           solve_bind; distinct2.
-           ++ econstructor; solve_bind; cbn; eauto.
-              intros.
-              inversions H0.
-              ** econstructor. solve_bind.
-              ** inversions H2.
-                 --- econstructor. solve_bind.
-                     solve_dom all_distinct.
-                     distinct2.
-                 --- contradiction.
-      * intros. destruct_const_len_list.
-        cbn. repeat ininv.
-        -- econstructor. solve_bind.
-        -- cbn. econstructor; cbn; solve_bind; eauto.
-           ++ intros.
-              inversions H0.
-              ** econstructor. solve_bind. solve_dom all_distinct. distinct2.
-              ** contradiction.
-           ++ solve_dom all_distinct.
+        introv Tin. repeat ininv; cbn; econstructor; solve_bind.
+        solve_dom all_distinct.
+        progress solve_dom all_distinct. distinct2.
+      * intros. destruct_const_len_list. econstructor.
+        cbn. solve_bind.
+      * intros. destruct_const_len_list. cbn; econstructor; eauto.
+        -- intuition. repeat ininv. econstructor.
+           solve_bind; solve_dom all_distinct. distinct2.
+        -- solve_bind; solve_dom all_distinct.
+      * repeat rewrite union_empty_l. eauto.
+      * cbn. rewrite union_empty_l. eauto.
 Qed.
 
 Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
