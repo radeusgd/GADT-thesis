@@ -21,9 +21,9 @@ Qed.
 Hint Resolve okt_is_ok.
 
 Lemma okt_subst_tb : forall Σ Z P E F,
-  okt Σ (E & (withtyp Z) & F) ->
-  wft Σ E P ->
-  okt Σ (E & map (subst_tb Z P) F).
+    okt Σ (E & (withtyp Z) & F) ->
+    wft Σ E P ->
+    okt Σ (E & map (subst_tb Z P) F).
 Proof.
   introv O W. induction F using env_ind.
   - rewrite map_empty. rewrite concat_empty_r in *.
@@ -88,8 +88,8 @@ Lemma in_fold_exists : forall TV TT P ls Z X,
 Qed.
 
 Lemma notin_fv_tt_open : forall Y X T,
-  X \notin fv_typ (T open_tt_var Y) ->
-  X \notin fv_typ T.
+    X \notin fv_typ (T open_tt_var Y) ->
+    X \notin fv_typ T.
 Proof.
   unfold open_tt.
   introv FO.
@@ -98,7 +98,7 @@ Proof.
 Qed.
 
 Lemma notin_fv_wf : forall Σ E X T,
-  wft Σ E T -> X # E -> X \notin fv_typ T.
+    wft Σ E T -> X # E -> X \notin fv_typ T.
 Proof.
   induction 1 as [ | ? ? ? Hbinds | | | |];
     introv Fr; simpl; eauto.
@@ -113,7 +113,7 @@ Proof.
 Qed.
 
 Lemma map_subst_tb_id : forall Σ G Z P,
-  okt Σ G -> Z # G -> G = map (subst_tb Z P) G.
+    okt Σ G -> Z # G -> G = map (subst_tb Z P) G.
 Proof.
   induction 1; intros Fr; autorewrite with rew_env_map; simpl.
   - auto.
@@ -134,9 +134,9 @@ Ltac renameIHs H Heq :=
     rename IH into Heq end.
 
 Lemma typing_weakening : forall Σ E F G e T,
-   {Σ, E & G} ⊢ e ∈ T ->
-   okt Σ (E & F & G) ->
-   {Σ, E & F & G} ⊢ e ∈ T.
+    {Σ, E & G} ⊢ e ∈ T ->
+    okt Σ (E & F & G) ->
+    {Σ, E & F & G} ⊢ e ∈ T.
 Proof.
   introv HTyp. gen F.
   inductions HTyp; introv Ok; eauto.
@@ -276,8 +276,8 @@ Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
 Qed.
 
 Lemma subst_removes_var : forall T U Z,
-  Z \notin fv_typ U ->
-  Z \notin fv_typ (subst_tt Z U T).
+    Z \notin fv_typ U ->
+    Z \notin fv_typ (subst_tt Z U T).
   induction T using typ_ind'; introv FU; cbn; eauto.
   - case_if; cbn; eauto.
   - rewrite list_fold_map.
@@ -309,8 +309,8 @@ Qed.
 
 
 Lemma fold_empty : forall Ts,
-  (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
-  List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
+    (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
+    List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
   induction Ts as [ | Th]; introv Fv; cbn; eauto.
   lets* Hempty: Fv Th.
   rewrite Hempty; eauto with listin.
@@ -348,13 +348,14 @@ Qed.
 Lemma typing_through_subst_te : forall Σ E F Z e T P,
     {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
     wft Σ E P ->
+    Z \notin fv_typ P -> (* theoretically this assumption should not be needed as it should arise from wft E P /\ okt E + Z (so Z is not in E and P is wft in E so it cannot have free Z), but we can shift this responsibility up *)
     {Σ, E & map (subst_tb Z P) F} ⊢ (subst_te Z P e) ∈ (subst_tt Z P T).
 Proof.
   Ltac apply_ih2 :=
     match goal with
     | H: forall X, X \notin ?L -> forall E0 F0 Z0, ?P1 -> ?P2 |- _ =>
       apply_ih_map_bind* H end.
-  introv Typ W.
+  introv Typ W FP.
   inductions Typ; introv; simpls subst_tt; simpls subst_te; eauto.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
     match goal with
@@ -362,25 +363,23 @@ Proof.
   - assert (Hokconstr: okConstructorDef Σ Tarity (GADTconstr (length Ts) CargType CretTypes)).
     + apply* gadt_constructor_ok. apply* okt_implies_okgadt.
       lets*: typing_regular Typ.
-    + assert (Z \notin fv_typ P).
-      * admit.
-      * inversion Hokconstr
-          as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
-        econstructor; eauto.
-        -- apply* List.map_length.
-        -- apply* subst_commutes_open_tt_many.
-           rewrite Farg. eauto.
-        -- introv Timaped.
-           lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
-           apply Hinmap in Timaped.
-           destruct Timaped as [T' [Teq T'in]].
-           subst.
-           apply* wft_subst_tb.
-           apply* okt_is_ok.
-           apply* okt_strengthen_2.
-           lets* reg: typing_regular Typ.
-        -- apply* subst_commutes_open_tt_many.
-           cbn. rewrite* fold_empty.
+    + inversion Hokconstr
+        as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
+      econstructor; eauto.
+      * apply* List.map_length.
+      * apply* subst_commutes_open_tt_many.
+        rewrite Farg. eauto.
+      * introv Timaped.
+        lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
+        apply Hinmap in Timaped.
+        destruct Timaped as [T' [Teq T'in]].
+        subst.
+        apply* wft_subst_tb.
+        apply* okt_is_ok.
+        apply* okt_strengthen_2.
+        lets* reg: typing_regular Typ.
+      * apply* subst_commutes_open_tt_many.
+        cbn. rewrite* fold_empty.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
@@ -407,7 +406,7 @@ Proof.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih2.
-Admitted.
+Qed.
 
 Ltac IHR e :=
   match goal with
