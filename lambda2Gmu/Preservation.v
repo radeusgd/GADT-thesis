@@ -215,45 +215,97 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     apply_ih.
 Qed.
 
-(* Lemma okt_from_wft : forall Σ E T,  (may not be provable?) *)
-(*     wft Σ E T -> okt Σ E. *)
-(*   introv W. *)
-(*   inversions W. *)
-
 Hint Resolve okt_subst_tb.
 
+Lemma subst_idempotent : forall U Z P,
+    Z \notin fv_typ P ->
+    subst_tt Z P U = subst_tt Z P (subst_tt Z P U).
+  induction U using typ_ind'; introv FV; try solve [cbn; eauto].
+  - cbn.
+    case_if.
+    + rewrite* subst_tt_fresh.
+    + cbn. case_if. eauto.
+  - cbn.
+    rewrite* <- IHU1.
+    rewrite* <- IHU2.
+  - cbn.
+    rewrite* <- IHU1.
+    rewrite* <- IHU2.
+  - cbn.
+    rewrite* <- IHU.
+  - cbn. f_equal.
+    rewrite List.map_map.
+    apply* List.map_ext_in.
+    introv ain.
+    rewrite List.Forall_forall in *.
+    eauto.
+Qed.
 
-Lemma subst_commutes_with_unrelated_opens_2 : forall Us T V Y,
-    (forall U, List.In U Us -> Y \notin fv_typ U) ->
-    type V ->
-    subst_tt Y V (open_tt_many Us T) =
-    (open_tt_many Us (subst_tt Y V T)).
-  (* induction Xs as [| Xh Xt]; introv Hneq Htyp. *)
-  (* - cbn. eauto. *)
-  (* - cbn. *)
-  (*   fold (open_tt_many_var Xt (T open_tt_var Xh)). *)
-  (*   fold (open_tt_many_var Xt (subst_tt Y V T open_tt_var Xh)). *)
-  (*   rewrite* subst_tt_open_tt_var; eauto with listin. *)
-Admitted.
+Lemma subst_idempotent_through_many_open : forall Tts Z U P,
+    type P ->
+    Z \notin fv_typ P ->
+    subst_tt Z P (open_tt_many Tts U) =
+    subst_tt Z P (open_tt_many Tts (subst_tt Z P U)).
+  induction Tts; introv TP FV.
+  - cbn. apply* subst_idempotent.
+  - cbn.
+    rewrite* IHTts.
+    rewrite* (IHTts Z (open_tt (subst_tt Z P U) a) P).
+    f_equal. f_equal.
+    repeat rewrite* subst_tt_open_tt.
+    f_equal.
+    apply* subst_idempotent.
+Qed.
 
-Lemma todo : forall Ts Z P U,
+Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A -> A) (z : B),
+    List.fold_left (fun a b => f a b) (List.map g ls) z
+    =
+    List.fold_left (fun a b => f a (g b)) ls z.
+  induction ls; introv; cbn; eauto.
+Qed.
+
+Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
+    (forall e, List.In e ls -> x \notin P e) ->
+    x \notin z ->
+    x \notin List.fold_left (fun fv e => fv \u P e) ls z.
+  induction ls; introv FPe Fz; cbn; eauto.
+  apply* IHls.
+  - eauto with listin.
+  - rewrite notin_union; split*.
+    eauto with listin.
+Qed.
+
+Lemma subst_removes_var : forall T U Z,
+  Z \notin fv_typ U ->
+  Z \notin fv_typ (subst_tt Z U T).
+  induction T using typ_ind'; introv FU; cbn; eauto.
+  - case_if; cbn; eauto.
+  - rewrite list_fold_map.
+    rewrite List.Forall_forall in *.
+    apply* notin_fold.
+Qed.
+
+Lemma subst_commutes_open_tt_many : forall Ts Z P U,
+    type P ->
+    Z \notin fv_typ P ->
     Z \notin fv_typ U ->
     subst_tt Z P (open_tt_many Ts U) =
     open_tt_many (List.map (subst_tt Z P) Ts) U.
-  induction Ts as [| Th Tts]; introv FV.
-  + cbn. apply* subst_tt_fresh.
-  + cbn.
-    rewrite <- IHTts.
-    (* rewrite IHTts. *)
-    
-    (* rewrite <- (@subst_tt_fresh Z P U). *)
-    (* rewrite subst_tt_open_tt. *)
-    (*   -- rewrite <- subst_commutes_with_unrelated_opens_2. *)
-    (*      ++ f_equal. *)
-    (* apply IHTs. *)
-    (* rewrite <- (@subst_tt_fresh Z P U). *)
-    (* rewrite <- subst_tt_open_tt. *)
-Admitted.
+  induction Ts as [| Th Tts]; introv TP FP FU.
+  - cbn. apply* subst_tt_fresh.
+  - cbn.
+    rewrite* subst_idempotent_through_many_open.
+    rewrite* subst_tt_open_tt.
+    rewrite* (@subst_tt_fresh Z P U).
+    apply* IHTts.
+    unfold open_tt.
+    lets* FO: fv_open U (subst_tt Z P Th) 0.
+    destruct FO as [FO | FO].
+    + rewrite FO.
+      apply notin_union; split*.
+      apply* subst_removes_var.
+    + rewrite* FO.
+Qed.
 
 
 Lemma fold_empty : forall Ts,
@@ -310,22 +362,25 @@ Proof.
   - assert (Hokconstr: okConstructorDef Σ Tarity (GADTconstr (length Ts) CargType CretTypes)).
     + apply* gadt_constructor_ok. apply* okt_implies_okgadt.
       lets*: typing_regular Typ.
-    + inversion Hokconstr as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
-      econstructor; eauto.
-      * apply* List.map_length.
-      * apply* todo. eauto.
-        rewrite Farg. eauto.
-      * introv Timaped.
-        lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
-        apply Hinmap in Timaped.
-        destruct Timaped as [T' [Teq T'in]].
-        subst.
-        apply* wft_subst_tb.
-        apply* okt_is_ok.
-        apply* okt_strengthen_2.
-        lets* reg: typing_regular Typ.
-      * apply* todo.
-        cbn. rewrite* fold_empty.
+    + assert (Z \notin fv_typ P).
+      * admit.
+      * inversion Hokconstr
+          as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
+        econstructor; eauto.
+        -- apply* List.map_length.
+        -- apply* subst_commutes_open_tt_many.
+           rewrite Farg. eauto.
+        -- introv Timaped.
+           lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
+           apply Hinmap in Timaped.
+           destruct Timaped as [T' [Teq T'in]].
+           subst.
+           apply* wft_subst_tb.
+           apply* okt_is_ok.
+           apply* okt_strengthen_2.
+           lets* reg: typing_regular Typ.
+        -- apply* subst_commutes_open_tt_many.
+           cbn. rewrite* fold_empty.
   - apply_fresh* typing_abs as y.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
@@ -352,7 +407,7 @@ Proof.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih2.
-Qed.
+Admitted.
 
 Ltac IHR e :=
   match goal with
