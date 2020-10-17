@@ -32,14 +32,9 @@ Require Import TLC.LibLN.
 Require Import TLC.LibTactics.
 Require Import List.
 Require Import Coq.Init.Nat.
-Notation "[ ]" := nil (format "[ ]").
-Notation "[ x ]" := (cons x nil).
-Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)).
+Import List.ListNotations.
 
-(** * Definitions *)
-
-(* ********************************************************************** *)
-(** ** Grammars *)
+(** * Types *)
 
 Definition GADTName : Set := var.
 (* I think it's ok to use the same name set for GADT types,
@@ -105,6 +100,8 @@ Section typ_ind'.
     end.
 
 End typ_ind'.
+
+(** * Terms *)
 
 (* pre-terms *)
 Inductive trm : Set :=
@@ -176,31 +173,8 @@ Clause : Set :=
 
 (* End trm_ind'. *)
 
-(* Coercion trm_bvar : nat >-> trm. *)
-(* Coercion trm_fvar : var >-> trm. *)
+(** * Sizes *)
 
-(** ** Opening *)
-
-(** Opening replaces an index with a term. It corresponds to informal
-    substitution for a bound variable, such as in the rule for beta
-    reduction. Note that only "dangling" indices (those that do not
-    refer to any abstraction) can be opened. Opening has no effect for
-    terms that are locally closed.
-
-    Natural numbers are just an inductive datatype with two
-    constructors: O and S, defined in Coq.Init.Datatypes.
-
-    We make several simplifying assumptions in defining [open_rec].
-    First, we assume that the argument [u] is locally closed.  This
-    assumption simplifies the implementation since we do not need to
-    shift indices in [u] when passing under a binder.  Second, we
-    assume that this function is initially called with index zero and
-    that zero is the only unbound index in the term.  This eliminates
-    the need to possibly subtract one in the case of indices.
-
-    There is no need to worry about variable capture because bound
-    variables are indices.
- *)
 Fixpoint sum (ls : list nat) : nat :=
   match ls with
     | nil => O
@@ -248,6 +222,29 @@ Fixpoint trm_size (e : trm) : nat :=
   (* | trm_matchgadt e1 clauses =>  *)
   | trm_let e1 e2 => 1 + trm_size e1 + trm_size e2
   end.
+
+(** ** Opening *)
+
+(** Opening replaces an index with a term. It corresponds to informal
+    substitution for a bound variable, such as in the rule for beta
+    reduction. Note that only "dangling" indices (those that do not
+    refer to any abstraction) can be opened. Opening has no effect for
+    terms that are locally closed.
+
+    Natural numbers are just an inductive datatype with two
+    constructors: O and S, defined in Coq.Init.Datatypes.
+
+    We make several simplifying assumptions in defining [open_rec].
+    First, we assume that the argument [u] is locally closed.  This
+    assumption simplifies the implementation since we do not need to
+    shift indices in [u] when passing under a binder.  Second, we
+    assume that this function is initially called with index zero and
+    that zero is the only unbound index in the term.  This eliminates
+    the need to possibly subtract one in the case of indices.
+
+    There is no need to worry about variable capture because bound
+    variables are indices.
+ *)
 
 Fixpoint open_tt_rec (k : nat) (u : typ) (t : typ) {struct t} : typ :=
   match t with
@@ -364,34 +361,7 @@ Definition open_te_many (args : list typ) (e : trm) := fold_left open_te args e.
 (*   | h :: t => open_tt_many (open_tt T h) t *)
 (*   end. *)
 
-
-Lemma open_tt_test : open_tt (typ_all (typ_bvar 1)) (typ_unit) = typ_all typ_unit.
-  cbv. auto.
-Qed.
-
-Lemma open_te_test : open_te (trm_abs (typ_bvar 0) (trm_bvar 0)) (typ_unit) = trm_abs typ_unit (trm_bvar 0).
-  cbv. auto.
-Qed.
-
-Lemma open_ee_test : open_ee (trm_abs (typ_bvar 0) (trm_bvar 1)) (trm_unit) = trm_abs (typ_bvar 0) (trm_unit).
-  cbv. auto.
-Qed.
-
-Lemma open_typlist_test : open_typlist_rec 0 (typ_unit) [typ_bvar 0; typ_tuple (typ_bvar 0) (typ_bvar 1)] = [typ_unit; typ_tuple (typ_unit) (typ_bvar 0)].
-  cbv; repeat case_if. auto.
-Qed.
-
-Axiom T : var.
-(* Lemma open_tt_many_test : open_tt_many [typ_unit; typ_fvar T] (typ_tuple (typ_bvar 0) (typ_bvar 1)) = typ_tuple typ_unit (typ_fvar T). *)
-(*   cbv. auto. *)
-(* Qed. *)
-Lemma open_tt_many_test : open_tt_many [typ_unit; typ_fvar T] (typ_tuple (typ_bvar 0) (typ_bvar 1)) = typ_tuple typ_unit (typ_fvar T).
-  cbv. auto.
-Qed.
-
-Lemma open_te_many_test : open_te_many [typ_unit; typ_fvar T] (trm_abs (typ_tuple (typ_bvar 0) (typ_bvar 1)) (trm_bvar 0)) = (trm_abs (typ_tuple typ_unit (typ_fvar T)) (trm_bvar 0)).
-  cbv. auto.
-Qed.
+(** * Free Variables *)
 
 Fixpoint fv_typ (T : typ) {struct T} : vars :=
   match T with
@@ -426,7 +396,7 @@ Fixpoint fv_trm (e : trm) {struct e} : vars :=
   end.
 
 
-(** Types as locally closed pre-types *)
+(** * Closed types and terms; and values *)
 
 Inductive type : typ -> Prop :=
   | type_var : forall X,
@@ -503,7 +473,7 @@ value : trm -> Prop :=
 | value_tabs : forall e1, term (trm_tabs e1) ->
                      value (trm_tabs e1)
 | value_unit : value (trm_unit)
-                     (* TODO value_fvar ??? this is problematic as we have x-vars and f-vars, do we need to differentiate them? *)
+                     (** TODO value_fvar ??? this is problematic as we have x-vars and f-vars, do we need to differentiate them?; it should be carefully analysed how it influences the language design - it seems that it does not change expressivity significantly *)
 | value_tuple : forall e1 e2,
     value e1 ->
     value e2 ->
@@ -514,10 +484,23 @@ value : trm -> Prop :=
     value (trm_constructor Tparams Name e1)
 .
 
+(** * GADT Environment definition *)
+(*
 
 
-(* Warning: this is a very early draft of handling the environment *)
+f : T → ∀α. T
+f = λx : T. Λα. x - valid but we cannot encode it
+but we can do
+f' : T → ∀α. Unit → T
+f' = λx : T. Λα. λignored: Unit. x
 
+and instead of applying (f x)[U]
+we would apply ((f x)[U]) <> to get the result
+
+
+
+
+*)
 Inductive GADTConstructorDef : Set :=
   (* a constructor of type ∀(α...). τ → (β...) T)
      arity specifies how many type parameters (α) there are, they are referred to inside the types by DeBruijn indices
@@ -542,6 +525,8 @@ Some raw ideas:
 --- we could then even require the pattern match to preserve order of constructors (not sure if this helps with anything though, but probably with exhaustivity)
 *)
 
+(** * Context *)
+
 Inductive bind : Set :=
 | bind_typ : bind
 | bind_var : typ -> bind.
@@ -551,7 +536,15 @@ Notation "x ~: T" := (x ~ bind_var T) (at level 27, left associativity).
 
 Unset Implicit Arguments.
 Definition ctx := env bind.
-About binds.
+
+(** * Well-formed types *)
+(* (TODO clarify) In pDOT there is no such notion as a type is well formed if it is used in a typing judgement.
+But this language requires it, because like in System F we have type-abstractions and type-applications.
+In type-application we need a way to ensure that the type is well-formed.
+In pDOT type-abstraction is handled by dependent typing and type-application is implemented by applying a term containing a type-member, so we get its well-formedness from the fact that the term containing this type is well-typed.
+But in this calculus we apply 'naked' types, so there are no typing judgements for them, so we need a separate notion.
+ *)
+
 Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
 | wft_unit : forall Σ E,
     wft Σ E typ_unit
@@ -583,14 +576,11 @@ Fixpoint add_types (E : ctx) (args : list var) :=
   | Th :: Tts => (add_types E Tts & withtyp Th)
   end.
 
-(* Inductive DistinctFset : fset var -> Prop := *)
-(* | distinct_empty : DistinctFset \{} *)
-(* | distinct_append : forall h t, h \notin t -> DistinctFset t -> DistinctFset (\{ h } \u t). *)
-
-(* Definition DistinctList (L : list var) : Prop := DistinctFset (from_list L). *)
 Inductive DistinctList : list var -> Prop :=
 | distinctive_empty : DistinctList []
 | distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (h :: t).
+
+(** * Well-formedness of the GADT definitions and the envionment *)
 
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
@@ -644,6 +634,7 @@ Inductive okt : GADTEnv -> ctx -> Prop :=
 | okt_typ : forall Σ E x T,
     okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & x ~: T).
 
+(** * Typing *)
 
 Reserved Notation "{ Σ , E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
@@ -704,6 +695,8 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
 
+(** * Reduction rules (Small-step operational semantics) *)
+
 Reserved Notation "e1 --> e2" (at level 49).
 Inductive red : trm -> trm -> Prop :=
 | red_beta : forall T e1 v2 e',
@@ -763,6 +756,8 @@ Inductive red : trm -> trm -> Prop :=
     trm_let e1 e2 --> trm_let e1' e2
 where "e1 --> e2" := (red e1 e2).
 
+(** * Substitution *)
+
 Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
   match T with
   | typ_bvar J => typ_bvar J
@@ -817,6 +812,8 @@ Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   | bind_var T => bind_var (subst_tt Z P T)
   end.
 
+(** * Statemenf of desired safety properties *)
+
 Definition progress := forall Σ e T,
     {Σ, empty} ⊢ e ∈ T ->
     (value e) \/ (exists e', e --> e').
@@ -825,40 +822,3 @@ Definition preservation := forall Σ e T e',
     {Σ, empty} ⊢ e ∈ T ->
     e --> e' ->
     {Σ, empty} ⊢ e' ∈ T.
-
-
-Lemma list_quantification : forall A (L : list A) (P : A -> Prop),
-    (forall x, In x L -> P x) <-> Forall P L.
-  intuition.
-  - induction L.
-    + econstructor.
-    + econstructor.
-      * apply H.
-        constructor*.
-      * apply IHL.
-        intros. apply H.
-        apply* in_cons.
-  - induction L.
-    + inversion H0.
-    + destruct (in_inv H0); subst.
-      * inversion* H.
-      * inversions H. apply* IHL.
-Qed.
-
-Fixpoint zip {A B} (As : list A) (Bs : list B) : list (A * B) :=
-  match (As, Bs) with
-  | ([], []) => []
-  | (ha :: ta, hb :: tb) => (ha, hb) :: (zip ta tb)
-  | _ => []
-  end.
-
-Lemma zip_eq_len : forall A B (As : list A) (Bs : list B),
-    length As = length Bs ->
-    length (zip As Bs) = length As.
-  intros. gen Bs.
-  induction As; intros.
-  - cbn. destruct Bs; cbn; auto.
-  - destruct Bs.
-    + inversion H.
-    + cbn. intuition.
-Qed.

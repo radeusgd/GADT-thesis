@@ -1,4 +1,4 @@
-Require Import Definitions.
+Require Export Prelude.
 Require Import Psatz.
 Require Import TLC.LibLN.
 Require Import TLC.LibEnv.

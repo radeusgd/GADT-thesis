@@ -201,7 +201,7 @@ trait S[N]
 
 enum Vector[T] {
   case VNil[A]() extends Vector[A * Z]
-  case VCons[U where U <: A * Z for some A, Z](head: A, tail: Vector[A * N]) extends Vector[A * S[N]]
+  case VCons[U where U <: A * N for some A, N](head: A, tail: Vector[A * N]) extends Vector[A * S[N]]
   // or
   case VCons[U <: . * .](head: {fst U}, tail: Vector[U]) extends Vector[{fst U} * S[{snd U}]]
 }
