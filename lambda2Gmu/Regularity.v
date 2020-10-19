@@ -380,13 +380,12 @@ Proof.
       let usedvars := gather_vars in
       lets* EAlphas: exist_alphas (usedvars) (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
+      rewrite length_equality in A1.
       lets* HH: H10 Alphas CiC.
-      * rewrite <- length_equality.
-        eauto.
-      * apply* wft_open_many;
-          intros; lets* FA: A3 Name.
-        (* TODO fixme *)
-        apply* fv_typs_notin.
+      apply (@wft_open_many E Σ Alphas Ts); eauto;
+        intros A; lets* FA: A3 A.
+      introv Ain Tin.
+      apply* fv_typs_notin.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.

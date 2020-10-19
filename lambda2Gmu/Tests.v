@@ -1,4 +1,5 @@
 Require Import TestCommon.
+Require Import Regularity.
 
 Definition id := trm_tabs (trm_abs (@0) (#0)).
 Definition id_typ := typ_all (@0 ==> @0).

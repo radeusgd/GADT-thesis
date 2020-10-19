@@ -1,9 +1,7 @@
-Require Import Definitions.
+Require Import Prelude.
 Require Import Infrastructure.
+Require Import Regularity.
 Require Import CanonicalForms.
-Require Import TLC.LibTactics.
-Require Import TLC.LibEnv.
-Require Import TLC.LibLN.
 
 Ltac fs := exact \{}. (* There must be a better way *)
 Hint Resolve binds_empty_inv.

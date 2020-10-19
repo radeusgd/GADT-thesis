@@ -1,9 +1,7 @@
 Set Implicit Arguments.
-Require Import Definitions.
+Require Import Prelude.
 Require Import Infrastructure.
-Require Import CanonicalForms.
-Require Import TLC.LibTactics.
-Require Import TLC.LibEnv.
+Require Import Regularity.
 Require Import TLC.LibLN.
 
 Lemma term_through_subst : forall e x u,
@@ -14,6 +12,7 @@ Lemma term_through_subst : forall e x u,
   induction e; eauto;
     try solve [
           cbn; case_if; eauto
+        | cbn; eauto
         | inversion Hterme; subst; cbn; econstructor; eauto
         ].
 Qed.
