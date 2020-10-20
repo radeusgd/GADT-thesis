@@ -30,12 +30,6 @@ Lemma value_is_term : forall e, value e -> term e.
 Qed.
 
 
-Fixpoint fv_typs (Ts : list typ) : fset var :=
-  match Ts with
-  | List.nil => \{}
-  | List.cons Th Tts => fv_typ Th \u fv_typs Tts
-  end.
-
 (** Gathering free names already used in the proofs *)
 Ltac gather_vars :=
   let A := gather_vars_with (fun x : vars => x) in

@@ -103,6 +103,41 @@ End typ_ind'.
 
 (** * Terms *)
 
+
+(* I propose a simple rewrite of original syntax:
+since we assume all matches are exhaustive, instead of specifying the GADT name in each branch and specifying which constructor we refer to,
+we specify inside of the *match* which GADT we plan to match and then
+each case corresponds to consecutive constructors:
+i.e. first case matches first constructor, second one second etc.
+Checking if the match is exhaustive in this form is as simple as checking
+length cases = length constructors
+
+Another thing to consider is that originally the clauses would look like this:
+constructor[T1, T2, ..., Tm](x) => expr[where T1,... and x are bound]
+as we use DeBruijn indices for bound variables, we do not use these names, so we can remove them
+BUT we keep the length of the list of types to be bound, so the new form is following
+case (constructor id is implicit from order) [M] => expr with 1 bound value variable and M bound type variables.
+This M is then checked in typing if it is consistent with constructor arguments count.
+We need to know M in syntax to make properties like 'closed type' not dependent on typing environment.
+It is quite expected, since we also have this information in the original syntax (the length of list of type variables to bind).
+
+Overall, an expression
+case e of
+| c1[T1,...Tm1](x1) => e1
+| ...
+| cn[Tn,...Tmn](xn) => en
+where c1, ..., cn are constructors of type TG (as explained in other notes, we do not allow matches that mix types)
+
+becomes
+case e matching TG of
+| [M1] => e1'
+| ...
+| [Mn] => en'
+
+where ei' := ei[ T1 -> @0, ..., Tm -> @(m-1), xi -> #0 ]
+TODO: or is type translation order in reverse?
+ *)
+
 (* pre-terms *)
 Inductive trm : Set :=
 | trm_bvar : nat -> trm
@@ -119,59 +154,82 @@ Inductive trm : Set :=
 | trm_fix : typ -> trm -> trm
 (* | trm_matchunit *)
 (* | trm_matchtuple ( these two add nothing interesting, they may be kept for completeness) *)
-(* | trm_matchgadt : trm -> (list Clause) -> trm *)
+| trm_matchgadt : trm -> GADTName -> (list Clause) -> trm
 | trm_let : trm -> trm -> trm
 with
+(* Clause : Set := *)
+(* | clause (c: GADTConstructor) (e: trm) *)
 Clause : Set :=
-| clause (c: GADTConstructor) (e: trm)
+| clause (Tarity : nat) (e : trm)
 .
 
-(* Section trm_ind'. *)
-(*   Variable P : trm -> Prop. *)
-(*   Hypothesis trm_bvar_case : forall (n : nat), P (trm_bvar n). *)
-(*   Hypothesis trm_fvar_case : forall (x : var), P (trm_fvar x). *)
-(*   Hypothesis trm_constructor_case : forall (e : trm), *)
-(*       P e -> P (trm_fst e). *)
-(*   Hypothesis trm_unit_case : P (trm_unit). *)
-(*   Hypothesis trm_tuple_case : forall (t1 t2 : trm), *)
-(*       P t1 -> P t2 -> P (trm_tuple t1 t2). *)
-(*   Hypothesis trm_fst_case : forall (e : trm), *)
-(*       P e -> P (trm_fst e). *)
-(*   Hypothesis trm_snd_case : forall (e : trm), *)
-(*       P e -> P (trm_snd e). *)
-(*   Hypothesis trm_abs_case : forall T (e : trm), *)
-(*       P e -> P (trm_abs T e). *)
-(*   Hypothesis trm_app_case : forall (t1 t2 : trm), *)
-(*       P t1 -> P t2 -> P (trm_app t1 t2). *)
-(*   Hypothesis trm_tabs_case : forall (e : trm), *)
-(*       P e -> P (trm_tabs e). *)
-(*   Hypothesis trm_tapp_case : forall (e : trm) T, *)
-(*       P e -> P (trm_tapp e T). *)
-(*   Hypothesis trm_app_case : forall (t1 t2 : trm), *)
-(*       P t1 -> P t2 -> P (trm_app t1 t2). *)
-(*   Hypothesis trm_gadt_case : forall (ls : list trm) (n : GADTName), *)
-(*       Forall P ls -> P (trm_gadt ls n). *)
+Definition clauseTArity (c : Clause) : nat :=
+  match c with
+  | clause n _ => n
+  end.
 
-(*   Fixpoint trm_ind' (t : trm) : P t := *)
-(*     let fix list_trm_ind (ls : list trm) : Forall P ls := *)
-(*         match ls return (Forall P ls) with *)
-(*         | nil => Forall_nil P *)
-(*         | cons t' rest => *)
-(*           let Pt : P t' := trm_ind' t' in *)
-(*           let LPt : Forall P rest := list_trm_ind rest in *)
-(*           (Forall_cons t' Pt LPt) *)
-(*         end in *)
-(*     match t with *)
-(*     | trm_bvar i => trm_bvar_case i *)
-(*     | trm_fvar x => trm_fvar_case x *)
-(*     | trm_unit => trm_unit_case *)
-(*     | trm_tuple t1 t2 => trm_tuple_case (trm_ind' t1) (trm_ind' t2) *)
-(*     | trm_arrow t1 t2 => trm_arrow_case (trm_ind' t1) (trm_ind' t2) *)
-(*     | trm_all t1 => trm_all_case (trm_ind' t1) *)
-(*     | trm_gadt tparams name => trm_gadt_case name (list_trm_ind tparams) *)
-(*     end. *)
+Definition clauseTerm (c : Clause) : trm :=
+  match c with
+  | clause _ t => t
+  end.
 
-(* End trm_ind'. *)
+Section trm_ind'.
+  Variable P : trm -> Prop.
+  Hypothesis trm_bvar_case : forall (n : nat), P (trm_bvar n).
+  Hypothesis trm_fvar_case : forall (x : var), P (trm_fvar x).
+  Hypothesis trm_constructor_case : forall (e : trm) (Ts : list typ) (GADTC : GADTConstructor),
+      P e -> P (trm_constructor Ts GADTC e).
+  Hypothesis trm_unit_case : P (trm_unit).
+  Hypothesis trm_tuple_case : forall (t1 t2 : trm),
+      P t1 -> P t2 -> P (trm_tuple t1 t2).
+  Hypothesis trm_fst_case : forall (e : trm),
+      P e -> P (trm_fst e).
+  Hypothesis trm_snd_case : forall (e : trm),
+      P e -> P (trm_snd e).
+  Hypothesis trm_abs_case : forall T (e : trm),
+      P e -> P (trm_abs T e).
+  Hypothesis trm_app_case : forall (t1 t2 : trm),
+      P t1 -> P t2 -> P (trm_app t1 t2).
+  Hypothesis trm_tabs_case : forall (e : trm),
+      P e -> P (trm_tabs e).
+  Hypothesis trm_tapp_case : forall (e : trm) T,
+      P e -> P (trm_tapp e T).
+  Hypothesis trm_fix_case : forall (e : trm) T,
+      P e -> P (trm_fix T e).
+  Hypothesis trm_match_case : forall (clauses : list Clause) (G : GADTName) (e : trm),
+      P e ->
+      (* (forall TN e', In (clause TN e') ls -> P e') -> *)
+      Forall (fun c => P (clauseTerm c)) clauses ->
+      P (trm_matchgadt e G clauses).
+  Hypothesis trm_let_case : forall (t1 t2 : trm),
+      P t1 -> P t2 -> P (trm_let t1 t2).
+
+  Fixpoint trm_ind' (t : trm) : P t :=
+    let fix list_clause_ind (clauses : list Clause) : Forall (fun c => P (clauseTerm c)) clauses :=
+        match clauses return (Forall (fun c => P (clauseTerm c)) clauses) with
+        | nil => Forall_nil (fun c => P (clauseTerm c))
+        | cons c rest =>
+          let head_proof : P (clauseTerm c) := trm_ind' (clauseTerm c) in
+          let tail_proof : Forall (fun c => P (clauseTerm c)) rest := list_clause_ind rest in
+          (Forall_cons c head_proof tail_proof)
+        end in
+    match t with
+  | trm_bvar i    => trm_bvar_case i
+  | trm_fvar x    => trm_fvar_case x
+  | trm_constructor tparams C t => trm_constructor_case tparams C (trm_ind' t)
+  | trm_unit => trm_unit_case
+  | trm_tuple e1 e2 => trm_tuple_case (trm_ind' e1) (trm_ind' e2)
+  | trm_fst e => trm_fst_case (trm_ind' e)
+  | trm_snd e => trm_snd_case (trm_ind' e)
+  | trm_abs T e => trm_abs_case T (trm_ind' e)
+  | trm_app e1 e2 => trm_app_case (trm_ind' e1) (trm_ind' e2)
+  | trm_tabs e => trm_tabs_case (trm_ind' e)
+  | trm_tapp e T => trm_tapp_case T (trm_ind' e)
+  | trm_fix T e => trm_fix_case T (trm_ind' e)
+  | trm_matchgadt e G clauses => trm_match_case G (trm_ind' e) (list_clause_ind clauses)
+  | trm_let e1 e2 => trm_let_case (trm_ind' e1) (trm_ind' e2)
+    end.
+End trm_ind'.
 
 (** * Sizes *)
 
@@ -205,6 +263,14 @@ Fixpoint typ_size (t : typ) : nat :=
 (*   | cons h t => typ_size h + typlist_size t *)
 (*   end. *)
 
+Definition map_clause_trms {A : Type} (f : trm -> A) (cs : list Clause) : list A :=
+  map (fun c => f (clauseTerm c)) cs.
+
+Definition map_clause_trm_trm (f : trm -> trm) (cs : list Clause) : list Clause :=
+  map (fun c => match c with
+             | clause n e => clause n (f e)
+             end) cs.
+
 Fixpoint trm_size (e : trm) : nat :=
   match e with
   | trm_bvar i    => 1
@@ -219,7 +285,7 @@ Fixpoint trm_size (e : trm) : nat :=
   | trm_tabs e1 => 1 + trm_size e1
   | trm_tapp e1 T => 1 + trm_size e1
   | trm_fix T e1 => 1 + trm_size e1
-  (* | trm_matchgadt e1 clauses =>  *)
+  | trm_matchgadt e G cs => trm_size e + sum (map_clause_trms trm_size cs)
   | trm_let e1 e2 => 1 + trm_size e1 + trm_size e2
   end.
 
@@ -268,7 +334,8 @@ Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k
 Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   let fix open_te_clauses k u (cs : list Clause) : list Clause :=
     match cs with
-    | cons (clause c e) t => cons (clause c (open_te_rec k u e)) (open_te_clauses k u t)
+      (* each clause binds n type variables, as specified in its syntax *)
+    | cons (clause n e) t => cons (clause n (open_te_rec (k + n) u e)) (open_te_clauses k u t)
     | nil => nil
     end in
   match t with
@@ -284,16 +351,17 @@ Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   | trm_tabs e1 => trm_tabs (open_te_rec (S k) u e1)
   | trm_tapp e1 T => trm_tapp (open_te_rec k u e1) (open_tt_rec k u T)
   | trm_fix T e1 => trm_fix (open_tt_rec k u T) (open_te_rec k u e1)
-  (* | trm_matchgadt e1 clauses => trm_matchgadt (open_te_rec k u e1) (open_te_clauses k u clauses) *)
+  | trm_matchgadt e1 G clauses => trm_matchgadt (open_te_rec k u e1) G (open_te_clauses k u clauses)
   | trm_let e1 e2 => trm_let (open_te_rec k u e1) (open_te_rec k u e2)
   end.
 
 Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   let fix open_ee_clauses k u (cs : list Clause) : list Clause :=
-    match cs with
-    | cons (clause c e) t => cons (clause c (open_ee_rec k u e)) (open_ee_clauses k u t)
-    | nil => nil
-    end in
+      match cs with
+      (* each clause binds exactly 1 term variable *)
+      | cons (clause n e) t => cons (clause n (open_ee_rec (S k) u e)) (open_ee_clauses k u t)
+      | nil => nil
+      end in
   match e with
   (* | trm_bvar i    => If k = i then u else (trm_bvar i) *)
   | trm_bvar i    => if (k =? i) then u else (trm_bvar i)
@@ -308,9 +376,10 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tabs e1 => trm_tabs (open_ee_rec k u e1)
   | trm_tapp e1 T => trm_tapp (open_ee_rec k u e1) T
   | trm_fix T e1 => trm_fix T (open_ee_rec (S k) u e1)
-  (* | trm_matchgadt e1 clauses => trm_matchgadt (open_ee_rec k u e1) (open_ee_clauses k u clauses) *)
+  | trm_matchgadt e1 G clauses => trm_matchgadt (open_ee_rec k u e1) G (open_ee_clauses k u clauses)
   | trm_let e1 e2 => trm_let (open_ee_rec k u e1) (open_ee_rec (S k) u e2)
   end.
+
 (** Many common applications of opening replace index zero with an
     expression or variable.  The following definition provides a
     convenient shorthand for such uses.  Note that the order of
@@ -374,7 +443,25 @@ Fixpoint fv_typ (T : typ) {struct T} : vars :=
   | typ_gadt Ts _ => fold_left (fun fv T => fv \u fv_typ T) Ts \{}
   end.
 
+Fixpoint fv_typs (Ts : list typ) : fset var :=
+  match Ts with
+  | nil => \{}
+  | cons Th Tts => fv_typ Th \u fv_typs Tts
+  end.
+
 (* TODO shall we differentiate free type and term variables? *)
+
+Lemma fv_typs_migration : forall Ts Z,
+    fv_typs Ts \u Z =
+    fold_left (fun fv T => fv \u fv_typ T) Ts Z.
+  induction Ts; introv; cbn.
+  - rewrite* union_empty_l.
+  - rewrite <- IHTs.
+    rewrite (union_comm (fv_typ a) (fv_typs Ts)).
+    rewrite <- union_assoc.
+    rewrite (union_comm (fv_typ a) Z).
+    auto.
+Qed.
 
 Fixpoint fv_trm (e : trm) {struct e} : vars :=
   match e with
@@ -390,7 +477,8 @@ Fixpoint fv_trm (e : trm) {struct e} : vars :=
   | trm_tapp e1 T1 => fv_typ T1 \u fv_trm e1
   | trm_fix T1 e1 => fv_typ T1 \u fv_trm e1
   | trm_let e1 e2 => fv_trm e1 \u fv_trm e2
-  (* | trm_matchgadt _ _ => \{} (* TODO GADT support *) *)
+  | trm_matchgadt e _ cs =>
+    fold_left (fun fv c => fv \u fv_trm (clauseTerm c)) cs (fv_trm e)
   | trm_constructor Ts _ e1 =>
     fold_left (fun fv T => fv \u fv_typ T) Ts (fv_trm e1)
   end.
@@ -784,7 +872,8 @@ Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
   | trm_tapp e1 T1 => trm_tapp (subst_te Z U e1) (subst_tt Z U T1)
   | trm_fix T1 e1 => trm_fix (subst_tt Z U T1) (subst_te Z U e1)
   | trm_let e1 e2 => trm_let (subst_te Z U e1) (subst_te Z U e2)
-  (* | trm_matchgadt _ _ => e (* TODO GADT support *) *)
+  | trm_matchgadt e G cs =>
+    trm_matchgadt (subst_te Z U e) G (map_clause_trm_trm (subst_te Z U) cs)
   | trm_constructor Ts N e1 => trm_constructor (map (subst_tt Z U) Ts) N (subst_te Z U e1)
   end.
 
@@ -802,7 +891,8 @@ Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
   | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
   | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
-  (* | trm_matchgadt _ _ => e (* TODO GADT support *) *)
+  | trm_matchgadt e G cs =>
+    trm_matchgadt (subst_ee z u e) G (map_clause_trm_trm (subst_ee z u) cs)
   | trm_constructor Ts N e1 => trm_constructor Ts N (subst_ee z u e1)
   end.
 
