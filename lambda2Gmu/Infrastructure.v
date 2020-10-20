@@ -14,15 +14,37 @@ Lemma open_ee_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
   induction e using trm_ind'; introv; try solve [cbn; try case_if; cbn; eauto].
   cbn.
-  rewrite <- IHe.
-  admit.
-Admitted.
+  - rewrite <- IHe.
+    f_equal.
+    f_equal.
+    unfold map_clause_trms.
+    rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* Heq: H cl clin.
+    destruct cl.
+    unfold clauseTerm.
+    apply* Heq.
+Qed.
 
 Lemma open_te_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_te_rec n (typ_fvar x) e).
   induction e using trm_ind'; introv; try solve [cbn; try case_if; cbn; eauto].
-  admit.
-Admitted.
+  - cbn.
+    rewrite <- IHe.
+    f_equal.
+    f_equal.
+    unfold map_clause_trms.
+    rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* Heq: H cl clin.
+    destruct cl.
+    unfold clauseTerm.
+    apply* Heq.
+Qed.
 
 Lemma open_tt_var_preserves_size : forall T X n,
     typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
@@ -144,20 +166,42 @@ Lemma fv_fold_base : forall x ls base,
   lets*: fv_fold_general.
 Qed.
 
-Lemma fv_fold : forall Z x ls base,
-    Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
-    List.In x ls ->
-    Z \notin fv_typ x.
+Lemma fv_fold_base_clause : forall Z ls base,
+    Z \notin List.fold_left (fun (fv : fset var) (cl : Clause) => fv \u fv_trm (clauseTerm cl)) ls base ->
+    Z \notin base.
+  intros.
+  lets*: fv_fold_general (fun cl => fv_trm (clauseTerm cl)).
+Qed.
+
+Lemma fv_fold_in_general : forall A Z (e : A) (P : A -> fset var) ls base,
+    Z \notin List.fold_left (fun (fv : fset var) (e' : A) => fv \u P e') ls base ->
+    List.In e ls ->
+    Z \notin P e.
   induction ls; introv ZIL Lin.
   - false*.
   - apply List.in_inv in Lin.
     destruct Lin.
     + cbn in ZIL.
-      apply fv_fold_base in ZIL. subst. auto.
+      apply fv_fold_general in ZIL. subst. auto.
     + apply* IHls.
 Qed.
 
-Hint Resolve fv_fold_base fv_fold.
+Lemma fv_fold_in_clause : forall Z cl ls base,
+    Z \notin List.fold_left (fun (fv : fset var) (cl : Clause) => fv \u fv_trm (clauseTerm cl)) ls base ->
+    List.In cl ls ->
+    Z \notin fv_trm (clauseTerm cl).
+  intros.
+  lets*: fv_fold_in_general (fun cl => fv_trm (clauseTerm cl)) ls.
+Qed.
+
+Lemma fv_fold_in : forall Z x ls base,
+    Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
+    List.In x ls ->
+    Z \notin fv_typ x.
+  lets*: fv_fold_in_general.
+Qed.
+
+Hint Resolve fv_fold_base fv_fold_in fv_fold_general fv_fold_in_general.
 
 Lemma subst_tt_fresh : forall Z U T,
   Z \notin fv_typ T -> subst_tt Z U T = T.
@@ -544,8 +588,17 @@ Proof.
     apply* subst_tt_fresh.
   - apply* IHe.
     lets*: fv_fold_general H0.
-  - admit.
-Admitted.
+  - unfold map_clause_trm_trm.
+    rewrite List.Forall_forall in *.
+    rewrite <- List.map_id.
+    apply List.map_ext_in.
+    intros cl clin.
+    lets* Heq: H cl clin.
+    destruct cl.
+    f_equal.
+    apply* Heq.
+    lets*: fv_fold_in_clause.
+Qed.
 
 (** Substitution distributes on the open operation. *)
 
@@ -562,8 +615,16 @@ Proof.
     apply List.map_ext.
     intro.
     apply* H0.
-  - admit.
-Admitted.
+  - unfold map_clause_trm_trm.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* Heq: H0 cl clin.
+    destruct cl.
+    f_equal.
+    eauto.
+Qed.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -627,9 +688,23 @@ Lemma subst_ee_fresh : forall x u e,
 Proof.
   induction e using trm_ind'; simpl; intros; f_equal*.
   - case_var*.
-  - admit.
-  - admit.
-Admitted.
+  - apply IHe.
+    lets*: fv_fold_base_clause.
+  - unfold map_clause_trm_trm.
+    rewrite <- List.map_id.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* Heq: H clin.
+    unfold clauseTerm in Heq.
+    lets Hfv: fv_fold_in_clause.
+    lets* Hfv2: Hfv cl clauses.
+    unfold clauseTerm in Hfv2.
+    destruct cl.
+    f_equal.
+    apply Heq.
+    apply* Hfv2.
+Qed.
 
 (** Substitution distributes on the open operation. *)
 Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
@@ -637,11 +712,19 @@ Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
   open_ee (subst_ee x u t1) (subst_ee x u t2).
 Proof.
   intros. unfold open_ee. generalize 0.
-  induction t1; intro n0; simpls; f_equal*.
+  induction t1 using trm_ind'; intro n0; simpls; f_equal*.
   - crush_eq.
   - case_var*. rewrite* <- open_ee_rec_term.
-  - admit.
-Admitted.
+  - unfold map_clause_trm_trm.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* IH: H0 clin.
+    destruct cl.
+    f_equal.
+    eauto.
+Qed.
 
 (** Substitution and open_var for distinct names commute. *)
 Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
@@ -671,8 +754,16 @@ Proof.
   introv. unfold open_ee. generalize 0.
   induction e using trm_ind'; intros; simpl; f_equal*.
   - crush_eq.
-  - admit.
-Admitted.
+  - unfold map_clause_trm_trm.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* IH: H clin.
+    destruct cl.
+    f_equal.
+    eauto.
+Qed.
 
 (** Interactions between term substitutions in terms and opening
   with type variables in terms. *)
@@ -683,8 +774,16 @@ Proof.
   introv. unfold open_te. generalize 0.
   induction e using trm_ind'; intros; simpl; f_equal*.
   - case_var*. symmetry. autos* open_te_rec_term.
-  - admit.
-Admitted.
+  - unfold map_clause_trm_trm.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    lets* IH: H clin.
+    destruct cl.
+    f_equal.
+    eauto.
+Qed.
 
 (** Substitutions preserve local closure. *)
 
