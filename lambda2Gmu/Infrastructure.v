@@ -12,13 +12,17 @@ Require Import TLC.LibLN.
 (** ** Preserving size *)
 Lemma open_ee_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
-  induction e; introv; try solve [cbn; try case_if; cbn; eauto].
-Qed.
+  induction e using trm_ind'; introv; try solve [cbn; try case_if; cbn; eauto].
+  cbn.
+  rewrite <- IHe.
+  admit.
+Admitted.
+
 Lemma open_te_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_te_rec n (typ_fvar x) e).
-  induction e; introv; try solve [cbn; try case_if; cbn; eauto].
-Qed.
-
+  induction e using trm_ind'; introv; try solve [cbn; try case_if; cbn; eauto].
+  admit.
+Admitted.
 
 Lemma open_tt_var_preserves_size : forall T X n,
     typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
@@ -122,15 +126,22 @@ Proof.
   - lia.
 Qed.
 
-Lemma fv_fold_base : forall x ls base,
-    x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
+
+Lemma fv_fold_general : forall A x (ls : list A) (P : A -> fset var) base,
+    x \notin List.fold_left (fun (fv : fset var) (e : A) => fv \u P e) ls base ->
     x \notin base.
   induction ls.
   - introv Hfold. cbn in Hfold. auto.
   - introv Hfold. cbn in Hfold.
-    assert (x \notin base \u fv_typ a).
+    assert (x \notin base \u P a).
     + apply* IHls.
     + auto.
+Qed.
+
+Lemma fv_fold_base : forall x ls base,
+    x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
+    x \notin base.
+  lets*: fv_fold_general.
 Qed.
 
 Lemma fv_fold : forall Z x ls base,
@@ -389,8 +400,9 @@ Lemma open_te_rec_term_core : forall e j u i P ,
   open_ee_rec j u e = open_te_rec i P (open_ee_rec j u e) ->
   e = open_te_rec i P e.
 Proof.
-  induction e; intros; simpl in *; inversion H; f_equal*; f_equal*.
-Qed.
+  induction e using trm_ind'; intros; simpl in *; inversion H; f_equal*; f_equal*.
+  admit.
+Admitted.
 
 
 (* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
@@ -406,7 +418,7 @@ Qed.
 (*   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) -> *)
 (*   e = open_te_rec i P e. *)
 (* Proof. *)
-(*   induction e; intros; simpl in *; inversion H0; f_equal*; *)
+(*   induction e using trm_ind'; intros; simpl in *; inversion H0; f_equal*; *)
 (*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
 (*                         apply* (@open_tt_rec_type_core t j) end. *)
 (*   - admit. *)
@@ -448,7 +460,7 @@ Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 Lemma te_opening_te_adds_one : forall e X k n,
     te_closed_in_surroundings n (open_te_rec k (typ_fvar X) e) ->
     te_closed_in_surroundings (max (S n) (S k)) e.
-  induction e; introv Hc; inversions Hc;
+  induction e using trm_ind'; introv Hc; inversions Hc;
     try solve [
           constructor*
         | constructor*; apply* opening_adds_one
@@ -466,7 +478,7 @@ Qed.
 Lemma te_opening_ee_preserves : forall e x k n,
     te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
     te_closed_in_surroundings n e.
-  induction e; introv Hc; try solve [inversions Hc; constructor*].
+  induction e using trm_ind'; introv Hc; try solve [inversions Hc; constructor*].
 Qed.
 
 Lemma term_te_closed : forall e,
@@ -495,7 +507,7 @@ Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
     k >= n ->
     e = open_te_rec k T e.
-  induction e; introv Hc Hk; eauto; inversions Hc; cbn; f_equal;
+  induction e using trm_ind'; introv Hc Hk; eauto; inversions Hc; cbn; f_equal;
     try (match goal with
          | IH: forall T n k, ?P1 -> ?P2 -> ?e1 = open_te_rec k T ?e1 |- _ => apply* IH
          end);
@@ -525,12 +537,15 @@ Qed.
 Lemma subst_te_fresh : forall X U e,
   X \notin fv_trm e -> subst_te X U e = e.
 Proof.
-  induction e; simpl; intros; f_equal*; autos* subst_tt_fresh.
+  induction e using trm_ind'; simpl; intros; f_equal*; autos* subst_tt_fresh.
   - symmetry.
     apply map_id. introv Lin.
     symmetry.
     apply* subst_tt_fresh.
-Qed.
+  - apply* IHe.
+    lets*: fv_fold_general H0.
+  - admit.
+Admitted.
 
 (** Substitution distributes on the open operation. *)
 
@@ -539,7 +554,7 @@ Lemma subst_te_open_te : forall e T X U, type U ->
   open_te (subst_te X U e) (subst_tt X U T).
 Proof.
   intros. unfold open_te. generalize 0.
-  induction e; intro n0; simpls; f_equal*;
+  induction e using trm_ind'; intro n0; simpls; f_equal*;
     autos* subst_tt_open_tt_rec.
   - unfold open_typlist_rec.
     rewrite List.map_map.
@@ -547,7 +562,8 @@ Proof.
     apply List.map_ext.
     intro.
     apply* H0.
-Qed.
+  - admit.
+Admitted.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -570,21 +586,22 @@ Proof.
 Qed.
 
 (** ** Properties of term substitution in terms *)
-
 Lemma open_ee_rec_term_core : forall e j v u i, i <> j ->
   open_ee_rec j v e = open_ee_rec i u (open_ee_rec j v e) ->
   e = open_ee_rec i u e.
 Proof.
-  induction e; introv Neq H; simpl in *; inversion H; f_equal*.
-  crush_eq. crush_eq. subst. intuition.
-Qed.
+  induction e using trm_ind'; introv Neq Hopen; simpl in *; inversion Hopen; f_equal*.
+  - crush_eq. crush_eq. subst. intuition.
+  - admit.
+Admitted.
 
 Lemma open_ee_rec_type_core : forall e j V u i,
   open_te_rec j V e = open_ee_rec i u (open_te_rec j V e) ->
   e = open_ee_rec i u e.
 Proof.
-  induction e; introv H; simpls; inversion H; f_equal*.
-Qed.
+  induction e using trm_ind'; introv Ho; simpls; inversion Ho; f_equal*.
+  admit.
+Admitted.
 
 Lemma open_ee_rec_term : forall u e,
   term e -> forall k, e = open_ee_rec k u e.
@@ -608,9 +625,11 @@ Qed.
 Lemma subst_ee_fresh : forall x u e,
   x \notin fv_trm e -> subst_ee x u e = e.
 Proof.
-  induction e; simpl; intros; f_equal*.
+  induction e using trm_ind'; simpl; intros; f_equal*.
   - case_var*.
-Qed.
+  - admit.
+  - admit.
+Admitted.
 
 (** Substitution distributes on the open operation. *)
 Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
@@ -621,7 +640,8 @@ Proof.
   induction t1; intro n0; simpls; f_equal*.
   - crush_eq.
   - case_var*. rewrite* <- open_ee_rec_term.
-Qed.
+  - admit.
+Admitted.
 
 (** Substitution and open_var for distinct names commute. *)
 Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
@@ -649,8 +669,10 @@ Lemma subst_te_open_ee_var : forall Z P x e,
   (subst_te Z P e) open_ee_var x = subst_te Z P (e open_ee_var x).
 Proof.
   introv. unfold open_ee. generalize 0.
-  induction e; intros; simpl; f_equal*. crush_eq.
-Qed.
+  induction e using trm_ind'; intros; simpl; f_equal*.
+  - crush_eq.
+  - admit.
+Admitted.
 
 (** Interactions between term substitutions in terms and opening
   with type variables in terms. *)
@@ -659,9 +681,10 @@ Lemma subst_ee_open_te_var : forall z u e X, term u ->
   (subst_ee z u e) open_te_var X = subst_ee z u (e open_te_var X).
 Proof.
   introv. unfold open_te. generalize 0.
-  induction e; intros; simpl; f_equal*.
-  case_var*. symmetry. autos* open_te_rec_term.
-Qed.
+  induction e using trm_ind'; intros; simpl; f_equal*.
+  - case_var*. symmetry. autos* open_te_rec_term.
+  - admit.
+Admitted.
 
 (** Substitutions preserve local closure. *)
 

@@ -332,12 +332,6 @@ end.
 Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k u) ts.
 
 Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
-  let fix open_te_clauses k u (cs : list Clause) : list Clause :=
-    match cs with
-      (* each clause binds n type variables, as specified in its syntax *)
-    | cons (clause n e) t => cons (clause n (open_te_rec (k + n) u e)) (open_te_clauses k u t)
-    | nil => nil
-    end in
   match t with
   | trm_bvar i    => trm_bvar i
   | trm_fvar x    => trm_fvar x
@@ -351,17 +345,13 @@ Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   | trm_tabs e1 => trm_tabs (open_te_rec (S k) u e1)
   | trm_tapp e1 T => trm_tapp (open_te_rec k u e1) (open_tt_rec k u T)
   | trm_fix T e1 => trm_fix (open_tt_rec k u T) (open_te_rec k u e1)
-  | trm_matchgadt e1 G clauses => trm_matchgadt (open_te_rec k u e1) G (open_te_clauses k u clauses)
+  | trm_matchgadt e1 G cs =>
+    trm_matchgadt (open_te_rec k u e1) G
+                  (map (fun c => match c with clause n e => clause n (open_te_rec (k + n) u e) end) cs)
   | trm_let e1 e2 => trm_let (open_te_rec k u e1) (open_te_rec k u e2)
   end.
 
 Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
-  let fix open_ee_clauses k u (cs : list Clause) : list Clause :=
-      match cs with
-      (* each clause binds exactly 1 term variable *)
-      | cons (clause n e) t => cons (clause n (open_ee_rec (S k) u e)) (open_ee_clauses k u t)
-      | nil => nil
-      end in
   match e with
   (* | trm_bvar i    => If k = i then u else (trm_bvar i) *)
   | trm_bvar i    => if (k =? i) then u else (trm_bvar i)
@@ -376,7 +366,9 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tabs e1 => trm_tabs (open_ee_rec k u e1)
   | trm_tapp e1 T => trm_tapp (open_ee_rec k u e1) T
   | trm_fix T e1 => trm_fix T (open_ee_rec (S k) u e1)
-  | trm_matchgadt e1 G clauses => trm_matchgadt (open_ee_rec k u e1) G (open_ee_clauses k u clauses)
+  | trm_matchgadt e1 G cs =>
+    trm_matchgadt (open_ee_rec k u e1) G
+                  (map (fun c => match c with clause n e => clause n (open_ee_rec (S k) u e) end) cs)
   | trm_let e1 e2 => trm_let (open_ee_rec k u e1) (open_ee_rec (S k) u e2)
   end.
 
