@@ -346,6 +346,7 @@ Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   | trm_tapp e1 T => trm_tapp (open_te_rec k u e1) (open_tt_rec k u T)
   | trm_fix T e1 => trm_fix (open_tt_rec k u T) (open_te_rec k u e1)
   | trm_matchgadt e1 G cs =>
+    (* each clause binds n type variables *)
     trm_matchgadt (open_te_rec k u e1) G
                   (map (fun c => match c with clause n e => clause n (open_te_rec (k + n) u e) end) cs)
   | trm_let e1 e2 => trm_let (open_te_rec k u e1) (open_te_rec k u e2)
@@ -367,6 +368,7 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   | trm_tapp e1 T => trm_tapp (open_ee_rec k u e1) T
   | trm_fix T e1 => trm_fix T (open_ee_rec (S k) u e1)
   | trm_matchgadt e1 G cs =>
+    (* each clause binds 1 value variable *)
     trm_matchgadt (open_ee_rec k u e1) G
                   (map (fun c => match c with clause n e => clause n (open_ee_rec (S k) u e) end) cs)
   | trm_let e1 e2 => trm_let (open_ee_rec k u e1) (open_ee_rec (S k) u e2)

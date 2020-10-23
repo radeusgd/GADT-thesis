@@ -444,10 +444,25 @@ Lemma open_te_rec_term_core : forall e j u i P ,
   open_ee_rec j u e = open_te_rec i P (open_ee_rec j u e) ->
   e = open_te_rec i P e.
 Proof.
-  induction e using trm_ind'; intros; simpl in *; inversion H; f_equal*; f_equal*.
-  admit.
-Admitted.
-
+  induction e using trm_ind';
+    try solve [intros; simpl in *; inversion H; f_equal*; f_equal*].
+  introv Heq.
+  - rewrite List.Forall_forall in *.
+    cbn. cbn in Heq.
+    f_equal;
+      inversion* Heq.
+    rewrite <- (List.map_id) at 1.
+    apply* List.map_ext_in.
+    intros cl clin.
+    rewrite List.map_map in H2.
+    lets Heqcl: ext_in_map H2 clin.
+    destruct cl.
+    lets* IH: H clin (S j) u (i + Tarity) P.
+    cbn in IH.
+    f_equal.
+    apply* IH.
+    inversion* Heqcl.
+Qed.
 
 (* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
 (*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
@@ -653,16 +668,34 @@ Lemma open_ee_rec_term_core : forall e j v u i, i <> j ->
 Proof.
   induction e using trm_ind'; introv Neq Hopen; simpl in *; inversion Hopen; f_equal*.
   - crush_eq. crush_eq. subst. intuition.
-  - admit.
-Admitted.
+  - rewrite List.Forall_forall in *.
+    rewrite List.map_map in H2.
+    rewrite <- List.map_id at 1.
+    apply* List.map_ext_in.
+    intros cl clin.
+    lets* Hcleq: ext_in_map H2 clin.
+    destruct cl.
+    inversion* Hcleq.
+    f_equal.
+    lets* IH: H clin (S j) (S i).
+Qed.
 
 Lemma open_ee_rec_type_core : forall e j V u i,
   open_te_rec j V e = open_ee_rec i u (open_te_rec j V e) ->
   e = open_ee_rec i u e.
 Proof.
   induction e using trm_ind'; introv Ho; simpls; inversion Ho; f_equal*.
-  admit.
-Admitted.
+  - rewrite List.Forall_forall in *.
+    rewrite List.map_map in H2.
+    rewrite <- List.map_id at 1.
+    apply* List.map_ext_in.
+    intros cl clin.
+    lets* Hcleq: ext_in_map H2 clin.
+    destruct cl.
+    inversion* Hcleq.
+    f_equal.
+    lets* IH: H clin (j + Tarity) (S i).
+Qed.
 
 Lemma open_ee_rec_term : forall u e,
   term e -> forall k, e = open_ee_rec k u e.
