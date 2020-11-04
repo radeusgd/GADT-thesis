@@ -56,17 +56,17 @@ Axiom Vector : var.
 Axiom all_distinct :
   (Zero <> Succ) /\ (Succ <> Vector) /\ (Zero <> Vector).
 Definition VectorDef := (* Vector a len *)
-  GADT 2 [
+  mkGADT 2 [
          (* empty : () -> Vector a Zero *)
-         GADTconstr 1 typ_unit [@0; typ_gadt [] Zero];
+         mkGADTconstructor 1 typ_unit [@0; typ_gadt [] Zero];
          (* cons : (a * Vector a n) -> Vector a (Succ n) *)
-         GADTconstr 2 (@0 ** typ_gadt [@0; @1] Vector) [@0; typ_gadt [@1] Succ]
+         mkGADTconstructor 2 (@0 ** typ_gadt [@0; @1] Vector) [@0; typ_gadt [@1] Succ]
        ].
 
 Definition sigma :=
   empty
-  & Zero ~ GADT 0 [] (* zero and succ are phantom types, so they do not even need any constructors (but we can add them if needed) *)
-  & Succ ~ GADT 1 []
+  & Zero ~ mkGADT 0 [] (* zero and succ are phantom types, so they do not even need any constructors (but we can add them if needed) *)
+  & Succ ~ mkGADT 1 []
   & Vector ~ VectorDef.
 
 Lemma oksigma : okGadt sigma.

@@ -1,9 +1,9 @@
 Require Import TestCommon.
 
 Axiom Nat : var.
-Definition NatDef := GADT 0 [
-                            GADTconstr 0 typ_unit [];
-                            GADTconstr 0 (typ_gadt [] Nat) []
+Definition NatDef := mkGADT 0 [
+                            mkGADTconstructor 0 typ_unit [];
+                            mkGADTconstructor 0 (typ_gadt [] Nat) []
                           ].
 
 Definition natSigma := (empty & Nat ~ NatDef).

@@ -34,6 +34,11 @@ Require Import List.
 Require Import Coq.Init.Nat.
 Import List.ListNotations.
 
+
+Inductive DistinctList : list var -> Prop :=
+| distinctive_empty : DistinctList []
+| distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (h :: t).
+
 (** * Types *)
 
 Definition GADTName : Set := var.
@@ -160,10 +165,10 @@ with
 (* Clause : Set := *)
 (* | clause (c: GADTConstructor) (e: trm) *)
 Clause : Set :=
-| clause (Tarity : nat) (e : trm)
+| clause (clArity : nat) (e : trm)
 .
 
-Definition clauseTArity (c : Clause) : nat :=
+Definition clauseArity (c : Clause) : nat :=
   match c with
   | clause n _ => n
   end.
@@ -424,6 +429,8 @@ Definition open_te_many (args : list typ) (e : trm) := fold_left open_te args e.
 (*   | h :: t => open_tt_many (open_tt T h) t *)
 (*   end. *)
 
+Definition open_te_many_var (args : list var) (e : trm) := open_te_many (map typ_fvar args) e.
+
 (** * Free Variables *)
 
 Fixpoint fv_typ (T : typ) {struct T} : vars :=
@@ -544,10 +551,17 @@ Inductive term : trm -> Prop :=
     term e1 ->
     (forall x, x \notin L -> term (e2 open_ee_var x)) ->
     term (trm_let e1 e2)
-(* | term_matchgadt : forall e1 clauses, *)
-(*     term e1 -> *)
-(*     (forall cname ce, In (clause cname ce) clauses -> term ce) -> *)
-(*     term (trm_matchgadt e1 clauses) *)
+| term_matchgadt : forall L e1 G ms,
+    term e1 ->
+    (forall cl, In cl ms ->
+           forall Alphas x,
+             length Alphas = clauseArity cl ->
+             DistinctList Alphas ->
+             (forall A, In A Alphas -> A \notin L) ->
+             x \notin L ->
+           term ((open_te_many_var Alphas (clauseTerm cl)) open_ee_var x)
+    ) ->
+    term (trm_matchgadt e1 G ms)
 with
 value : trm -> Prop :=
 | value_abs : forall V e1, term (trm_abs V e1) ->
@@ -583,17 +597,24 @@ we would apply ((f x)[U]) <> to get the result
 
 
 *)
-Inductive GADTConstructorDef : Set :=
+Record GADTConstructorDef : Set :=
   (* a constructor of type ∀(α...). τ → (β...) T)
      arity specifies how many type parameters (α) there are, they are referred to inside the types by DeBruijn indices
      τ is the type of argument (one arg only, use tuples for more; it can refer to α)
      β are the instantiated type parameters of the returned GADT type (they can refer to α) - βs are represented by rettypes
      T is the base GADT type name that is returned by this constructor, it is not included in the constructor definition as it is implicit from where this definition is
    *)
-  GADTconstr (arity : nat) (argtype : typ) (rettypes : list typ).
+  mkGADTconstructor {
+      Carity : nat;
+      Cargtype : typ;
+      Crettypes : list typ
+    }.
 
-Inductive GADTDef : Set :=
-  GADT (arity : nat) (constructors : list GADTConstructorDef).
+Record GADTDef : Set :=
+  mkGADT {
+      Tarity : nat;
+      Tconstructors : list GADTConstructorDef
+    }.
 
 (* This env is the signature of the available GADT types, it is Σ in the paper *)
 Definition GADTEnv := env GADTDef.
@@ -647,7 +668,7 @@ Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
     wft Σ E (typ_all T2)
 | wft_gadt : forall Σ E Tparams Name Arity Defs,
     (forall T, In T Tparams -> wft Σ E T) ->
-    binds Name (GADT Arity Defs) Σ ->
+    binds Name (mkGADT Arity Defs) Σ ->
     length Tparams = Arity ->
     wft Σ E (typ_gadt Tparams Name)
 .
@@ -657,10 +678,6 @@ Fixpoint add_types (E : ctx) (args : list var) :=
   | [] => E
   | Th :: Tts => (add_types E Tts & withtyp Th)
   end.
-
-Inductive DistinctList : list var -> Prop :=
-| distinctive_empty : DistinctList []
-| distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (h :: t).
 
 (** * Well-formedness of the GADT definitions and the envionment *)
 
@@ -686,12 +703,12 @@ Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
     fv_typ argT = \{} ->
     (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* the types have no free variables, but can of course reference other GADTs since these are not counted as free vars *)
     (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
-    okConstructorDef Σ Tarity (GADTconstr Carity argT retTs).
+    okConstructorDef Σ Tarity (mkGADTconstructor Carity argT retTs).
 
 Definition okGadt (Σ : GADTEnv) : Prop :=
   ok Σ /\
   forall Name Arity Defs,
-    binds Name (GADT Arity Defs) Σ ->
+    binds Name (mkGADT Arity Defs) Σ ->
     (forall Def,
         In Def Defs ->
         okConstructorDef Σ Arity Def).
@@ -731,8 +748,8 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ (trm_fvar x) ∈ T
 | typing_cons : forall Σ E Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
     {Σ, E} ⊢ e1 ∈ Targ ->
-    binds Name (GADT Tarity Ctors) Σ ->
-    nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
+    binds Name (mkGADT Tarity Ctors) Σ ->
+    nth_error Ctors Ctor = Some (mkGADTconstructor Carity CargType CretTypes) ->
     length Ts = Carity ->
     Targ = open_tt_many Ts CargType ->
     (forall T, In T Ts -> wft Σ E T) ->
@@ -775,6 +792,28 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ e1 ∈ V ->
     (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, E} ⊢ trm_let e1 e2 ∈ T2
+(* typing case merges rules ty-case and pat-cons from the original paper *)
+| typing_case : forall L Σ E e ms Ts T Name Tc Tarity Defs,
+    {Σ, E} ⊢ e ∈ T ->
+    T = (typ_gadt Ts Name) ->
+    binds Name (mkGADT Tarity Defs) Σ ->
+    (* length Defs = length ms -> (* implicit exhaustivity check *) *)
+    Forall2 (fun def clause =>
+               forall Alphas x,
+                 length Alphas = Carity def ->
+                 DistinctList Alphas -> (* not sure if this is necessary, but may be helpful*)
+                 (forall A, In A Alphas -> A \notin L) ->
+                 x \notin L ->
+                 (* TODO for now we do not have add the type equalities, without them the existential tpes are mostly useless; will be added in next iteration
+                    TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
+                  *)
+                 clauseArity clause = Carity def ->
+                 { Σ,
+                   (add_types E Alphas)
+                   & x ~: (open_tt_many_var Alphas (Cargtype def))
+                 } ⊢ (clauseTerm clause) ∈ Tc
+            ) Defs ms ->
+    { Σ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
 
 (** * Reduction rules (Small-step operational semantics) *)
@@ -806,6 +845,12 @@ Inductive red : trm -> trm -> Prop :=
     term (trm_fix T v) ->
     e' = open_ee v (trm_fix T v) ->
     trm_fix T v --> e'
+| red_match : forall e1 G cid Ts ms Carity Ce e',
+    value (trm_constructor Ts (G, cid) e1) ->
+    nth_error ms cid = Some (clause Carity Ce) ->
+    length Ts = Carity -> (* do we need this additional assumption? seems to be derivable from typing, but maybe better keep it for sanity *)
+    e' = open_ee (open_te_many Ts Ce) e1 ->
+    trm_matchgadt (trm_constructor Ts (G, cid) e1) G ms --> e'
 | ered_app_1 : forall e1 e1' e2,
     e1 --> e1' ->
     trm_app e1 e2 --> trm_app e1' e2
@@ -836,6 +881,9 @@ Inductive red : trm -> trm -> Prop :=
 | ered_let : forall e1 e2 e1',
     e1 --> e1' ->
     trm_let e1 e2 --> trm_let e1' e2
+| ered_match : forall e1 G ms e1',
+    e1 --> e1' ->
+    trm_matchgadt e1 G ms --> trm_matchgadt e1' G ms
 where "e1 --> e2" := (red e1 e2).
 
 (** * Substitution *)

@@ -173,7 +173,8 @@ Proof.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-Qed.
+  - admit.
+Admitted.
 
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
 
@@ -212,7 +213,8 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
   - apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
     apply_ih.
-Qed.
+  - admit.
+Admitted.
 
 Hint Resolve okt_subst_tb.
 
@@ -359,7 +361,7 @@ Proof.
   - apply* typing_var. rewrite* (@map_subst_tb_id Σ E Z P).
     match goal with
     | Hbinds: binds _ _ _ |- _ => binds_cases Hbinds; unsimpl_map_bind* end.
-  - assert (Hokconstr: okConstructorDef Σ Tarity (GADTconstr (length Ts) CargType CretTypes)).
+  - assert (Hokconstr: okConstructorDef Σ Tarity (mkGADTconstructor (length Ts) CargType CretTypes)).
     + apply* gadt_constructor_ok. apply* okt_implies_okgadt.
       lets*: typing_regular Typ.
     + inversion Hokconstr
@@ -405,7 +407,8 @@ Proof.
     unsimpl (subst_tb Z P (bind_var V)).
     rewrite* subst_te_open_ee_var.
     apply_ih2.
-Qed.
+  - admit.
+Admitted.
 
 Ltac IHR e :=
   match goal with
@@ -482,4 +485,6 @@ Theorem preservation_thm : preservation.
     expand_env_empty E.
     apply* typing_through_subst_ee.
     fold_env_empty.
-Qed.
+  - (* matchgadt *)
+    admit.
+Admitted.

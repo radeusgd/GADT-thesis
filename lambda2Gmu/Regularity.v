@@ -256,10 +256,10 @@ Qed.
 Hint Resolve okt_is_ok.
 
 Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType CretTypes,
-    binds Name (GADT Tarity Ctors) Σ ->
-    List.nth_error Ctors Ctor = Some (GADTconstr Carity CargType CretTypes) ->
+    binds Name (mkGADT Tarity Ctors) Σ ->
+    List.nth_error Ctors Ctor = Some (mkGADTconstructor Carity CargType CretTypes) ->
     okGadt Σ ->
-    okConstructorDef Σ Tarity (GADTconstr Carity CargType CretTypes).
+    okConstructorDef Σ Tarity (mkGADTconstructor Carity CargType CretTypes).
   introv Hbind Hlist HokG.
   inversion HokG as [Hok HokG'].
   apply* HokG'.
@@ -363,6 +363,7 @@ Proof.
                    | | | |
                    | ? ? ? ? ? IHval ? IH
                    | ? ? ? ? ? ? ? ? ? ? IH
+                   |
                    ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
@@ -445,7 +446,10 @@ Proof.
     + econstructor. auto.
       introv HxiL. lets HF: IH1 x HxiL. destruct* HF.
     + apply_folding E wft_strengthen.
-Qed.
+  - splits*.
+    + admit.
+    + admit.
+Admitted.
 
 (** The value relation is restricted to well-formed objects. *)
 

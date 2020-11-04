@@ -457,7 +457,7 @@ Proof.
     rewrite List.map_map in H2.
     lets Heqcl: ext_in_map H2 clin.
     destruct cl.
-    lets* IH: H clin (S j) u (i + Tarity) P.
+    lets* IH: H clin (S j) u (i + clArity) P.
     cbn in IH.
     f_equal.
     apply* IH.
@@ -560,7 +560,8 @@ Lemma term_te_closed : forall e,
     pick_fresh X.
     lets* Hopen: te_opening_te_adds_one e1 X 0 0.
   -  constructor*. apply* type_closed.
-Qed.
+  - admit.
+Admitted.
 
 Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
@@ -694,7 +695,7 @@ Proof.
     destruct cl.
     inversion* Hcleq.
     f_equal.
-    lets* IH: H clin (j + Tarity) (S i).
+    lets* IH: H clin (j + clArity) (S i).
 Qed.
 
 Lemma open_ee_rec_term : forall u e,
@@ -713,7 +714,8 @@ Proof.
 
   - unfolds open_ee. pick_fresh x.
     apply* (@open_ee_rec_term_core e2 0 (trm_fvar x)).
-Qed.
+  - admit.
+Admitted.
 
 (** Substitution for a fresh name is identity. *)
 Lemma subst_ee_fresh : forall x u e,
@@ -861,6 +863,7 @@ Proof.
       rewrite* subst_te_open_ee_var.
       rewrite* subst_te_open_ee_var.
     + apply_fresh* term_let as x. rewrite* subst_te_open_ee_var.
+    + admit.
   - lets: subst_tt_type; induction 1; intros; cbn; auto;
       match goal with
       | H: term _ |- _ => rename H into Hterm end.
@@ -877,7 +880,7 @@ Proof.
       * apply* value_is_term.
       * apply* subst_map_reverse_type.
         inversion* Hterm.
-Qed.
+Admitted.
 
 Lemma subst_ee_term : forall e1 Z e2,
     term e1 -> term e2 -> term (subst_ee Z e2 e1)
@@ -890,6 +893,7 @@ Proof.
     + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
     + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
+    + admit.
   - induction 1; intros; simpl; auto;
       try match goal with
       | H: term (trm_abs _ _) |- _ => rename H into Hterm
@@ -904,7 +908,7 @@ Proof.
         -- apply* value_is_term.
         -- inversion* H.
       * apply* IHvalue.
-Qed.
+Admitted.
 
 Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
     open_tt_many OTs (typ_gadt GTs N) =
