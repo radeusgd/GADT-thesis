@@ -514,7 +514,12 @@ Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 | closed_term_constructor : forall Ts N e k,
     List.Forall (typ_closed_in_surroundings k) Ts ->
     te_closed_in_surroundings k e ->
-    te_closed_in_surroundings k (trm_constructor Ts N e).
+    te_closed_in_surroundings k (trm_constructor Ts N e)
+| closed_term_match : forall G e ms k,
+    te_closed_in_surroundings k e ->
+    (forall cl, List.In cl ms -> te_closed_in_surroundings (k + clauseArity cl) (clauseTerm cl)) ->
+    te_closed_in_surroundings k (trm_matchgadt e G ms)
+.
 
 Lemma te_opening_te_adds_one : forall e X k n,
     te_closed_in_surroundings n (open_te_rec k (typ_fvar X) e) ->
@@ -532,12 +537,39 @@ Lemma te_opening_te_adds_one : forall e X k n,
     unfold open_typlist_rec.
     apply* List.in_map.
   - econstructor. apply* IHe.
+  - constructor*.
+    introv clin.
+    rewrite List.Forall_forall in *.
+    lets* IHcl: H clin.
+    destruct cl as [clArity clTerm].
+    cbn.
+    cbn in IHcl.
+    assert (Harit: Nat.max n k + clArity = Nat.max (n + clArity) (k + clArity)); try lia.
+    rewrite Harit.
+    apply IHcl with X.
+    lets* IHcl2: H5 (clause clArity (open_te_rec (k + clArity) (typ_fvar X) clTerm)).
+    cbn in IHcl2.
+    apply* IHcl2.
+    apply* List.in_map_iff.
+    exists (clause clArity clTerm). eauto.
 Qed.
 
 Lemma te_opening_ee_preserves : forall e x k n,
     te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
     te_closed_in_surroundings n e.
   induction e using trm_ind'; introv Hc; try solve [inversions Hc; constructor*].
+  - inversions Hc.
+    rewrite List.Forall_forall in *.
+    constructor*.
+    introv clin.
+    apply H with x (S k); eauto.
+    destruct cl as [clA clT].
+    lets* Hcl: H5 (clause clA (open_ee_rec (S k) (trm_fvar x) clT)).
+    cbn in Hcl.
+    cbn.
+    apply Hcl.
+    apply* List.in_map_iff.
+    exists (clause clA clT). eauto.
 Qed.
 
 Lemma term_te_closed : forall e,
@@ -559,8 +591,16 @@ Lemma term_te_closed : forall e,
   - constructor*.
     pick_fresh X.
     lets* Hopen: te_opening_te_adds_one e1 X 0 0.
-  -  constructor*. apply* type_closed.
-  - admit.
+  - constructor*. apply* type_closed.
+  - constructor*.
+    introv clin.
+    cbn.
+    lets* fresh_alphas: exist_alphas L (clauseArity cl).
+    inversion fresh_alphas as [Alphas [Hlen [Hdist Hnotin]]].
+    rewrite length_equality in Hlen.
+    pick_fresh x.
+    lets hmm: H1 clin Alphas x Hlen Hdist.
+    admit.
 Admitted.
 
 Lemma te_closed_id : forall e T n k,
@@ -573,14 +613,21 @@ Lemma te_closed_id : forall e T n k,
          end);
     try apply* closed_id;
     try lia.
-  unfold open_typlist_rec.
-  rewrite <- List.map_id at 1.
-  apply* List.map_ext_in.
-  intro U.
-  rewrite List.Forall_forall in *.
-  lets* HC: H2 U.
-  lets*: closed_id U T n k.
-Qed.
+  - unfold open_typlist_rec.
+    rewrite <- List.map_id at 1.
+    apply* List.map_ext_in.
+    intro U.
+    rewrite List.Forall_forall in *.
+    lets* HC: H2 U.
+    lets*: closed_id U T n k.
+  - rewrite <- List.map_id at 1.
+    apply* List.map_ext_in.
+    intros cl clin.
+    rewrite List.Forall_forall in *.
+    destruct cl as [clA clT].
+    f_equal.
+    admit. (* WIP *)
+Admitted.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
