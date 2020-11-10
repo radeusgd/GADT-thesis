@@ -420,18 +420,24 @@ Fixpoint open_tt_many (args : list typ) (T : typ) :=
   | [] => T
   end.
 
-Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ_fvar args) T.
-
 Fixpoint open_te_many (args : list typ) (e : trm) :=
   match args with
   | ha :: ta => open_te_many ta (open_te e ha)
   | [] => e
   end.
-(* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
+(* Fixpoint open_tt_many (args : list typ) (T : typ) : typ := *)
 (*   match args with *)
 (*   | [] => T *)
-(*   | h :: t => open_tt_many (open_tt T h) t *)
+(*   | h :: t => open_tt (open_tt_many t T) h *)
 (*   end. *)
+
+(* Fixpoint open_te_many (args : list typ) (e : trm) : trm := *)
+(*   match args with *)
+(*   | [] => e *)
+(*   | h :: t => open_te (open_te_many t e) h *)
+(*   end. *)
+
+Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ_fvar args) T.
 
 Definition open_te_many_var (args : list var) (e : trm) := open_te_many (map typ_fvar args) e.
 

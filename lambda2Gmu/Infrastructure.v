@@ -579,17 +579,15 @@ Lemma te_opening_te_many_adds : forall As N n e,
   induction As as [| Ah Ats]; destruct N; introv Hcl Hlen; inversion Hlen.
   - cbn in *. eauto.
   - cbn in Hcl.
-    lets: open_te_many_var.
     fold (open_te_many_var Ats (e open_te_var Ah)) in Hcl.
-    lets IH: IHAts (length Ats) (S n) e.
-    assert (Harit: length Ats + S n = S (length Ats) + n); try lia.
-    rewrite <- Harit.
-    apply* IH.
-    assert (Harit2: max (S n) (S 0) = S n); try lia.
+
+    lets IH: IHAts (length Ats) n (e open_te_var Ah).
+    assert (Harit2: Nat.max (S (length Ats + n)) (S 0) = (S (length Ats) + n)); try lia.
     rewrite <- Harit2.
     apply te_opening_te_adds_one with Ah.
-
-Admitted.
+    fold (e open_te_var Ah).
+    apply* IH.
+Qed.
 
 Lemma term_te_closed : forall e,
     term e -> te_closed_in_surroundings 0 e.
@@ -624,7 +622,8 @@ Lemma term_te_closed : forall e,
     unfold open_ee in hmm2.
     lets hmm3: te_opening_ee_preserves hmm2.
     lets hmm4: te_opening_te_many_adds (clauseArity cl) hmm3.
-    cbn in hmm4.
+    assert (Hneutral: forall n, n + 0 = n); try (intro; lia).
+    rewrite Hneutral in hmm4.
     apply* hmm4.
 Qed.
 
