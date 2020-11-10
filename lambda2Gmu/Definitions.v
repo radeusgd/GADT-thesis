@@ -422,7 +422,11 @@ Fixpoint open_tt_many (args : list typ) (T : typ) :=
 
 Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ_fvar args) T.
 
-Definition open_te_many (args : list typ) (e : trm) := fold_left open_te args e.
+Fixpoint open_te_many (args : list typ) (e : trm) :=
+  match args with
+  | ha :: ta => open_te_many ta (open_te e ha)
+  | [] => e
+  end.
 (* Fixpoint open_tt_many (T : typ) (args : list typ) : typ := *)
 (*   match args with *)
 (*   | [] => T *)

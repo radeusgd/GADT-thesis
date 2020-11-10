@@ -572,6 +572,25 @@ Lemma te_opening_ee_preserves : forall e x k n,
     exists (clause clA clT). eauto.
 Qed.
 
+Lemma te_opening_te_many_adds : forall As N n e,
+    te_closed_in_surroundings n (open_te_many_var As e) ->
+    length As = N ->
+    te_closed_in_surroundings (N + n) e.
+  induction As as [| Ah Ats]; destruct N; introv Hcl Hlen; inversion Hlen.
+  - cbn in *. eauto.
+  - cbn in Hcl.
+    lets: open_te_many_var.
+    fold (open_te_many_var Ats (e open_te_var Ah)) in Hcl.
+    lets IH: IHAts (length Ats) (S n) e.
+    assert (Harit: length Ats + S n = S (length Ats) + n); try lia.
+    rewrite <- Harit.
+    apply* IH.
+    assert (Harit2: max (S n) (S 0) = S n); try lia.
+    rewrite <- Harit2.
+    apply te_opening_te_adds_one with Ah.
+
+Admitted.
+
 Lemma term_te_closed : forall e,
     term e -> te_closed_in_surroundings 0 e.
   induction 1; try solve [
@@ -599,9 +618,15 @@ Lemma term_te_closed : forall e,
     inversion fresh_alphas as [Alphas [Hlen [Hdist Hnotin]]].
     rewrite length_equality in Hlen.
     pick_fresh x.
+    assert (xfresh: x \notin L); eauto.
     lets hmm: H1 clin Alphas x Hlen Hdist.
-    admit.
-Admitted.
+    lets hmm2: hmm Hnotin xfresh.
+    unfold open_ee in hmm2.
+    lets hmm3: te_opening_ee_preserves hmm2.
+    lets hmm4: te_opening_te_many_adds (clauseArity cl) hmm3.
+    cbn in hmm4.
+    apply* hmm4.
+Qed.
 
 Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
