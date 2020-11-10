@@ -650,8 +650,12 @@ Lemma te_closed_id : forall e T n k,
     rewrite List.Forall_forall in *.
     destruct cl as [clA clT].
     f_equal.
-    admit. (* WIP *)
-Admitted.
+    lets* IH: H (clause clA clT) T (n + clA) (k + clA).
+    cbn in IH.
+    apply* IH.
+    + lets* Hcl: H5 (clause clA clT).
+    + lia.
+Qed.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
@@ -772,7 +776,8 @@ Qed.
 Lemma open_ee_rec_term : forall u e,
   term e -> forall k, e = open_ee_rec k u e.
 Proof.
-  induction 1; intro k; simpl; f_equal*.
+  induction 1; intro k;
+    simpl; f_equal*.
   - unfolds open_ee. pick_fresh x.
     apply* (@open_ee_rec_term_core e1 0 (trm_fvar x)).
 
@@ -785,7 +790,38 @@ Proof.
 
   - unfolds open_ee. pick_fresh x.
     apply* (@open_ee_rec_term_core e2 0 (trm_fvar x)).
-  - admit.
+  - rewrite <- List.map_id at 1.
+    apply List.map_ext_in.
+    intros cl clin.
+    destruct cl as [clA clT].
+    f_equal.
+
+    lets* fresh_alphas: exist_alphas L clA.
+    inversion fresh_alphas as [Alphas [Hlen [Hdist Hnotin]]].
+    rewrite length_equality in Hlen.
+    pick_fresh x.
+    assert (xfresh: x \notin L); eauto.
+
+
+    lets* IHcl: H1 clin Alphas x.
+    cbn in IHcl.
+    lets* IHcl2: IHcl Hlen Hdist Hnotin xfresh.
+
+    lets: open_ee_rec_term_core.
+
+    assert (Hpart: open_te_many_var Alphas clT =
+                   open_ee_rec (S k) u (open_te_many_var Alphas clT)).
+    + unfolds open_ee.
+      eapply open_ee_rec_term_core.
+      2: {
+        apply* IHcl2.
+      }
+      lia.
+    +
+
+    (* lets* IHclterm: H0 clin Alphas x. *)
+    (* cbn in IHclterm. *)
+    (* lets* IHclterm2: IHclterm Hlen Hdist Hnotin xfresh. *)
 Admitted.
 
 (** Substitution for a fresh name is identity. *)
