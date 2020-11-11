@@ -773,6 +773,18 @@ Proof.
     lets* IH: H clin (j + clArity) (S i).
 Qed.
 
+Lemma open_ee_rec_type_many : forall As k u e,
+  open_te_many_var As e =
+  open_ee_rec k u (open_te_many_var As e) ->
+  e = open_ee_rec k u e.
+  induction As as [| Ah Ats]; introv Heq.
+  - cbn in Heq. eauto.
+  - cbn in Heq.
+    fold (open_te_many_var Ats (e open_te_var Ah)) in Heq.
+    lets* IH: IHAts k u (e open_te_var Ah) Heq.
+    apply* open_ee_rec_type_core.
+Qed.
+
 Lemma open_ee_rec_term : forall u e,
   term e -> forall k, e = open_ee_rec k u e.
 Proof.
@@ -807,8 +819,6 @@ Proof.
     cbn in IHcl.
     lets* IHcl2: IHcl Hlen Hdist Hnotin xfresh.
 
-    lets: open_ee_rec_term_core.
-
     assert (Hpart: open_te_many_var Alphas clT =
                    open_ee_rec (S k) u (open_te_many_var Alphas clT)).
     + unfolds open_ee.
@@ -817,12 +827,8 @@ Proof.
         apply* IHcl2.
       }
       lia.
-    +
-
-    (* lets* IHclterm: H0 clin Alphas x. *)
-    (* cbn in IHclterm. *)
-    (* lets* IHclterm2: IHclterm Hlen Hdist Hnotin xfresh. *)
-Admitted.
+    + apply* open_ee_rec_type_many.
+Qed.
 
 (** Substitution for a fresh name is identity. *)
 Lemma subst_ee_fresh : forall x u e,
