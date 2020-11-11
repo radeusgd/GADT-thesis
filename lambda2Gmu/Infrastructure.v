@@ -464,26 +464,6 @@ Proof.
     inversion* Heqcl.
 Qed.
 
-(* Lemma open_typlist_rec_type_core : forall l j Q i P, *)
-(*     open_typlist_rec j Q l = open_typlist_rec i P (open_typlist_rec j Q l) -> *)
-(*     i <> j -> *)
-(*     l = open_typlist_rec i P l. *)
-(*   induction l; intros; simpl in *; inversion H; f_equal*; *)
-(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
-(*                         apply* (@open_tt_rec_type_core t j) end. *)
-(* Admitted. *)
-
-(* Lemma open_te_rec_type_core : forall e j Q i P, i <> j -> *)
-(*   open_te_rec j Q e = open_te_rec i P (open_te_rec j Q e) -> *)
-(*   e = open_te_rec i P e. *)
-(* Proof. *)
-(*   induction e using trm_ind'; intros; simpl in *; inversion H0; f_equal*; *)
-(*     try match goal with H: ?i <> ?j |- ?t = open_tt_rec ?i _ ?t => *)
-(*                         apply* (@open_tt_rec_type_core t j) end. *)
-(*   - admit. *)
-(*     (* apply* open_typlist_rec_type_core. *) *)
-(* Admitted. *)
-
 (* this one describes terms being closed in relation to type-variables, not term-varaibles*)
 Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 | closed_trm_bvar : forall i k, te_closed_in_surroundings k (trm_bvar i)
@@ -959,6 +939,31 @@ Proof.
     apply* subst_map_reverse_type.
 Qed.
 
+Lemma subst_commutes_with_unrelated_opens_te_te : forall Xs e V Y,
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    subst_te Y V (open_te_many_var Xs e) =
+    (open_te_many_var Xs (subst_te Y V e)).
+  induction Xs as [| Xh Xt]; introv Hneq Htyp.
+  - cbn. eauto.
+  - cbn.
+    fold (open_te_many_var Xt (e open_te_var Xh)).
+    fold (open_te_many_var Xt (subst_te Y V e open_te_var Xh)).
+    rewrite* subst_te_open_te_var; eauto with listin.
+Qed.
+
+Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y,
+    (forall X, List.In X Xs -> X <> y) ->
+    term v ->
+    subst_ee y v (open_te_many_var Xs e) =
+    (open_te_many_var Xs (subst_ee y v e)).
+  induction Xs as [| Xh Xt]; introv Hneq Htyp.
+  - cbn. eauto.
+  - cbn.
+    fold (open_te_many_var Xt (e open_te_var Xh)).
+    fold (open_te_many_var Xt (subst_ee y v e open_te_var Xh)).
+    rewrite* subst_ee_open_te_var; eauto with listin.
+Qed.
 
 Lemma subst_te_term : forall e Z P,
     term e -> type P -> term (subst_te Z P e)
@@ -976,7 +981,32 @@ Proof.
       rewrite* subst_te_open_ee_var.
       rewrite* subst_te_open_ee_var.
     + apply_fresh* term_let as x. rewrite* subst_te_open_ee_var.
-    + admit.
+    + econstructor; eauto.
+      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh.
+      destruct cl as [clA clT].
+      unfold map_clause_trm_trm in clinmap.
+      lets cl2: clinmap.
+      apply List.in_map_iff in cl2.
+      destruct cl2 as [[cl'A cl'T] [cl'eq cl'in]].
+      inversion cl'eq. subst.
+      cbn.
+      lets* IH: H2 cl'in Alphas x Hlen Hdist.
+      cbn in IH.
+      instantiate (1:=(L \u \{ Z })) in Afresh.
+      assert (Hpull:
+          open_te_many_var Alphas (subst_te Z P cl'T) open_ee_var x
+          =
+          subst_te Z P (open_te_many_var Alphas cl'T open_ee_var x)
+        ).
+      * rewrite <- subst_commutes_with_unrelated_opens_te_te.
+        rewrite* subst_te_open_ee_var.
+        -- intros A AAlpha.
+           assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
+        -- eauto.
+      * rewrite Hpull.
+        apply* IH.
+        introv Ain.
+        assert (A \notin L \u \{ Z}); eauto.
   - lets: subst_tt_type; induction 1; intros; cbn; auto;
       match goal with
       | H: term _ |- _ => rename H into Hterm end.
@@ -993,7 +1023,7 @@ Proof.
       * apply* value_is_term.
       * apply* subst_map_reverse_type.
         inversion* Hterm.
-Admitted.
+Qed.
 
 Lemma subst_ee_term : forall e1 Z e2,
     term e1 -> term e2 -> term (subst_ee Z e2 e1)
@@ -1006,7 +1036,25 @@ Proof.
     + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
     + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
-    + admit.
+    + econstructor; eauto.
+      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh.
+      destruct cl as [clA clT].
+      unfold map_clause_trm_trm in clinmap.
+      lets cl2: clinmap.
+      apply List.in_map_iff in cl2.
+      destruct cl2 as [[cl'A cl'T] [cl'eq cl'in]].
+      inversion cl'eq. subst.
+      cbn.
+      lets* IH: H1 cl'in Alphas x Hlen Hdist.
+      cbn in IH.
+      instantiate (1:=(L \u \{ Z })) in Afresh.
+      rewrite* <- subst_commutes_with_unrelated_opens_te_ee.
+      * rewrite* subst_ee_open_ee_var.
+        apply* IH.
+        intros A AAlpha.
+        assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
+      * intros A AAlpha.
+        assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
   - induction 1; intros; simpl; auto;
       try match goal with
       | H: term (trm_abs _ _) |- _ => rename H into Hterm
@@ -1021,7 +1069,7 @@ Proof.
         -- apply* value_is_term.
         -- inversion* H.
       * apply* IHvalue.
-Admitted.
+Qed.
 
 Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
     open_tt_many OTs (typ_gadt GTs N) =
