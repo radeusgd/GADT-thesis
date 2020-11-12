@@ -33,6 +33,7 @@ Require Import TLC.LibTactics.
 Require Import List.
 Require Import Coq.Init.Nat.
 Import List.ListNotations.
+Require Import Zip.
 
 
 Inductive DistinctList : list var -> Prop :=
@@ -808,6 +809,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     T = (typ_gadt Ts Name) ->
     binds Name (mkGADT Tarity Defs) Σ ->
     (* length Defs = length ms -> (* implicit exhaustivity check *) *)
+    (* TODO may need to rewrite it into zip to get better induction for free *)
     Forall2 (fun def clause =>
                forall Alphas x,
                  length Alphas = Carity def ->

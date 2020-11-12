@@ -87,7 +87,16 @@ Theorem progress_thm : progress.
   - right.
     eexists.
     constructor*.
-  - admit.
+  - right.
+    inversions Htyp.
+    lets* IHe2: IHe H2.
+    destruct IHe2 as [Hval | [e' Hred]].
+    + lets* [GTs [GC [Ge Heq]]]: CanonicalFormGadt H2.
+      subst.
+      eexists.
+      econstructor; eauto.
+      admit.
+    + exists (trm_matchgadt e' g l). constructor*.
   - IHT e1.
     right. destruct IHt as [Hv | Hev].
     + eexists. econstructor; eauto.

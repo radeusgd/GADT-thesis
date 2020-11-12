@@ -363,3 +363,4 @@ Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
   rewrite isTrue_eq_if in H;
   case_if; auto.
 Qed.
+

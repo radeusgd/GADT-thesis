@@ -352,6 +352,12 @@ Lemma wft_open_many : forall E Σ Alphas Ts U,
     apply* Htb.
 Qed.
 
+Lemma forall2_from_snd : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) (Bs : list T2) (B : T2),
+    List.Forall2 P As Bs ->
+    List.In B Bs ->
+    exists A, (List.In A As /\ P A B).
+Admitted.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -446,9 +452,31 @@ Proof.
     + econstructor. auto.
       introv HxiL. lets HF: IH1 x HxiL. destruct* HF.
     + apply_folding E wft_strengthen.
-  - splits*.
-    + admit.
-    + admit.
+  - destruct IHtyping as [Hokt [Hterme HwftT]].
+    splits*.
+    + econstructor; eauto.
+      intros cl clin Alphas x Hlen Hdist Afresh xfresh.
+      destruct cl as [clA clT].
+      cbn.
+      lets* HF: forall2_from_snd clin.
+      cbn in HF.
+      destruct HF as [Def [InDef HDef]].
+      (* rewrite List.Forall2_forall in *. *)
+      (* lets* IH: H2 clin. Alphas x Hlen Hdist. *)
+      Print typing_ind.
+      (* may need strong induction over tree size for these *)
+      admit.
+    + destruct ms.
+      * (* TODO GADT length > 0 *)
+        admit.
+      * assert (cin: List.In c (c :: ms)); eauto with listin.
+        lets* HF: forall2_from_snd cin.
+        destruct HF as [Def [InDef HDef]].
+        lets* EAlphas: exist_alphas (Carity Def).
+        inversion EAlphas as [Alphas [A1 [A2 A3]]].
+        lets* HF: HDef A3.
+        -- rewrite* <- length_equality.
+        -- admit.
 Admitted.
 
 (** The value relation is restricted to well-formed objects. *)
