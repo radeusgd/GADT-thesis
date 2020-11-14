@@ -352,6 +352,59 @@ Lemma wft_open_many : forall E Σ Alphas Ts U,
     apply* Htb.
 Qed.
 
+Lemma notin_fv_wf : forall Σ E X T,
+    wft Σ E T -> X # E -> X \notin fv_typ T.
+Proof.
+  induction 1 as [ | ? ? ? Hbinds | | | |];
+    introv Fr; simpl; eauto.
+  - rewrite notin_singleton. intro. subst. applys binds_fresh_inv Hbinds Fr.
+  - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
+  - intro Hin.
+    lets* Hex: in_fold_exists Hin.
+    destruct Hex as [Hex | Hex].
+    + destruct Hex as [T [Tin fvT]].
+      lets* Hf: H0 T Tin.
+    + apply* in_empty_inv.
+Qed.
+
+Lemma wft_strengthen_typ : forall Σ E F U T,
+    U \notin fv_typ T ->
+    wft Σ (E & (withtyp U) & F) T -> wft Σ (E & F) T.
+Proof.
+  introv Ufresh Hwft. gen_eq G: (E & (withtyp U) & F). gen F.
+  induction Hwft; intros F EQ; cbn in Ufresh; subst; auto.
+  - match goal with
+    | H: binds _ _ _ |- _ =>
+      rename H into Hbinds_bindtyp end.
+    apply* (@wft_var).
+    destruct (binds_concat_inv Hbinds_bindtyp) as [?|[? Hbinds2]].
+    + apply~ binds_concat_right.
+    + destruct (binds_push_inv Hbinds2) as [[? ?]|[? ?]].
+      * subst. false. apply* notin_same.
+      * apply~ binds_concat_left.
+  - (* todo: binds_cases tactic *)
+    match goal with
+    | H: forall X, X \notin L -> ?P3 -> forall F0, ?P1 -> ?P2 |- _ =>
+      rename H into H_ctxEq_implies_wft end.
+    apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft.
+    unfold open_tt.
+    lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0; cbn in Hfv.
+    + rewrite Hfv. eauto.
+    + rewrite Hfv. eauto.
+  - econstructor; eauto.
+Qed.
+
+Lemma wft_strengthen_typ_many : forall Σ As E T,
+    wft Σ (add_types E As) T ->
+    (forall A, List.In A As -> A \notin fv_typ T) ->
+    wft Σ E T.
+  induction As as [| Ah Ats]; introv Hwft Asfresh.
+  - cbn in *. eauto.
+  - cbn in *.
+    apply* IHAts.
+    apply_folding (add_types E Ats) wft_strengthen_typ.
+Qed.
+
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -460,33 +513,34 @@ Proof.
       cbn in Hlen2.
       assert (Hlen3: length Alphas = Carity Def); try lia.
       lets* HF: HDef Alphas x Hlen3 Hdist Afresh.
-    + (* TODO prove ms nonempty *)
+    + assert (ms <> []).
+      * lets gadtOk: okt_implies_okgadt Hokt.
+        inversion gadtOk as [? okDefs].
+        lets [defNEmpty okDef]: okDefs H1.
+        intro.
+        destruct Defs; subst; eauto. cbn in H2. lia.
+      * destruct ms as [ | cl1 rest]; [ contradiction | idtac ].
+        apply F2_from_zip in H5; eauto.
+        lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd cl1 H5;
+          eauto with listin.
 
-      lets* EAlphas: exist_alphas (length Ts).
-      inversion EAlphas as [Alphas [A1 [A2 A3]]].
-      rewrite length_equality in A1.
-    
-      lets [Cokt [Cterm Cwft]]: HF xfresh.
-      * 
-      cbn in HF.
-      destruct HF as [Def [InDef HDef]].
-      (* rewrite List.Forall2_forall in *. *)
-      (* lets* IH: H2 clin. Alphas x Hlen Hdist. *)
-      Print typing_ind.
-      (* may need strong induction over tree size for these *)
-      admit.
-    + destruct ms.
-      * (* TODO GADT length > 0 *)
-        admit.
-      * assert (cin: List.In c (c :: ms)); eauto with listin.
-        lets* HF: forall2_from_snd cin.
-        destruct HF as [Def [InDef HDef]].
-        lets* EAlphas: exist_alphas (Carity Def).
-        inversion EAlphas as [Alphas [A1 [A2 A3]]].
-        lets* HF: HDef A3.
-        -- rewrite* <- length_equality.
-        -- admit.
-Admitted.
+        (* May want a tactic 'pick_fresh Alphas' *)
+        lets* [Alphas [A1 [A2 A3]]]: exist_alphas (Carity Def).
+        rewrite length_equality in A1.
+        instantiate (1:=L \u fv_typ Tc) in A3.
+        pick_fresh x.
+
+        assert (Afresh: (forall A : var, List.In A Alphas -> A \notin L));
+          [ introv Ain; lets*: A3 Ain | idtac ].
+        assert (xfresh: x \notin L); eauto.
+
+        lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh.
+        assert (wftAlphas: wft Σ (add_types E Alphas) Tc);
+          [ apply_folding (add_types E Alphas) wft_strengthen | idtac ].
+        apply wft_strengthen_typ_many with Alphas.
+        -- eauto.
+        -- introv Ain. lets*: A3 Ain.
+Qed.
 
 (** The value relation is restricted to well-formed objects. *)
 

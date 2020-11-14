@@ -1152,3 +1152,27 @@ Lemma fv_typs_notin : forall Ts T X,
         cbn in Hall. eauto.
 Qed.
 
+Lemma in_fold_exists : forall TV TT P ls Z X,
+    X \in List.fold_left (fun (fv : fset TV) (T : TT) => fv \u P T) ls Z ->
+          (exists T, List.In T ls /\ X \in P T) \/ X \in Z.
+  induction ls; introv Hin.
+  - right.
+    cbn in *. eauto.
+  - cbn in Hin.
+    lets* IH: IHls (Z \u P a) X Hin.
+    destruct IH as [IH | IH].
+    + destruct IH as [T [Tin PT]].
+      left. exists T. eauto with listin.
+    + rewrite in_union in IH.
+      destruct IH as [IH | IH]; eauto with listin.
+Qed.
+
+Lemma notin_fv_tt_open : forall Y X T,
+    X \notin fv_typ (T open_tt_var Y) ->
+    X \notin fv_typ T.
+Proof.
+  unfold open_tt.
+  introv FO.
+  lets* characterized: fv_open T (typ_fvar Y) 0.
+  destruct characterized as [Hc | Hc]; rewrite Hc in FO; eauto.
+Qed.
