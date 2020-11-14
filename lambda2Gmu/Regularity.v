@@ -352,12 +352,6 @@ Lemma wft_open_many : forall E Σ Alphas Ts U,
     apply* Htb.
 Qed.
 
-Lemma forall2_from_snd : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) (Bs : list T2) (B : T2),
-    List.Forall2 P As Bs ->
-    List.In B Bs ->
-    exists A, (List.In A As /\ P A B).
-Admitted.
-
 Lemma typing_regular : forall Σ E e T,
    {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
 Proof.
@@ -458,7 +452,22 @@ Proof.
       intros cl clin Alphas x Hlen Hdist Afresh xfresh.
       destruct cl as [clA clT].
       cbn.
-      lets* HF: forall2_from_snd clin.
+      apply F2_from_zip in H5; eauto.
+      lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd clin.
+      cbn in HDef.
+      cbn in Hlen.
+      lets Hlen2: H3 DefIn2.
+      cbn in Hlen2.
+      assert (Hlen3: length Alphas = Carity Def); try lia.
+      lets* HF: HDef Alphas x Hlen3 Hdist Afresh.
+    + (* TODO prove ms nonempty *)
+
+      lets* EAlphas: exist_alphas (length Ts).
+      inversion EAlphas as [Alphas [A1 [A2 A3]]].
+      rewrite length_equality in A1.
+    
+      lets [Cokt [Cterm Cwft]]: HF xfresh.
+      * 
       cbn in HF.
       destruct HF as [Def [InDef HDef]].
       (* rewrite List.Forall2_forall in *. *)

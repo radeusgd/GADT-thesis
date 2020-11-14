@@ -1,3 +1,4 @@
+Require Export Zip.
 Require Export Definitions.
 Require Export TLC.LibTactics.
 Require Export TLC.LibFset.
@@ -16,14 +17,6 @@ Export List.ListNotations.
 Hint Constructors type term wft typing red value.
 
 Hint Resolve typing_var typing_app typing_tapp.
-
-Ltac listin :=
-  match goal with
-  | |- List.In ?e (?h :: ?t) =>
-    cbn; solve [right* | left*]
-  end.
-
-Hint Extern 4 (List.In _ (_ :: _)) => (cbn; solve [left* | right*]) : listin.
 
 Lemma value_is_term : forall e, value e -> term e.
   induction e; intro Hv; inversion Hv; eauto.

@@ -720,6 +720,7 @@ Definition okGadt (Σ : GADTEnv) : Prop :=
   ok Σ /\
   forall Name Arity Defs,
     binds Name (mkGADT Arity Defs) Σ ->
+    Defs <> [] /\
     (forall Def,
         In Def Defs ->
         okConstructorDef Σ Arity Def).
@@ -808,9 +809,11 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     {Σ, E} ⊢ e ∈ T ->
     T = (typ_gadt Ts Name) ->
     binds Name (mkGADT Tarity Defs) Σ ->
-    (* length Defs = length ms -> (* implicit exhaustivity check *) *)
-    (* TODO may need to rewrite it into zip to get better induction for free *)
-    Forall2 (fun def clause =>
+    length Defs = length ms -> (* implicit exhaustivity check *)
+    (* we use zip instead of Forall2 to get better induction for free, but can rephrase it as needed using equivalence thm  *)
+    (forall def clause, In (def, clause) (zip Defs ms) ->
+                   clauseArity clause = Carity def) ->
+    (forall def clause, In (def, clause) (zip Defs ms) ->
                forall Alphas x,
                  length Alphas = Carity def ->
                  DistinctList Alphas -> (* not sure if this is necessary, but may be helpful*)
@@ -819,12 +822,11 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
                  (* TODO for now we do not have add the type equalities, without them the existential tpes are mostly useless; will be added in next iteration
                     TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
                   *)
-                 clauseArity clause = Carity def ->
                  { Σ,
                    (add_types E Alphas)
                    & x ~: (open_tt_many_var Alphas (Cargtype def))
-                 } ⊢ (clauseTerm clause) ∈ Tc
-            ) Defs ms ->
+                 } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
+            ) ->
     { Σ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
 where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
 
