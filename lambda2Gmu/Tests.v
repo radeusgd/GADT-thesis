@@ -17,9 +17,8 @@ Lemma well_typed_id : {empty, empty} ⊢ id ∈ id_typ.
   - intros.
     econstructor. cbn. intros.
     econstructor. eauto. constructor*.
-    repeat constructor*.
-    intros.
-    binds_inv.
+    repeat constructor*;
+      binds_inv.
     Unshelve. fs. fs.
 Qed.
 
@@ -42,16 +41,12 @@ Qed.
 
 Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
 Lemma id_app_types : {empty, empty} ⊢ id_app ∈ typ_unit.
-  econstructor; repeat econstructor; cbn; try case_if; swap 1 2.
+  econstructor; repeat econstructor; try solve binds_inv; cbn; try case_if; swap 1 2.
   - instantiate (1 := (@0 ==> @0)).
     simpl_op.
-    repeat (intros; econstructor); simpl_op.
-    + intros; binds_inv.
-    + eauto.
-  - intros; binds_inv.
-  - crush_simple_type.
+  - crush_simple_type; rewrite get_empty in H1; congruence.
     Unshelve.
-    fs. fs.
+    fs.
 Qed.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
@@ -86,10 +81,10 @@ Lemma loop_type : {empty, empty} ⊢ loop ∈ (typ_unit ==> typ_unit).
   cbv.
   econstructor; intros; econstructor; cbn; repeat case_if; econstructor; swap 2 3.
   - econstructor.
-  - repeat constructor*.
+  - repeat constructor*;
     intros; binds_inv.
   - intros. econstructor; cbn; econstructor.
-  - repeat constructor*.
+  - repeat constructor*;
     intros; binds_inv.
     Unshelve. fs. fs.
 Qed.
@@ -99,7 +94,7 @@ Definition divergent := trm_app loop trm_unit.
 Lemma divergent_type : {empty, empty} ⊢ divergent ∈ typ_unit.
   econstructor; swap 1 2.
   - apply loop_type.
-  - repeat econstructor.
+  - repeat econstructor;
     intros; binds_inv.
 Qed.
 

@@ -14,6 +14,8 @@ Lemma oknat : okGadt natSigma.
   - intros.
     binds_inv.
     inversions EQ.
+    splits*; try congruence.
+    intros.
     repeat ininv.
     + econstructor; cbn; eauto; try solve [intros; intuition].
       intros.
