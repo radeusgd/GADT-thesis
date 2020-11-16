@@ -812,6 +812,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
     length Defs = length ms -> (* implicit exhaustivity check *)
     (* we use zip instead of Forall2 to get better induction for free, but can rephrase it as needed using equivalence thm  *)
     (forall def clause, In (def, clause) (zip Defs ms) ->
+                   (* this is because in pat-cons alphas of same length is in c[...] (clauseArity) and forall ... (def Carity) *)
                    clauseArity clause = Carity def) ->
     (forall def clause, In (def, clause) (zip Defs ms) ->
                forall Alphas x,

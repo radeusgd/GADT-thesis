@@ -1,6 +1,7 @@
 Set Implicit Arguments.
 Require Import List.
 Require Import TLC.LibTactics.
+Require Import Psatz.
 Open Scope list_scope.
 
 Section Zip.
@@ -81,4 +82,27 @@ Lemma forall2_from_snd_zip : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) 
   intros.
   eapply forall2_from_snd; eauto.
   apply F2_iff_In_zip. eauto.
+Qed.
+
+Lemma nth_error_implies_zip : forall AT BT (As : list AT) (Bs : list BT) i A,
+    List.nth_error As i = Some A ->
+    List.length As = List.length Bs ->
+    exists B, List.nth_error Bs i = Some B /\ List.In (A, B) (zip As Bs).
+  induction As as [| Ah Ats]; introv ntherror lengtheq.
+  - lets: List.nth_error_In ntherror.
+    contradiction.
+  - destruct Bs as [| Bh Bts]; cbn in lengtheq; try lia.
+    destruct i.
+    + cbn in ntherror.
+      assert (Ah = A); try congruence; subst.
+      exists Bh.
+      split*.
+      cbn. left*.
+    + cbn in ntherror.
+      assert (Hlen: length Ats = length Bts); eauto.
+      lets* IH: IHAts ntherror Hlen.
+      destruct IH as [B [Bnth Binzip]].
+      exists B.
+      split*.
+      cbn. right*.
 Qed.

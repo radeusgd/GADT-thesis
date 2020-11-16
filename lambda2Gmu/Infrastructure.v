@@ -1176,3 +1176,14 @@ Proof.
   lets* characterized: fv_open T (typ_fvar Y) 0.
   destruct characterized as [Hc | Hc]; rewrite Hc in FO; eauto.
 Qed.
+
+Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
+    binds x v1 E ->
+    binds x v2 E ->
+    v1 = v2.
+  induction E using env_ind; introv b1 b2.
+  - exfalso. apply* binds_empty_inv.
+  - lets* [[? ?] | [? ?]]: binds_push_inv b1;
+      lets* [[? ?] | [? ?]]: binds_push_inv b2.
+      subst; trivial.
+Qed.

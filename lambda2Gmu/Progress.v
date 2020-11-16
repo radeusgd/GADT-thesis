@@ -3,7 +3,6 @@ Require Import Infrastructure.
 Require Import Regularity.
 Require Import CanonicalForms.
 
-Ltac fs := exact \{}. (* There must be a better way *)
 Hint Resolve binds_empty_inv.
 
 Ltac empty_binding :=
@@ -21,10 +20,6 @@ Ltac IHT e :=
       assert P as H; eauto
     end
   end.
-
-Ltac copy H1 H2 :=
-  let Heq := fresh "Heq" in
-  remember H1 as H2 eqn:Heq; clear Heq.
 
 Hint Constructors value red.
 Theorem progress_thm : progress.
@@ -51,7 +46,7 @@ Theorem progress_thm : progress.
     + inversion IHev1; right; eauto.
   - IHT e.
     destruct IHt as [Hv | Hev].
-    + copy Hv Hv'.
+    + copy Hv.
       eapply CanonicalFormTuple in Hv; eauto.
       inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
       right*.
@@ -59,19 +54,18 @@ Theorem progress_thm : progress.
     + inversion Hev as [e' ev]; eauto.
   - IHT e.
     destruct IHt as [Hv | Hev].
-    + copy Hv Hv'.
+    + copy Hv.
       eapply CanonicalFormTuple in Hv; eauto.
       inversion Hv as [v1 Hv2]; inversion Hv2 as [v2 Heq]; subst.
       right*.
-
     + inversion Hev as [e' ev]; eauto.
   - left; econstructor; econstructor; eauto.
   - IHT e1; IHT e2.
     destruct IHt as [Hv1 | Hev1].
     + destruct IHt0 as [Hv2 | Hev2].
-      * copy Hv1 Hv1'.
-        eapply CanonicalFormAbs in Hv1'; eauto.
-        inversion Hv1' as [v1 Heq]; subst.
+      * copy Hv1.
+        eapply CanonicalFormAbs in Hv1; eauto.
+        inversion Hv1 as [v1 Heq]; subst.
         right; eexists; econstructor; eauto.
       * right; inversion Hev2; eexists; eauto.
     + right; inversion Hev1; eexists; eauto.
@@ -79,24 +73,34 @@ Theorem progress_thm : progress.
   - IHT e.
     destruct IHt as [Hv | Hev].
     + right.
-      copy Hv Hv'.
-      eapply CanonicalFormTAbs in Hv'; eauto.
-      inversion Hv' as [v1 eq]; subst.
+      eapply CanonicalFormTAbs in Hv; eauto.
+      inversion Hv as [v1 eq]; subst.
       eexists. econstructor; eauto.
     + right; inversion Hev; eauto.
   - right.
     eexists.
     constructor*.
   - right.
+    rename l into ms.
     inversions Htyp.
     lets* IHe2: IHe H2.
     destruct IHe2 as [Hval | [e' Hred]].
-    + lets* [GTs [GC [Ge Heq]]]: CanonicalFormGadt H2.
+    + lets* [GCargs [GCind [GCterm Heq]]]: CanonicalFormGadt H2.
       subst.
-      eexists.
-      econstructor; eauto.
-      admit.
-    + exists (trm_matchgadt e' g l). constructor*.
+
+      inversions H3.
+      lets* bindeq: binds_ext H6 H11.
+      inversions bindeq.
+      lets* bindeq: binds_ext H4 H11.
+      inversions bindeq.
+
+      lets* [[clA clT] [nth_cl inzip]]: nth_error_implies_zip H14 H12.
+      assert (clA = length GCargs).
+      * lets*: H9 inzip.
+      * subst.
+        eexists.
+        econstructor; eauto.
+    + eexists; eauto.
   - IHT e1.
     right. destruct IHt as [Hv | Hev].
     + eexists. econstructor; eauto.
@@ -104,4 +108,4 @@ Theorem progress_thm : progress.
       eexists; eapply ered_let; eauto.
 
   - eapply typing_implies_term; eauto.
-Admitted.
+Qed.
