@@ -4,6 +4,13 @@ Require Import Infrastructure.
 Require Import Regularity.
 Require Import TLC.LibLN.
 
+(* TODO move to Prelude *)
+Lemma JMeq_from_eq : forall T (x y : T),
+    x = y -> JMeq.JMeq x y.
+  introv EQ.
+  rewrite EQ. trivial.
+Qed.
+
 Lemma term_through_subst : forall e x u,
     term u ->
     term e ->
@@ -93,6 +100,62 @@ Ltac renameIHs H Heq :=
   | IH: forall X, X \notin ?L -> forall E0 G0, ?P1 -> ?P2 |- _ =>
     rename IH into Heq end.
 
+Lemma add_types_assoc : forall E F As,
+    add_types (E & F) As = E & add_types F As.
+  induction As; cbn; eauto.
+  - rewrite IHAs. eauto using concat_assoc.
+Qed.
+
+Lemma add_types_dom_is_from_list : forall As,
+    dom (add_types empty As) = from_list As.
+  induction As; cbn.
+  - apply dom_empty.
+  - rewrite dom_concat.
+    rewrite IHAs.
+    rewrite union_comm.
+    unfold from_list.
+    rewrite dom_single.
+    trivial.
+Qed.
+
+Lemma fromlist_notin_restated : forall T (X : T) As,
+    ~ List.In X As ->
+    X \notin from_list As.
+  induction As as [|Ah Ats]; introv Hnotin.
+  - cbn. eauto.
+  - cbn.
+    rewrite notin_union.
+    constructor.
+    + apply notin_singleton.
+      intro HF. subst.
+      apply Hnotin. eauto with listin.
+    + unfold from_list in IHAts.
+      apply* IHAts.
+      intro HF.
+      apply Hnotin. eauto with listin.
+Qed.
+
+Lemma okt_Alphas_strengthen : forall Σ E As,
+    (forall A, List.In A As -> A # E) ->
+    DistinctList As ->
+    okt Σ E ->
+    okt Σ (E & add_types empty As).
+  induction As as [| Ah Ats]; introv Afresh Adist Hok.
+  - cbn. rewrite concat_empty_r. trivial.
+  - cbn. rewrite concat_assoc.
+    econstructor.
+    + apply IHAts.
+      * introv Ain. eauto with listin.
+      * inversion* Adist.
+      * trivial.
+    + rewrite dom_concat.
+      apply notin_union. constructor.
+      * eauto with listin.
+      * inversions Adist.
+        rewrite add_types_dom_is_from_list.
+        apply* fromlist_notin_restated.
+Qed.
+
 Lemma typing_weakening : forall Σ E F G e T,
     {Σ, E & G} ⊢ e ∈ T ->
     okt Σ (E & F & G) ->
@@ -134,10 +197,82 @@ Proof.
     lets (Hokt&?&?): typing_regular K.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
-  - admit.
+  - apply* typing_case.
+    introv Inzip AlphasArity ADistinct Afresh xfresh.
+    let envvars := gather_vars in
+    instantiate (1:=envvars) in xfresh.
+    assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
+      [ introv Ain; lets*: Afresh Ain | idtac ].
+    assert (xfreshL: x \notin L); eauto.
+    lets* IH1: H3 Inzip Alphas x AlphasArity ADistinct.
+    lets* IH2: IH1 AfreshL xfreshL.
+    lets IHeq1: H4 Inzip Alphas x AlphasArity ADistinct.
+    lets* IHeq2: IHeq1 AfreshL xfreshL.
+    rewrite add_types_assoc.
+
+    lets IHeq3: IHeq2 E (add_types G Alphas & x ~ bind_var (open_tt_many_var Alphas (Cargtype def))) F.
+    + apply JMeq_from_eq.
+      rewrite add_types_assoc.
+      rewrite concat_assoc. trivial.
+    + rewrite concat_assoc in IHeq3.
+      apply IHeq3.
+      rewrite <- (concat_empty_r G).
+      rewrite add_types_assoc.
+      rewrite concat_assoc.
+      econstructor.
+      * apply okt_Alphas_strengthen; trivial.
+        introv Ain; lets*: Afresh Ain.
+      * admit.
+      * repeat rewrite dom_concat.
+        rewrite add_types_dom_is_from_list.
+        eauto.
 Admitted.
 
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
+
+Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
+    List.nth_error (zip As Bs) i = Some (A, B) ->
+    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
+  induction i; destruct As; destruct Bs; intros; try (cbn in *; congruence).
+  - cbn in *. inversions H; eauto.
+  - cbn in *.
+    lets* IH: IHi H.
+Qed.
+
+Lemma nth_error_zip_merge : forall i AT BT (As : list AT) (Bs : list BT) A B,
+    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B ->
+    List.nth_error (zip As Bs) i = Some (A, B).
+  induction i; destruct As; destruct Bs; introv [Ha Hb]; try (inversions Ha; inversions Hb; cbn in *; congruence).
+  cbn in *.
+  apply* IHi.
+Qed.
+
+Lemma Inzip_to_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B,
+    List.In (A, B) (zip As Bs) ->
+    exists i, List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
+  introv inzip.
+  lets* [i Hin]: List.In_nth_error inzip.
+  lets*: nth_error_zip_split Hin.
+Qed.
+
+Lemma Inzip_from_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B i,
+    List.nth_error As i = Some A ->
+    List.nth_error Bs i = Some B ->
+    List.In (A, B) (zip As Bs).
+  introv HA HB.
+  apply List.nth_error_In with i.
+  apply* nth_error_zip_merge.
+Qed.
+
+Lemma nth_error_map : forall i A B (F : A -> B) (ls : list A) (b : B),
+    List.nth_error (List.map F ls) i = Some b ->
+    exists a, (List.nth_error ls i = Some a /\ F a = b).
+  induction i; destruct ls; introv Hnth_map; try (cbn in *; congruence).
+  - cbn in *.
+    inversions Hnth_map. exists a. eauto.
+  - cbn in *.
+    eauto.
+Qed.
 
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     {Σ, E & (x ~: U) & F} ⊢ e ∈ T ->
@@ -174,111 +309,40 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
   - apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
     apply_ih.
-  - admit.
+  - econstructor; eauto.
+    + unfold map_clause_trm_trm.
+      rewrite* List.map_length.
+    + introv inzip.
+      lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
+      lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
+      destruct clause as [clA clT]. cbn.
+      inversions Hclsubst.
+      lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
+      lets*: H2 Hzip.
+    + introv inzip. intros Alphas xClause Alen Adist Afresh xfresh.
+      lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
+      lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
+      destruct clause as [clA clT]. cbn.
+      inversions Hclsubst.
+      lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
+      lets* IH: H4 Hzip.
+
+      assert (Htypfin: {Σ, E & add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
+                ⊢ subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
+      * lets Htmp: IH Alphas xClause Alen Adist Afresh.
+        lets Htmp2: Htmp xfresh.
+        lets Htmp3: Htmp2 E (add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))) x U.
+        cbn in Htmp3.
+        rewrite <- concat_assoc.
+        apply* Htmp3.
+        apply JMeq_from_eq.
+        rewrite add_types_assoc. eauto using concat_assoc.
+      * rewrite <- add_types_assoc in Htypfin.
+        lets: subst_commutes_open_tt_many.
 Admitted.
 
 Hint Resolve okt_subst_tb.
 
-Lemma subst_idempotent : forall U Z P,
-    Z \notin fv_typ P ->
-    subst_tt Z P U = subst_tt Z P (subst_tt Z P U).
-  induction U using typ_ind'; introv FV; try solve [cbn; eauto].
-  - cbn.
-    case_if.
-    + rewrite* subst_tt_fresh.
-    + cbn. case_if. eauto.
-  - cbn.
-    rewrite* <- IHU1.
-    rewrite* <- IHU2.
-  - cbn.
-    rewrite* <- IHU1.
-    rewrite* <- IHU2.
-  - cbn.
-    rewrite* <- IHU.
-  - cbn. f_equal.
-    rewrite List.map_map.
-    apply* List.map_ext_in.
-    introv ain.
-    rewrite List.Forall_forall in *.
-    eauto.
-Qed.
-
-Lemma subst_idempotent_through_many_open : forall Tts Z U P,
-    type P ->
-    Z \notin fv_typ P ->
-    subst_tt Z P (open_tt_many Tts U) =
-    subst_tt Z P (open_tt_many Tts (subst_tt Z P U)).
-  induction Tts; introv TP FV.
-  - cbn. apply* subst_idempotent.
-  - cbn.
-    rewrite* IHTts.
-    rewrite* (IHTts Z (open_tt (subst_tt Z P U) a) P).
-    f_equal. f_equal.
-    repeat rewrite* subst_tt_open_tt.
-    f_equal.
-    apply* subst_idempotent.
-Qed.
-
-Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A -> A) (z : B),
-    List.fold_left (fun a b => f a b) (List.map g ls) z
-    =
-    List.fold_left (fun a b => f a (g b)) ls z.
-  induction ls; introv; cbn; eauto.
-Qed.
-
-Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
-    (forall e, List.In e ls -> x \notin P e) ->
-    x \notin z ->
-    x \notin List.fold_left (fun fv e => fv \u P e) ls z.
-  induction ls; introv FPe Fz; cbn; eauto.
-  apply* IHls.
-  - eauto with listin.
-  - rewrite notin_union; split*.
-    eauto with listin.
-Qed.
-
-Lemma subst_removes_var : forall T U Z,
-    Z \notin fv_typ U ->
-    Z \notin fv_typ (subst_tt Z U T).
-  induction T using typ_ind'; introv FU; cbn; eauto.
-  - case_if; cbn; eauto.
-  - rewrite list_fold_map.
-    rewrite List.Forall_forall in *.
-    apply* notin_fold.
-Qed.
-
-Lemma subst_commutes_open_tt_many : forall Ts Z P U,
-    type P ->
-    Z \notin fv_typ P ->
-    Z \notin fv_typ U ->
-    subst_tt Z P (open_tt_many Ts U) =
-    open_tt_many (List.map (subst_tt Z P) Ts) U.
-  induction Ts as [| Th Tts]; introv TP FP FU.
-  - cbn. apply* subst_tt_fresh.
-  - cbn.
-    rewrite* subst_idempotent_through_many_open.
-    rewrite* subst_tt_open_tt.
-    rewrite* (@subst_tt_fresh Z P U).
-    apply* IHTts.
-    unfold open_tt.
-    lets* FO: fv_open U (subst_tt Z P Th) 0.
-    destruct FO as [FO | FO].
-    + rewrite FO.
-      apply notin_union; split*.
-      apply* subst_removes_var.
-    + rewrite* FO.
-Qed.
-
-
-Lemma fold_empty : forall Ts,
-    (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
-    List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
-  induction Ts as [ | Th]; introv Fv; cbn; eauto.
-  lets* Hempty: Fv Th.
-  rewrite Hempty; eauto with listin.
-  rewrite union_empty_r.
-  eauto with listin.
-Qed.
 
 Lemma okt_strengthen_2 : forall Σ E Z P F,
     wft Σ E P ->

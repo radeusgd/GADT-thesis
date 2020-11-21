@@ -1187,3 +1187,104 @@ Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
       lets* [[? ?] | [? ?]]: binds_push_inv b2.
       subst; trivial.
 Qed.
+
+Lemma subst_idempotent : forall U Z P,
+    Z \notin fv_typ P ->
+    subst_tt Z P U = subst_tt Z P (subst_tt Z P U).
+  induction U using typ_ind'; introv FV; try solve [cbn; eauto].
+  - cbn.
+    case_if.
+    + rewrite* subst_tt_fresh.
+    + cbn. case_if. eauto.
+  - cbn.
+    rewrite* <- IHU1.
+    rewrite* <- IHU2.
+  - cbn.
+    rewrite* <- IHU1.
+    rewrite* <- IHU2.
+  - cbn.
+    rewrite* <- IHU.
+  - cbn. f_equal.
+    rewrite List.map_map.
+    apply* List.map_ext_in.
+    introv ain.
+    rewrite List.Forall_forall in *.
+    eauto.
+Qed.
+
+Lemma subst_idempotent_through_many_open : forall Tts Z U P,
+    type P ->
+    Z \notin fv_typ P ->
+    subst_tt Z P (open_tt_many Tts U) =
+    subst_tt Z P (open_tt_many Tts (subst_tt Z P U)).
+  induction Tts; introv TP FV.
+  - cbn. apply* subst_idempotent.
+  - cbn.
+    rewrite* IHTts.
+    rewrite* (IHTts Z (open_tt (subst_tt Z P U) a) P).
+    f_equal. f_equal.
+    repeat rewrite* subst_tt_open_tt.
+    f_equal.
+    apply* subst_idempotent.
+Qed.
+
+Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A -> A) (z : B),
+    List.fold_left (fun a b => f a b) (List.map g ls) z
+    =
+    List.fold_left (fun a b => f a (g b)) ls z.
+  induction ls; introv; cbn; eauto.
+Qed.
+
+Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
+    (forall e, List.In e ls -> x \notin P e) ->
+    x \notin z ->
+    x \notin List.fold_left (fun fv e => fv \u P e) ls z.
+  induction ls; introv FPe Fz; cbn; eauto.
+  apply* IHls.
+  - eauto with listin.
+  - rewrite notin_union; split*.
+    eauto with listin.
+Qed.
+
+Lemma subst_removes_var : forall T U Z,
+    Z \notin fv_typ U ->
+    Z \notin fv_typ (subst_tt Z U T).
+  induction T using typ_ind'; introv FU; cbn; eauto.
+  - case_if; cbn; eauto.
+  - rewrite list_fold_map.
+    rewrite List.Forall_forall in *.
+    apply* notin_fold.
+Qed.
+
+Lemma subst_commutes_open_tt_many : forall Ts Z P U,
+    type P ->
+    Z \notin fv_typ P ->
+    Z \notin fv_typ U ->
+    subst_tt Z P (open_tt_many Ts U) =
+    open_tt_many (List.map (subst_tt Z P) Ts) U.
+  induction Ts as [| Th Tts]; introv TP FP FU.
+  - cbn. apply* subst_tt_fresh.
+  - cbn.
+    rewrite* subst_idempotent_through_many_open.
+    rewrite* subst_tt_open_tt.
+    rewrite* (@subst_tt_fresh Z P U).
+    apply* IHTts.
+    unfold open_tt.
+    lets* FO: fv_open U (subst_tt Z P Th) 0.
+    destruct FO as [FO | FO].
+    + rewrite FO.
+      apply notin_union; split*.
+      apply* subst_removes_var.
+    + rewrite* FO.
+Qed.
+
+
+Lemma fold_empty : forall Ts,
+    (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
+    List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
+  induction Ts as [ | Th]; introv Fv; cbn; eauto.
+  lets* Hempty: Fv Th.
+  rewrite Hempty; eauto with listin.
+  rewrite union_empty_r.
+  eauto with listin.
+Qed.
