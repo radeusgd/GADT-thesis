@@ -597,8 +597,9 @@ Lemma term_te_closed : forall e,
     rewrite length_equality in Hlen.
     pick_fresh x.
     assert (xfresh: x \notin L); eauto.
+    assert (xfreshA: x \notin from_list Alphas); eauto.
     lets hmm: H1 clin Alphas x Hlen Hdist.
-    lets hmm2: hmm Hnotin xfresh.
+    lets hmm2: hmm Hnotin xfresh xfreshA.
     unfold open_ee in hmm2.
     lets hmm3: te_opening_ee_preserves hmm2.
     lets hmm4: te_opening_te_many_adds (clauseArity cl) hmm3.
@@ -982,7 +983,7 @@ Proof.
       rewrite* subst_te_open_ee_var.
     + apply_fresh* term_let as x. rewrite* subst_te_open_ee_var.
     + econstructor; eauto.
-      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh.
+      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh xfreshA.
       destruct cl as [clA clT].
       unfold map_clause_trm_trm in clinmap.
       lets cl2: clinmap.
@@ -1037,7 +1038,7 @@ Proof.
     + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var.
     + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
     + econstructor; eauto.
-      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh.
+      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh xfreshA.
       destruct cl as [clA clT].
       unfold map_clause_trm_trm in clinmap.
       lets cl2: clinmap.

@@ -4,13 +4,6 @@ Require Import Infrastructure.
 Require Import Regularity.
 Require Import TLC.LibLN.
 
-(* TODO move to Prelude *)
-Lemma JMeq_from_eq : forall T (x y : T),
-    x = y -> JMeq.JMeq x y.
-  introv EQ.
-  rewrite EQ. trivial.
-Qed.
-
 Lemma term_through_subst : forall e x u,
     term u ->
     term e ->
@@ -199,15 +192,15 @@ Proof.
     apply* wft_weaken.
   - apply* typing_case.
     let envvars := gather_vars in
-    (introv Inzip AlphasArity ADistinct Afresh xfresh;
+    (introv Inzip AlphasArity ADistinct Afresh xfresh xfreshA;
      instantiate (1:=envvars) in Afresh).
     assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
       [ introv Ain; lets*: Afresh Ain | idtac ].
     assert (xfreshL: x \notin L); eauto.
     lets* IH1: H3 Inzip Alphas x AlphasArity ADistinct.
-    lets* IH2: IH1 AfreshL xfreshL.
+    lets* IH2: IH1 AfreshL xfreshL xfreshA.
     lets IHeq1: H4 Inzip Alphas x AlphasArity ADistinct.
-    lets* IHeq2: IHeq1 AfreshL xfreshL.
+    lets* IHeq2: IHeq1 AfreshL xfreshL xfreshA.
     rewrite add_types_assoc.
 
     lets IHeq3: IHeq2 E (add_types G Alphas & x ~ bind_var (open_tt_many_var Alphas (Cargtype def))) F.
@@ -233,7 +226,6 @@ Proof.
         rewrite <- add_types_assoc. rewrite concat_empty_r.
         lets*: H5 Alphas (E & F & G).
       * repeat rewrite dom_concat.
-        (* TODO L quantification issues *)
         rewrite add_types_dom_is_from_list.
         eauto.
 Qed.
@@ -285,7 +277,7 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
       inversions Hclsubst.
       lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
       lets*: H2 Hzip.
-    + introv inzip. intros Alphas xClause Alen Adist Afresh xfresh.
+    + introv inzip. intros Alphas xClause Alen Adist Afresh xfresh xfreshA.
       lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
       lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
       destruct clause as [clA clT]. cbn.
@@ -296,7 +288,7 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
       assert (Htypfin: {Σ, E & add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
                 ⊢ subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
       * lets Htmp: IH Alphas xClause Alen Adist Afresh.
-        lets Htmp2: Htmp xfresh.
+        lets Htmp2: Htmp xfresh xfreshA.
         lets Htmp3: Htmp2 E (add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))) x U.
         cbn in Htmp3.
         rewrite <- concat_assoc.

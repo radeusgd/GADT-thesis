@@ -357,3 +357,8 @@ Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
   case_if; auto.
 Qed.
 
+Lemma JMeq_from_eq : forall T (x y : T),
+    x = y -> JMeq.JMeq x y.
+  introv EQ.
+  rewrite EQ. trivial.
+Qed.

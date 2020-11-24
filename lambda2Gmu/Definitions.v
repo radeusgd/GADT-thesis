@@ -570,6 +570,7 @@ Inductive term : trm -> Prop :=
              DistinctList Alphas ->
              (forall A, In A Alphas -> A \notin L) ->
              x \notin L ->
+             x \notin from_list Alphas ->
            term ((open_te_many_var Alphas (clauseTerm cl)) open_ee_var x)
     ) ->
     term (trm_matchgadt e1 G ms)
@@ -820,6 +821,7 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
                  DistinctList Alphas -> (* not sure if this is necessary, but may be helpful*)
                  (forall A, In A Alphas -> A \notin L) ->
                  x \notin L ->
+                 x \notin from_list Alphas -> (* Alphas are distinct but also x is not part of them *)
                  (* TODO for now we do not have add the type equalities, without them the existential tpes are mostly useless; will be added in next iteration
                     TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
                   *)
