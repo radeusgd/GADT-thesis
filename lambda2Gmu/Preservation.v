@@ -198,9 +198,9 @@ Proof.
     lets (?&?&?): okt_push_var_inv Hokt.
     apply* wft_weaken.
   - apply* typing_case.
-    introv Inzip AlphasArity ADistinct Afresh xfresh.
     let envvars := gather_vars in
-    instantiate (1:=envvars) in xfresh.
+    (introv Inzip AlphasArity ADistinct Afresh xfresh;
+     instantiate (1:=envvars) in Afresh).
     assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
       [ introv Ain; lets*: Afresh Ain | idtac ].
     assert (xfreshL: x \notin L); eauto.
@@ -222,57 +222,23 @@ Proof.
       econstructor.
       * apply okt_Alphas_strengthen; trivial.
         introv Ain; lets*: Afresh Ain.
-      * admit.
+      * match goal with | H: okt Σ ?E |- _ => lets okgadt: okt_implies_okgadt H end.
+        unfold okGadt in okgadt.
+        destruct okgadt as [okΣ okCtors].
+        lets [defsNe okDefs]: okCtors H0.
+        lets indef: fst_from_zip Inzip.
+        lets okCtor: okDefs indef.
+        inversions okCtor.
+        cbn.
+        rewrite <- add_types_assoc. rewrite concat_empty_r.
+        lets*: H5 Alphas (E & F & G).
       * repeat rewrite dom_concat.
+        (* TODO L quantification issues *)
         rewrite add_types_dom_is_from_list.
         eauto.
-Admitted.
+Qed.
 
 Hint Resolve typing_implies_term wft_strengthen okt_strengthen.
-
-Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
-    List.nth_error (zip As Bs) i = Some (A, B) ->
-    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
-  induction i; destruct As; destruct Bs; intros; try (cbn in *; congruence).
-  - cbn in *. inversions H; eauto.
-  - cbn in *.
-    lets* IH: IHi H.
-Qed.
-
-Lemma nth_error_zip_merge : forall i AT BT (As : list AT) (Bs : list BT) A B,
-    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B ->
-    List.nth_error (zip As Bs) i = Some (A, B).
-  induction i; destruct As; destruct Bs; introv [Ha Hb]; try (inversions Ha; inversions Hb; cbn in *; congruence).
-  cbn in *.
-  apply* IHi.
-Qed.
-
-Lemma Inzip_to_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B,
-    List.In (A, B) (zip As Bs) ->
-    exists i, List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
-  introv inzip.
-  lets* [i Hin]: List.In_nth_error inzip.
-  lets*: nth_error_zip_split Hin.
-Qed.
-
-Lemma Inzip_from_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B i,
-    List.nth_error As i = Some A ->
-    List.nth_error Bs i = Some B ->
-    List.In (A, B) (zip As Bs).
-  introv HA HB.
-  apply List.nth_error_In with i.
-  apply* nth_error_zip_merge.
-Qed.
-
-Lemma nth_error_map : forall i A B (F : A -> B) (ls : list A) (b : B),
-    List.nth_error (List.map F ls) i = Some b ->
-    exists a, (List.nth_error ls i = Some a /\ F a = b).
-  induction i; destruct ls; introv Hnth_map; try (cbn in *; congruence).
-  - cbn in *.
-    inversions Hnth_map. exists a. eauto.
-  - cbn in *.
-    eauto.
-Qed.
 
 Lemma typing_through_subst_ee : forall Σ E F x u U e T,
     {Σ, E & (x ~: U) & F} ⊢ e ∈ T ->

@@ -106,3 +106,63 @@ Lemma nth_error_implies_zip : forall AT BT (As : list AT) (Bs : list BT) i A,
       split*.
       cbn. right*.
 Qed.
+
+Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
+    List.nth_error (zip As Bs) i = Some (A, B) ->
+    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
+  induction i; destruct As; destruct Bs; intros; try (cbn in *; congruence).
+  - cbn in *. inversions H; eauto.
+  - cbn in *.
+    lets* IH: IHi H.
+Qed.
+
+Lemma nth_error_zip_merge : forall i AT BT (As : list AT) (Bs : list BT) A B,
+    List.nth_error As i = Some A /\ List.nth_error Bs i = Some B ->
+    List.nth_error (zip As Bs) i = Some (A, B).
+  induction i; destruct As; destruct Bs; introv [Ha Hb]; try (inversions Ha; inversions Hb; cbn in *; congruence).
+  cbn in *.
+  apply* IHi.
+Qed.
+
+Lemma Inzip_to_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B,
+    List.In (A, B) (zip As Bs) ->
+    exists i, List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
+  introv inzip.
+  lets* [i Hin]: List.In_nth_error inzip.
+  lets*: nth_error_zip_split Hin.
+Qed.
+
+Lemma Inzip_from_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B i,
+    List.nth_error As i = Some A ->
+    List.nth_error Bs i = Some B ->
+    List.In (A, B) (zip As Bs).
+  introv HA HB.
+  apply List.nth_error_In with i.
+  apply* nth_error_zip_merge.
+Qed.
+
+Lemma nth_error_map : forall i A B (F : A -> B) (ls : list A) (b : B),
+    List.nth_error (List.map F ls) i = Some b ->
+    exists a, (List.nth_error ls i = Some a /\ F a = b).
+  induction i; destruct ls; introv Hnth_map; try (cbn in *; congruence).
+  - cbn in *.
+    inversions Hnth_map. exists a. eauto.
+  - cbn in *.
+    eauto.
+Qed.
+
+Lemma fst_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
+    In (A,B) (zip As Bs) ->
+    In A As.
+  induction As as [| Ah Ats]; destruct Bs as [| Bh Bts]; introv Inz; try contradiction.
+  cbn in *.
+  destruct Inz as [Heq | Hin]; try inversion Heq; eauto.
+Qed.
+
+Lemma snd_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
+    In (A,B) (zip As Bs) ->
+    In B Bs.
+  induction As as [| Ah Ats]; destruct Bs as [| Bh Bts]; introv Inz; try contradiction.
+  cbn in *.
+  destruct Inz as [Heq | Hin]; try inversion Heq; eauto.
+Qed.
