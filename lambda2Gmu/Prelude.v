@@ -362,3 +362,64 @@ Lemma JMeq_from_eq : forall T (x y : T),
   introv EQ.
   rewrite EQ. trivial.
 Qed.
+
+Lemma split_notin_subset_union : forall T (x : T) A B C,
+    A \c B \u C ->
+    x \notin B ->
+    x \notin C ->
+    x \notin A.
+  introv Hsub HB HC.
+  intro inA.
+  lets Hf: Hsub inA.
+  rewrite in_union in Hf.
+  destruct Hf; eauto.
+Qed.
+
+Lemma in_from_list : forall As (x : var),
+    x \in from_list As ->
+          exists A, List.In A As /\ x = A.
+  induction As; introv xin.
+  - cbn in xin. exfalso; apply* in_empty_inv.
+  - cbn in *.
+    fold (from_list As) in xin.
+    rewrite in_union in xin.
+    destruct xin as [xin | xin].
+    + rewrite in_singleton in xin. subst. eauto.
+    + lets [A Ain]: IHAs xin.
+      exists A. split*.
+Qed.
+
+Lemma add_types_assoc : forall E F As,
+    (add_types (E & F) As = E & add_types F As)%env.
+  induction As; cbn; eauto.
+  - rewrite IHAs. eauto using concat_assoc.
+Qed.
+
+Lemma add_types_dom_is_from_list : forall As,
+    (dom (add_types EnvOps.empty As) = from_list As)%env.
+  induction As; cbn.
+  - apply dom_empty.
+  - rewrite dom_concat.
+    rewrite IHAs.
+    rewrite union_comm.
+    unfold from_list.
+    rewrite dom_single.
+    trivial.
+Qed.
+
+Lemma fromlist_notin_restated : forall T (X : T) As,
+    ~ List.In X As ->
+    X \notin from_list As.
+  induction As as [|Ah Ats]; introv Hnotin.
+  - cbn. eauto.
+  - cbn.
+    rewrite notin_union.
+    constructor.
+    + apply notin_singleton.
+      intro HF. subst.
+      apply Hnotin. eauto with listin.
+    + unfold from_list in IHAts.
+      apply* IHAts.
+      intro HF.
+      apply Hnotin. eauto with listin.
+Qed.

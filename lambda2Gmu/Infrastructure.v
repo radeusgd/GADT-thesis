@@ -954,11 +954,10 @@ Lemma subst_commutes_with_unrelated_opens_te_te : forall Xs e V Y,
 Qed.
 
 Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y,
-    (forall X, List.In X Xs -> X <> y) ->
     term v ->
     subst_ee y v (open_te_many_var Xs e) =
     (open_te_many_var Xs (subst_ee y v e)).
-  induction Xs as [| Xh Xt]; introv Hneq Htyp.
+  induction Xs as [| Xh Xt]; introv Htyp.
   - cbn. eauto.
   - cbn.
     fold (open_te_many_var Xt (e open_te_var Xh)).
@@ -1053,8 +1052,6 @@ Proof.
       * rewrite* subst_ee_open_ee_var.
         apply* IH.
         intros A AAlpha.
-        assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
-      * intros A AAlpha.
         assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
   - induction 1; intros; simpl; auto;
       try match goal with
@@ -1279,20 +1276,6 @@ Lemma subst_commutes_open_tt_many : forall Ts Z P U,
     + rewrite* FO.
 Qed.
 
-Lemma subst_ee_open_te_many_var : forall As x u e,
-    term u ->
-    subst_ee x u (open_te_many_var As e) =
-    open_te_many_var As (subst_ee x u e).
-  induction As as [| Ah Ats]; introv Hterm.
-  - cbn. trivial.
-  - cbn.
-    fold (open_te_many_var Ats (e open_te_var Ah)).
-    fold (open_te_many_var Ats (subst_ee x u e open_te_var Ah)).
-    rewrite* IHAts.
-    f_equal.
-    rewrite* subst_ee_open_te_var.
-Qed.
-
 Lemma fold_empty : forall Ts,
     (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
     List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
@@ -1301,4 +1284,48 @@ Lemma fold_empty : forall Ts,
   rewrite Hempty; eauto with listin.
   rewrite union_empty_r.
   eauto with listin.
+Qed.
+
+Lemma add_types_map_subst_tb : forall As Z P,
+    map (subst_tb Z P) (add_types empty As)
+    =
+    add_types empty As.
+  induction As as [| Ah Ats]; introv.
+  - cbn. autorewrite with rew_env_map. trivial.
+  - cbn. autorewrite with rew_env_map. cbn. rewrite IHAts. trivial.
+Qed.
+
+Lemma add_types_through_map : forall Z P E F As,
+    map (subst_tb Z P) (add_types E As & F)
+    =
+    add_types (map (subst_tb Z P) E) As & (map (subst_tb Z P) F).
+  intros.
+  autorewrite with rew_env_map.
+  f_equal.
+  rewrite <- (concat_empty_r E).
+  rewrite add_types_assoc.
+  autorewrite with rew_env_map.
+  rewrite add_types_assoc.
+  f_equal.
+  apply add_types_map_subst_tb.
+Qed.
+
+Lemma fv_smaller_many : forall As T,
+    fv_typ (open_tt_many_var As T) \c (fv_typ T \u from_list As).
+  induction As as [| Ah Ats]; introv.
+  - cbn. eauto.
+  - cbn.
+    fold (from_list Ats).
+    fold (open_tt_many_var Ats (T open_tt_var Ah)).
+    lets IH: IHAts (T open_tt_var Ah).
+    intros x xin.
+    lets Hin: IH xin.
+    rewrite in_union in Hin.
+    rewrite union_assoc.
+    destruct Hin as [Hin | Hin].
+    + lets Hs: fv_smaller T (typ_fvar Ah) 0.
+      fold (open_tt T (typ_fvar Ah)) in Hs.
+      lets Hf: Hs Hin. cbn in Hf.
+      rewrite* in_union.
+    + rewrite* in_union.
 Qed.
