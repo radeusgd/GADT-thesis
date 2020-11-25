@@ -1279,6 +1279,19 @@ Lemma subst_commutes_open_tt_many : forall Ts Z P U,
     + rewrite* FO.
 Qed.
 
+Lemma subst_ee_open_te_many_var : forall As x u e,
+    term u ->
+    subst_ee x u (open_te_many_var As e) =
+    open_te_many_var As (subst_ee x u e).
+  induction As as [| Ah Ats]; introv Hterm.
+  - cbn. trivial.
+  - cbn.
+    fold (open_te_many_var Ats (e open_te_var Ah)).
+    fold (open_te_many_var Ats (subst_ee x u e open_te_var Ah)).
+    rewrite* IHAts.
+    f_equal.
+    rewrite* subst_ee_open_te_var.
+Qed.
 
 Lemma fold_empty : forall Ts,
     (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->

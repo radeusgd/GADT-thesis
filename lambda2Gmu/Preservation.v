@@ -277,7 +277,10 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
       inversions Hclsubst.
       lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
       lets*: H2 Hzip.
-    + introv inzip. intros Alphas xClause Alen Adist Afresh xfresh xfreshA.
+    + introv inzip.
+      let env := gather_vars in
+      intros Alphas xClause Alen Adist Afresh xfresh xfreshA;
+        instantiate (1:=env) in xfresh.
       lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
       lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
       destruct clause as [clA clT]. cbn.
@@ -287,8 +290,11 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
 
       assert (Htypfin: {Σ, E & add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
                 ⊢ subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
-      * lets Htmp: IH Alphas xClause Alen Adist Afresh.
-        lets Htmp2: Htmp xfresh xfreshA.
+      * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
+          [ introv Ain; lets*: Afresh Ain | idtac ].
+        assert (xfreshL: xClause \notin L); eauto.
+        lets Htmp: IH Alphas xClause Alen Adist AfreshL.
+        lets Htmp2: Htmp xfreshL xfreshA.
         lets Htmp3: Htmp2 E (add_types F Alphas & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))) x U.
         cbn in Htmp3.
         rewrite <- concat_assoc.
@@ -296,8 +302,15 @@ Lemma typing_through_subst_ee : forall Σ E F x u U e T,
         apply JMeq_from_eq.
         rewrite add_types_assoc. eauto using concat_assoc.
       * rewrite <- add_types_assoc in Htypfin.
-        lets: subst_commutes_open_tt_many.
-Admitted.
+        assert (Horder:
+                  subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause)
+                  =
+                  open_te_many_var Alphas (subst_ee x u clT') open_ee_var xClause).
+        -- rewrite* <- subst_ee_open_ee_var.
+           f_equal.
+           apply* subst_ee_open_te_many_var.
+        -- rewrite* <- Horder.
+Qed.
 
 Hint Resolve okt_subst_tb.
 
