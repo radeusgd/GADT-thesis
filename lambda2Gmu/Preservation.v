@@ -307,24 +307,6 @@ Lemma okt_strengthen_2 : forall Σ E Z P F,
       applys* wft_subst_tb.
 Qed.
 
-(* Lemma subst_te_open_te_many_var : forall As X U e, *)
-(*     X \notin from_list As -> *)
-(*     type U -> *)
-(*     subst_te X U (open_te_many_var As e) = *)
-(*     open_te_many_var As (subst_te X U e). *)
-(*   induction As as [| Ah Ats]; introv Xfresh Htyp. *)
-(*   - cbn. trivial. *)
-(*   - cbn. *)
-(*     fold (open_te_many_var Ats (e open_te_var Ah)). *)
-(*     fold (open_te_many_var Ats (subst_te X U e open_te_var Ah)). *)
-(*     rewrite IHAts; trivial. *)
-(*     + f_equal. *)
-(*       rewrite* subst_te_open_te_var. *)
-(*       intro. apply Xfresh. subst. cbn. rewrite in_union; left; apply in_singleton_self. *)
-(*     + intro. apply Xfresh. cbn. fold (from_list Ats). *)
-(*       rewrite in_union; right; trivial. *)
-(* Qed. *)
-
 Lemma typing_through_subst_te : forall Σ E F Z e T P,
     {Σ, E & (withtyp Z) & F} ⊢ e ∈ T ->
     wft Σ E P ->
@@ -487,6 +469,116 @@ Ltac crush_ihred_gen :=
     crush_ihred e
   end.
 
+(* TODO move these to Infrastructure *)
+Lemma fv_open_tt : forall x T1 T2 k,
+    x \notin fv_typ T1 ->
+    x \notin fv_typ T2 ->
+    x \notin fv_typ (open_tt_rec k T1 T2).
+  introv f1 f2.
+  unfold open_tt.
+  lets [Ho | Ho]: fv_open T2 T1 k; rewrite Ho; eauto.
+Qed.
+
+Lemma fv_open_te : forall e k x T,
+    x \notin fv_trm e ->
+    x \notin fv_typ T ->
+    x \notin fv_trm (open_te_rec k T e).
+  induction e using trm_ind'; introv efresh Tfresh;
+    try solve [
+          cbn in *; eauto
+        | cbn in *;
+          rewrite notin_union;
+          split*; apply* fv_open_tt
+        ].
+  - cbn. cbn in efresh.
+    apply notin_fold.
+    + intros T' Tin.
+      unfold open_typlist_rec in Tin.
+      lets Tin2: Tin.
+      apply List.in_map_iff in Tin2.
+      destruct Tin2 as [T'' [T'eq T''in]].
+      subst.
+      apply* fv_open_tt.
+    + apply* IHe.
+  - cbn in *.
+    apply notin_fold.
+    + intros cl clin.
+      apply List.in_map_iff in clin.
+      destruct clin as [[cl'A cl'T] [cl'eq cl'in]].
+      subst. cbn.
+
+      rewrite List.Forall_forall in *.
+      fold (clauseTerm (clause cl'A cl'T)).
+      apply* H.
+
+      cbn.
+      fold (clauseTerm (clause cl'A cl'T)).
+      apply* fv_fold_in_clause.
+    + apply* IHe.
+      apply* fv_fold_base_clause.
+Qed.
+
+Lemma fv_open_te_many : forall Ts e x,
+    (forall T, List.In T Ts -> x \notin fv_typ T) ->
+    x \notin fv_trm e ->
+    x \notin fv_trm (open_te_many Ts e).
+  induction Ts as [| Th Tts]; introv Tfresh efresh.
+  - cbn. trivial.
+  - cbn. apply IHTts.
+    + introv Tin. eauto with listin.
+    + unfold open_te.
+      apply fv_open_te; eauto with listin.
+Qed.
+
+Fixpoint subst_te_many (Xs : list var) (Us : list typ) (e : trm) :=
+  match (Xs, Us) with
+  (* | ((List.cons X Xt), (List.cons U Ut)) => subst_tt X U (subst_tt_many Xt Ut T) *)
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_te_many Xt Ut (subst_te X U e)
+  | _ => e
+  end.
+
+Lemma subst_te_intro_many : forall Xs e Us,
+    length Xs = length Us ->
+    DistinctList Xs ->
+    (forall X, List.In X Xs -> X \notin fv_trm e) ->
+    (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
+    (forall U, List.In U Us -> type U) ->
+    open_te_many Us e = subst_te_many Xs Us (open_te_many_var Xs e).
+  induction Xs as [| Xh Xt]; introv Hleneq Hdistinct HXfv HXUfv XUtyp.
+  - destruct Us.
+    + cbv. trivial.
+    + inversions Hleneq.
+  - destruct Us as [| Uh Ut].
+    + inversions Hleneq.
+    + cbn.
+      fold (open_te_many_var Xt (e open_te_var Xh)).
+      (* rewrite* <- subst_intro_commutes_opens; eauto with listin. *)
+      (* * apply* IHXt; try solve [intuition; eauto with listin]. *)
+      (*   -- inversion* Hdistinct. *)
+      (*   -- introv XiXt. *)
+      (*      lets* Hless: fv_smaller T Uh 0. *)
+      (*      fold (open_tt T Uh) in Hless. *)
+      (*      intro Hin. *)
+      (*      apply Hless in Hin. *)
+      (*      rewrite in_union in Hin. *)
+      (*      destruct Hin as [Hin | Hin]. *)
+      (*      ++ apply* HXfv. listin. *)
+      (*      ++ apply* HXUfv; listin. *)
+      (* * inversions Hdistinct. *)
+      (*   introv XiXt. *)
+      (*   intro. subst. contradiction. *)
+      admit.
+Admitted.
+
+Lemma typing_through_subst_te_many : forall Σ E F As e T Ts CT,
+    {Σ, E & (add_types empty As) & F} ⊢ e ∈ T ->
+    (forall P, List.In P Ts -> wft Σ E P) ->
+    (* Z \notin fv_typ P -> (* theoretically this assumption should not be needed as it should arise from wft E P /\ okt E + Z (so Z is not in E and P is wft in E so it cannot have free Z), but we can shift this responsibility up *) *)
+    CT = (subst_tt_many As Ts T) ->
+    {Σ, E & (* map (subst_tb Z P) *) F} ⊢ (subst_te_many As Ts e) ∈ CT.
+  (* TODO the thm statement needs some fixes *)
+Admitted.
+
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
     let Hopen := fresh "Hopen" in
@@ -544,5 +636,44 @@ Theorem preservation_thm : preservation.
     apply* typing_through_subst_ee.
     fold_env_empty.
   - (* matchgadt *)
+    lets* [Def [nthDef Inzip]]: nth_error_implies_zip_swap Defs H10.
+    lets HclTyp: H3 Inzip.
+
+    let fresh := gather_vars in
+    lets* [Alphas [Hlen [Hdist Afresh]]]: exist_alphas fresh (length Ts0).
+    rewrite length_equality in Hlen.
+    pick_fresh x.
+
+    inversions H7.
+    rewrite (@subst_te_intro_many Alphas _ Ts0); eauto.
+    2: {
+      intros A Ain; lets*: Afresh Ain.
+    }
+    2: {
+      intros A U Ain Uin.
+      lets: Afresh Ain.
+      apply* fv_typs_notin.
+    }
+
+
+    rewrite (@subst_ee_intro x); trivial.
+    2: {
+      rewrite <- subst_te_intro_many; trivial.
+      - apply fv_open_te_many; auto.
+        intros. apply* fv_typs_notin.
+      - 
+        intros A Ain; lets*: Afresh Ain.
+      - 
+      intros A U Ain Uin.
+      lets: Afresh Ain.
+      apply* fv_typs_notin.
+    }
+
+    expand_env_empty E.
+    inversions Htyp.
+    apply* typing_through_subst_ee.
+    apply typing_through_subst_te_many.
+    fold_env_empty.
+    (* TODO *)
     admit.
 Admitted.

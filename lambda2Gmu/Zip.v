@@ -107,6 +107,25 @@ Lemma nth_error_implies_zip : forall AT BT (As : list AT) (Bs : list BT) i A,
       cbn. right*.
 Qed.
 
+Lemma zip_swap : forall AT BT As Bs (A : AT) (B : BT),
+    List.In (A,B) (zip As Bs) ->
+    List.In (B,A) (zip Bs As).
+  induction As; intros; destruct Bs; cbn in *; try congruence.
+  destruct H.
+  - inversions H. left*.
+  - right*.
+Qed.
+
+Lemma nth_error_implies_zip_swap : forall AT BT (As : list AT) (Bs : list BT) i B,
+    List.nth_error Bs i = Some B ->
+    List.length As = List.length Bs ->
+    exists A, List.nth_error As i = Some A /\ List.In (A, B) (zip As Bs).
+  intros.
+  lets [A ?]: nth_error_implies_zip As H.
+  - symmetry. trivial.
+  - exists A. split*. apply* zip_swap.
+Qed.
+
 Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
     List.nth_error (zip As Bs) i = Some (A, B) ->
     List.nth_error As i = Some A /\ List.nth_error Bs i = Some B.
