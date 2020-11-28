@@ -3,6 +3,13 @@
 This is my private repo where I put Work In Progress works on my master's thesis.
 
 - [lambda 2Gmu](./lambda2Gmu/) - my formalization of the source calculus
+  - [Definitions](./lambda2Gmu/Definitions.v) define the calculus syntax, typing and semantics and states the desired safety properties
+  - [Prelude](./lambda2Gmu/Prelude.v) gathers some basic useful lemmas
+  - [Infrastructure](./lambda2Gmu/Infrastructure.v) proves syntactic properties of binder handling
+  - [Regularity](./lambda2Gmu/Regularity.v) proves basic properties of the type system, with the most important result - a well typed term has other properties we defined (its type is well formed, it is closed etc.)
+  - [CanonicalForms](./lambda2Gmu/CanonicalForms.v) has proofs that allow to deconstruct a value of a given type to its canonical form
+  - [Progress](./lambda2Gmu/Progress.v) proves the progress theorem
+  - [Preservation](./lambda2Gmu/Preservation.v) proves the preservation theorem
 - [Source calculus differences](notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
 
 > It is a good idea to install an extension rendering TeX markers ([for example](https://chrome.google.com/webstore/detail/tex-all-the-things/cbimabofgmfdkicghcadidpemeenbffn?hl=en)) when browsing Markdown documents on GitHub in this repository.

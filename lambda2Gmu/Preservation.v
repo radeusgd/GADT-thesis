@@ -537,6 +537,38 @@ Fixpoint subst_te_many (Xs : list var) (Us : list typ) (e : trm) :=
   | _ => e
   end.
 
+Lemma subst_commutes_with_unrelated_opens_te : forall Xs e V Y,
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    subst_te Y V (open_te_many_var Xs e) =
+    (open_te_many_var Xs (subst_te Y V e)).
+  induction Xs as [| Xh Xt]; introv Hneq Htyp.
+  - cbn. eauto.
+  - cbn.
+    fold (open_te_many_var Xt (e open_te_var Xh)).
+    fold (open_te_many_var Xt (subst_te Y V e open_te_var Xh)).
+    rewrite* subst_te_open_te_var; eauto with listin.
+Qed.
+
+Lemma subst_intro_commutes_opens_te : forall Xs e Y V,
+    Y \notin fv_trm e ->
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    open_te_many_var Xs (open_te e V) =
+    subst_te Y V (open_te_many_var Xs (e open_te_var Y)).
+  induction Xs as [| Xh Xt]; introv Hfv Hneq Htyp.
+  - cbn. apply* subst_te_intro.
+  - cbn.
+    fold (open_te_many_var Xt (open_te e V open_te_var Xh)).
+    fold (open_te_many_var Xt ((e open_te_var Y) open_te_var Xh)).
+    rewrite* subst_commutes_with_unrelated_opens_te.
+    f_equal.
+    rewrite* <- subst_te_open_te_var.
+    + rewrite* <- subst_te_intro.
+    + apply* Hneq. cbn; eauto.
+    + eauto with listin.
+Qed.
+
 Lemma subst_te_intro_many : forall Xs e Us,
     length Xs = length Us ->
     DistinctList Xs ->
@@ -552,23 +584,15 @@ Lemma subst_te_intro_many : forall Xs e Us,
     + inversions Hleneq.
     + cbn.
       fold (open_te_many_var Xt (e open_te_var Xh)).
-      (* rewrite* <- subst_intro_commutes_opens; eauto with listin. *)
-      (* * apply* IHXt; try solve [intuition; eauto with listin]. *)
-      (*   -- inversion* Hdistinct. *)
-      (*   -- introv XiXt. *)
-      (*      lets* Hless: fv_smaller T Uh 0. *)
-      (*      fold (open_tt T Uh) in Hless. *)
-      (*      intro Hin. *)
-      (*      apply Hless in Hin. *)
-      (*      rewrite in_union in Hin. *)
-      (*      destruct Hin as [Hin | Hin]. *)
-      (*      ++ apply* HXfv. listin. *)
-      (*      ++ apply* HXUfv; listin. *)
-      (* * inversions Hdistinct. *)
-      (*   introv XiXt. *)
-      (*   intro. subst. contradiction. *)
-      admit.
-Admitted.
+      inversions Hdistinct.
+      rewrite IHXt; auto with listin.
+      * f_equal.
+        rewrite <- subst_intro_commutes_opens_te; eauto with listin.
+        introv Xin.
+        intro; subst. contradiction.
+      * introv Xin.
+        apply fv_open_te; eauto with listin.
+Qed.
 
 Lemma open_tt_many_closed : forall As T,
     type T ->
@@ -595,11 +619,19 @@ Lemma subst_tt_many_free : forall As Ts T,
 Qed.
 
 Lemma subst_te_many_commutes_open : forall As Ts e x,
+    length As = length Ts ->
     (forall A, List.In A As -> x <> A) ->
     (subst_te_many As Ts e) open_ee_var x
     =
     subst_te_many As Ts (e open_ee_var x).
-Admitted.
+  induction As as [| Ah Ats]; introv Hlen Afresh.
+  - cbn. auto.
+  - destruct Ts as [| Th Tts]; cbn in Hlen; try congruence.
+    cbn. fold (open_ee (subst_te_many Ats Tts (subst_te Ah Th e)) (trm_fvar x)).
+    rewrite IHAts; auto with listin.
+    f_equal.
+    apply subst_te_open_ee_var.
+Qed.
 
 Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
   match b with
@@ -795,12 +827,12 @@ Theorem preservation_thm : preservation.
     lets* IH: H3 Inzip Alphas x Adist xfreshA.
     cbn in IH.
 
-    rewrite subst_te_many_commutes_open.
-    2: {
-      introv Ain. lets: Afresh Ain.
-      lets: from_list_spec2 Ain.
-      intro. subst. auto.
-    }
+    rewrite subst_te_many_commutes_open; auto;
+      [ idtac
+      | introv Ain; lets: Afresh Ain;
+        lets: from_list_spec2 Ain;
+        intro; subst; auto
+      ].
 
     fold (subst_tb_many Alphas Ts0 (bind_var (open_tt_many_var Alphas (Cargtype Def)))).
     rewrite <- map_single.
