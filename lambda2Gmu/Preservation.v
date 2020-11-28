@@ -607,14 +607,65 @@ Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
   | bind_var T => bind_var (subst_tt_many As Ps T)
   end.
 
-Lemma typing_through_subst_te_many : forall Σ E F As e T Ts,
+Lemma env_map_ext_id : forall T (E : env T) (f : T -> T),
+    (forall x, f x = x) ->
+    map f E = E.
+  induction E using env_ind; introv fext;
+    autorewrite with rew_env_map; trivial.
+  - rewrite* IHE.
+    rewrite fext.
+    trivial.
+Qed.
+
+Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : A -> C),
+    (forall x, g (f x) = h x) ->
+    map g (map f E) = map h E.
+  induction E using env_ind; introv Hcomp;
+    autorewrite with rew_env_map; trivial.
+  - lets IH: IHE f g h.
+    rewrite IH; auto.
+    rewrite Hcomp. trivial.
+Qed.
+
+Lemma typing_through_subst_te_many : forall As Σ E F e T Ps,
     {Σ, E & (add_types empty As) & F} ⊢ e ∈ T ->
-    (forall P, List.In P Ts -> wft Σ E P) ->
+    length As = length Ps ->
+    (forall P, List.In P Ps -> wft Σ E P) ->
+    (forall A, List.In A As -> A # E) ->
+    (forall A, List.In A As -> A # F) ->
+    (forall A P, List.In A As -> List.In P Ps -> A \notin fv_typ P) ->
+    DistinctList As ->
     (* Z \notin fv_typ P -> (* theoretically this assumption should not be needed as it should arise from wft E P /\ okt E + Z (so Z is not in E and P is wft in E so it cannot have free Z), but we can shift this responsibility up *) *)
     (* CT = (subst_tt_many As Ts T) -> *)
-    {Σ, E & map (subst_tb_many As Ts) F} ⊢ (subst_te_many As Ts e) ∈  subst_tt_many As Ts T.
+    {Σ, E & map (subst_tb_many As Ps) F} ⊢ (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
   (* TODO the thm statement needs some fixes *)
-Admitted.
+  induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP Adist.
+  - cbn. unfold subst_tb_many. cbn.
+    rewrite env_map_ext_id;
+      [ idtac | intro xb; destruct xb; cbn; trivial ].
+    cbn in Htyp. rewrite concat_empty_r in Htyp. trivial.
+  - destruct Ps as [| Ph Pts]; cbn in Hlen; try congruence.
+    cbn.
+    lets Hcomp: env_map_compose (subst_tb Ah Ph) (subst_tb_many Ats Pts).
+    rewrite <- Hcomp;
+      [ idtac
+      | intros bd; destruct bd; cbn; trivial ].
+    apply IHAts; eauto with listin.
+    apply typing_through_subst_te.
+    + cbn in Htyp. autorewrite with rew_env_concat in Htyp. trivial.
+    + assert (HWFT: wft Σ E Ph); eauto with listin.
+      rewrite <- add_types_assoc.
+      rewrite concat_empty_r.
+      expand_env_empty (add_types E Ats).
+      apply wft_weaken_many; autorewrite with rew_env_concat; eauto with listin.
+      * lets [Hokt]: typing_regular Htyp.
+        apply okt_strengthen_simple in Hokt.
+        apply okt_strengthen_simple in Hokt.
+        apply* okt_is_ok.
+      * inversion* Adist.
+    + eauto with listin.
+    + inversion* Adist.
+Qed.
 
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
@@ -758,9 +809,17 @@ Theorem preservation_thm : preservation.
     rewrite subst_tt_many_free with Alphas Ts0 Tc;
       [ idtac | introv Ain; lets*: Afresh Ain ].
 
-    apply typing_through_subst_te_many.
+    apply typing_through_subst_te_many; trivial.
     + rewrite <- add_types_assoc.
       rewrite* concat_empty_r.
     + inversions Htyp.
       auto with listin.
+    + introv Ain; lets*: Afresh Ain.
+    + autorewrite with rew_env_dom.
+      introv Ain.
+      intro HF. rewrite in_singleton in HF. subst.
+      apply xfreshA.
+      apply* from_list_spec2.
+    + introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin.
 Qed.
+
