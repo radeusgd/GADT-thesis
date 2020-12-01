@@ -423,3 +423,23 @@ Lemma fromlist_notin_restated : forall T (X : T) As,
       intro HF.
       apply Hnotin. eauto with listin.
 Qed.
+
+Lemma env_map_ext_id : forall T (E : env T) (f : T -> T),
+    (forall x, f x = x) ->
+    EnvOps.map f E = E.
+  induction E using env_ind; introv fext;
+    autorewrite with rew_env_map; trivial.
+  - rewrite* IHE.
+    rewrite fext.
+    trivial.
+Qed.
+
+Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : A -> C),
+    (forall x, g (f x) = h x) ->
+    EnvOps.map g (EnvOps.map f E) = EnvOps.map h E.
+  induction E using env_ind; introv Hcomp;
+    autorewrite with rew_env_map; trivial.
+  - lets IH: IHE f g h.
+    rewrite IH; auto.
+    rewrite Hcomp. trivial.
+Qed.

@@ -1329,3 +1329,166 @@ Lemma fv_smaller_many : forall As T,
       rewrite* in_union.
     + rewrite* in_union.
 Qed.
+
+Lemma fv_open_tt : forall x T1 T2 k,
+    x \notin fv_typ T1 ->
+    x \notin fv_typ T2 ->
+    x \notin fv_typ (open_tt_rec k T1 T2).
+  introv f1 f2.
+  unfold open_tt.
+  lets [Ho | Ho]: fv_open T2 T1 k; rewrite Ho; eauto.
+Qed.
+
+Lemma fv_open_te : forall e k x T,
+    x \notin fv_trm e ->
+    x \notin fv_typ T ->
+    x \notin fv_trm (open_te_rec k T e).
+  induction e using trm_ind'; introv efresh Tfresh;
+    try solve [
+          cbn in *; eauto
+        | cbn in *;
+          rewrite notin_union;
+          split*; apply* fv_open_tt
+        ].
+  - cbn. cbn in efresh.
+    apply notin_fold.
+    + intros T' Tin.
+      unfold open_typlist_rec in Tin.
+      lets Tin2: Tin.
+      apply List.in_map_iff in Tin2.
+      destruct Tin2 as [T'' [T'eq T''in]].
+      subst.
+      apply* fv_open_tt.
+    + apply* IHe.
+  - cbn in *.
+    apply notin_fold.
+    + intros cl clin.
+      apply List.in_map_iff in clin.
+      destruct clin as [[cl'A cl'T] [cl'eq cl'in]].
+      subst. cbn.
+
+      rewrite List.Forall_forall in *.
+      fold (clauseTerm (clause cl'A cl'T)).
+      apply* H.
+
+      cbn.
+      fold (clauseTerm (clause cl'A cl'T)).
+      apply* fv_fold_in_clause.
+    + apply* IHe.
+      apply* fv_fold_base_clause.
+Qed.
+
+Lemma fv_open_te_many : forall Ts e x,
+    (forall T, List.In T Ts -> x \notin fv_typ T) ->
+    x \notin fv_trm e ->
+    x \notin fv_trm (open_te_many Ts e).
+  induction Ts as [| Th Tts]; introv Tfresh efresh.
+  - cbn. trivial.
+  - cbn. apply IHTts.
+    + introv Tin. eauto with listin.
+    + unfold open_te.
+      apply fv_open_te; eauto with listin.
+Qed.
+
+Fixpoint subst_te_many (Xs : list var) (Us : list typ) (e : trm) :=
+  match (Xs, Us) with
+  (* | ((List.cons X Xt), (List.cons U Ut)) => subst_tt X U (subst_tt_many Xt Ut T) *)
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_te_many Xt Ut (subst_te X U e)
+  | _ => e
+  end.
+
+Lemma subst_commutes_with_unrelated_opens_te : forall Xs e V Y,
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    subst_te Y V (open_te_many_var Xs e) =
+    (open_te_many_var Xs (subst_te Y V e)).
+  induction Xs as [| Xh Xt]; introv Hneq Htyp.
+  - cbn. eauto.
+  - cbn.
+    fold (open_te_many_var Xt (e open_te_var Xh)).
+    fold (open_te_many_var Xt (subst_te Y V e open_te_var Xh)).
+    rewrite* subst_te_open_te_var; eauto with listin.
+Qed.
+
+Lemma subst_intro_commutes_opens_te : forall Xs e Y V,
+    Y \notin fv_trm e ->
+    (forall X, List.In X Xs -> X <> Y) ->
+    type V ->
+    open_te_many_var Xs (open_te e V) =
+    subst_te Y V (open_te_many_var Xs (e open_te_var Y)).
+  induction Xs as [| Xh Xt]; introv Hfv Hneq Htyp.
+  - cbn. apply* subst_te_intro.
+  - cbn.
+    fold (open_te_many_var Xt (open_te e V open_te_var Xh)).
+    fold (open_te_many_var Xt ((e open_te_var Y) open_te_var Xh)).
+    rewrite* subst_commutes_with_unrelated_opens_te.
+    f_equal.
+    rewrite* <- subst_te_open_te_var.
+    + rewrite* <- subst_te_intro.
+    + apply* Hneq. cbn; eauto.
+    + eauto with listin.
+Qed.
+
+Lemma subst_te_intro_many : forall Xs e Us,
+    length Xs = length Us ->
+    DistinctList Xs ->
+    (forall X, List.In X Xs -> X \notin fv_trm e) ->
+    (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
+    (forall U, List.In U Us -> type U) ->
+    open_te_many Us e = subst_te_many Xs Us (open_te_many_var Xs e).
+  induction Xs as [| Xh Xt]; introv Hleneq Hdistinct HXfv HXUfv XUtyp.
+  - destruct Us.
+    + cbv. trivial.
+    + inversions Hleneq.
+  - destruct Us as [| Uh Ut].
+    + inversions Hleneq.
+    + cbn.
+      fold (open_te_many_var Xt (e open_te_var Xh)).
+      inversions Hdistinct.
+      rewrite IHXt; auto with listin.
+      * f_equal.
+        rewrite <- subst_intro_commutes_opens_te; eauto with listin.
+        introv Xin.
+        intro; subst. contradiction.
+      * introv Xin.
+        apply fv_open_te; eauto with listin.
+Qed.
+
+Lemma open_tt_many_closed : forall As T,
+    type T ->
+    open_tt_many As T = T.
+  induction As; introv Hcl.
+  - cbn. trivial.
+  - cbn. unfold open_tt.
+    rewrite* <- open_tt_rec_type.
+Qed.
+
+Lemma subst_tt_many_free : forall As Ts T,
+    (forall A, List.In A As -> A \notin fv_typ T) ->
+    T = subst_tt_many As Ts T.
+  induction As; introv Afresh.
+  - cbn. trivial.
+  - destruct Ts.
+    + cbn. trivial.
+    + cbn. rewrite <- IHAs.
+      * symmetry. apply subst_tt_fresh.
+        auto with listin.
+      * intros.
+        rewrite subst_tt_fresh;
+          auto with listin.
+Qed.
+
+Lemma subst_te_many_commutes_open : forall As Ts e x,
+    length As = length Ts ->
+    (forall A, List.In A As -> x <> A) ->
+    (subst_te_many As Ts e) open_ee_var x
+    =
+    subst_te_many As Ts (e open_ee_var x).
+  induction As as [| Ah Ats]; introv Hlen Afresh.
+  - cbn. auto.
+  - destruct Ts as [| Th Tts]; cbn in Hlen; try congruence.
+    cbn. fold (open_ee (subst_te_many Ats Tts (subst_te Ah Th e)) (trm_fvar x)).
+    rewrite IHAts; auto with listin.
+    f_equal.
+    apply subst_te_open_ee_var.
+Qed.
