@@ -109,9 +109,6 @@ Lemma const_test_types : {natSigma, empty} ⊢ const_test ∈ NAT.
     + apply const_types.
 Qed.
 
-Inductive evals : trm -> trm -> Prop :=
-| eval_step : forall a b c, a --> b -> evals b c -> evals a c
-| eval_finish : forall a, evals a a.
 Lemma const_test_evals : evals const_test one.
   cbv.
   eapply eval_step.
@@ -122,3 +119,16 @@ Lemma const_test_evals : evals const_test one.
       apply eval_finish.
       Unshelve. fs. fs. fs.
 Qed.
+
+Definition plus := trm_fix ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))) (trm_abs (typ_gadt [] Nat) (trm_abs (typ_gadt [] Nat) (trm_matchgadt (#1) Nat [clause 0 (#1); clause 0 (trm_app (trm_app (#3) (#0)) (trm_constructor [] (Nat, 1) (#1)))]))).
+
+Lemma plus_types : {natSigma, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))).
+  cbv.
+  admit.
+Admitted.
+
+Definition two := trm_constructor [] (Nat, 1) one.
+Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
+  cbv.
+  eapply eval_step.
+Admitted.

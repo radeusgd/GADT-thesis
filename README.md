@@ -10,7 +10,7 @@ This is my private repo where I put Work In Progress works on my master's thesis
   - [CanonicalForms](./lambda2Gmu/CanonicalForms.v) has proofs that allow to deconstruct a value of a given type to its canonical form
   - [Progress](./lambda2Gmu/Progress.v) proves the progress theorem
   - [Preservation](./lambda2Gmu/Preservation.v) proves the preservation theorem
-- [Source calculus differences](notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
+- [Source calculus differences](./notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
 
 > It is a good idea to install an extension rendering TeX markers ([for example](https://chrome.google.com/webstore/detail/tex-all-the-things/cbimabofgmfdkicghcadidpemeenbffn?hl=en)) when browsing Markdown documents on GitHub in this repository.
 
