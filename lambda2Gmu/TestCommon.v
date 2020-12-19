@@ -20,6 +20,15 @@ Ltac destruct_const_len_list :=
             destruct L; inversions H
           end).
 
+Lemma notin_inverse : forall A (x y : A),
+    x \notin \{ y } ->
+    y \notin \{ x }.
+  intros.
+  assert (x <> y).
+  - intro. subst. apply H. apply in_singleton_self.
+  - apply* notin_singleton.
+Qed.
+
 Ltac binds_inv :=
   match goal with
   | H: binds ?x ?a ?E |- _ =>
@@ -31,6 +40,8 @@ Ltac binds_inv :=
     subst
   | H: binds ?x ?a empty |- _ =>
     apply binds_empty_inv in H; contradiction
+  | |- ?x \notin \{ ?y } =>
+    apply* notin_inverse
   end.
 
 Ltac solve_dom all_distinct :=
