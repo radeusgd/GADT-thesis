@@ -173,4 +173,10 @@ Definition two := trm_constructor [] (Nat, 1) one.
 Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
   cbv.
   eapply eval_step.
+  - crush_1.
+    + with_fresh intros. cbn in *.
+      repeat autodestruct; subst; cbn in *;
+        destruct_const_len_list; cbn in *; crush_1.
+    + cbn in *. with_fresh intros.
+      cbn in *.
 Admitted.
