@@ -642,15 +642,74 @@ Some raw ideas:
 
 (** * Context *)
 
+(* TODO: move bind_typ to separate env Δ *)
+
 Inductive bind : Set :=
-| bind_typ : bind
 | bind_var : typ -> bind.
 
-Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity).
+(* Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity). *)
 Notation "x ~: T" := (x ~ bind_var T) (at level 27, left associativity).
 
 Unset Implicit Arguments.
 Definition ctx := env bind.
+
+(** * Substitution *)
+
+Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
+  match T with
+  | typ_bvar J => typ_bvar J
+  (* | typ_fvar X => If X = Z then U else (typ_fvar X) *)
+  | typ_fvar X => If X = Z then U else (typ_fvar X)
+  | typ_unit   => typ_unit
+  | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2
+  | T1 ==> T2   => subst_tt Z U T1 ==> subst_tt Z U T2
+  | typ_all T1 => typ_all (subst_tt Z U T1)
+  | typ_gadt Ts Name => typ_gadt (map (subst_tt Z U) Ts) Name
+  end.
+
+Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
+  match e with
+  | trm_bvar i => trm_bvar i
+  | trm_fvar x => trm_fvar x
+  | trm_unit   => trm_unit
+  | trm_tuple e1 e2 => trm_tuple (subst_te Z U e1) (subst_te Z U e2)
+  | trm_fst e1 => trm_fst (subst_te Z U e1)
+  | trm_snd e1 => trm_snd (subst_te Z U e1)
+  | trm_abs T1 e1 => trm_abs (subst_tt Z U T1) (subst_te Z U e1)
+  | trm_app e1 e2 => trm_app (subst_te Z U e1) (subst_te Z U e2)
+  | trm_tabs e1 => trm_tabs (subst_te Z U e1)
+  | trm_tapp e1 T1 => trm_tapp (subst_te Z U e1) (subst_tt Z U T1)
+  | trm_fix T1 e1 => trm_fix (subst_tt Z U T1) (subst_te Z U e1)
+  | trm_let e1 e2 => trm_let (subst_te Z U e1) (subst_te Z U e2)
+  | trm_matchgadt e G cs =>
+    trm_matchgadt (subst_te Z U e) G (map_clause_trm_trm (subst_te Z U) cs)
+  | trm_constructor Ts N e1 => trm_constructor (map (subst_tt Z U) Ts) N (subst_te Z U e1)
+  end.
+
+Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
+  match e with
+  | trm_bvar i => trm_bvar i
+  | trm_fvar x => If x = z then u else (trm_fvar x)
+  | trm_unit   => trm_unit
+  | trm_tuple e1 e2 => trm_tuple (subst_ee z u e1) (subst_ee z u e2)
+  | trm_fst e1 => trm_fst (subst_ee z u e1)
+  | trm_snd e1 => trm_snd (subst_ee z u e1)
+  | trm_abs T1 e1 => trm_abs T1 (subst_ee z u e1)
+  | trm_app e1 e2 => trm_app (subst_ee z u e1) (subst_ee z u e2)
+  | trm_tabs e1 => trm_tabs (subst_ee z u e1)
+  | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
+  | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
+  | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
+  | trm_matchgadt e G cs =>
+    trm_matchgadt (subst_ee z u e) G (map_clause_trm_trm (subst_ee z u) cs)
+  | trm_constructor Ts N e1 => trm_constructor Ts N (subst_ee z u e1)
+  end.
+
+Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
+  match b with
+  | bind_typ => bind_typ
+  (* | bind_var T => bind_var (subst_tt Z P T) *)
+  end.
 
 (** * Well-formed types *)
 (* (TODO clarify) In pDOT there is no such notion as a type is well formed if it is used in a typing judgement.
@@ -660,57 +719,98 @@ In pDOT type-abstraction is handled by dependent typing and type-application is 
 But in this calculus we apply 'naked' types, so there are no typing judgements for them, so we need a separate notion.
  *)
 
-Inductive wft : GADTEnv -> env bind -> typ -> Prop :=
-| wft_unit : forall Σ E,
-    wft Σ E typ_unit
-| wft_var : forall Σ E X,
-    binds X (bind_typ) E ->
-    wft Σ E (typ_fvar X)
-| wft_arrow : forall Σ E T1 T2,
-    wft Σ E T1 ->
-    wft Σ E T2 ->
-    wft Σ E (typ_arrow T1 T2)
-| wft_tuple : forall Σ E T1 T2,
-    wft Σ E T1 ->
-    wft Σ E T2 ->
-    wft Σ E (typ_tuple T1 T2)
-| wft_all : forall (L : fset var) Σ E T2,
+Definition substitution := list (var * typ).
+Definition substitution_sources (Θ : substitution) := map fst Θ.
+
+Inductive type_equation : Set := mk_type_equation (T U : typ).
+
+Notation "T ≡ U" := (mk_type_equation T U) (at level 30).
+
+Coercion typ_fvar : var >-> typ.
+
+Record typctx : Set := mkΔ {
+                           Δvars : list var;
+                           Δeqs : list type_equation
+                         }.
+
+Definition add_var (Δ : typctx) (A : var) : typctx :=
+  mkΔ (A :: Δvars Δ) (Δeqs Δ).
+Definition add_eq (Δ : typctx) (eq : type_equation) : typctx :=
+  mkΔ (Δvars Δ) (eq :: Δeqs Δ).
+Definition emptyΔ := mkΔ [] [].
+
+Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
+| wft_unit : forall Σ Δ,
+    wft Σ Δ typ_unit
+| wft_var : forall Σ Δ X,
+    In X (Δvars Δ) ->
+    wft Σ Δ (typ_fvar X)
+| wft_arrow : forall Σ Δ T1 T2,
+    wft Σ Δ  T1 ->
+    wft Σ Δ T2 ->
+    wft Σ Δ (typ_arrow T1 T2)
+| wft_tuple : forall Σ Δ T1 T2,
+    wft Σ Δ T1 ->
+    wft Σ Δ T2 ->
+    wft Σ Δ (typ_tuple T1 T2)
+| wft_all : forall (L : fset var) Σ Δ T2,
     (forall X, X \notin L ->
-          wft Σ (E & withtyp X) (T2 open_tt_var X)) ->
-    wft Σ E (typ_all T2)
-| wft_gadt : forall Σ E Tparams Name Arity Defs,
-    (forall T, In T Tparams -> wft Σ E T) ->
+          wft Σ (add_var Δ X) (T2 open_tt_var X)) ->
+    wft Σ Δ (typ_all T2)
+| wft_gadt : forall Σ Δ Tparams Name Arity Defs,
+    (forall T, In T Tparams -> wft Σ Δ T) ->
     binds Name (mkGADT Arity Defs) Σ ->
     length Tparams = Arity ->
-    wft Σ E (typ_gadt Tparams Name)
+    wft Σ Δ (typ_gadt Tparams Name)
 .
 
-Fixpoint add_types (E : ctx) (args : list var) :=
-  match args with
-  | [] => E
-  | Th :: Tts => (add_types E Tts & withtyp Th)
+Definition alpha_equivalent (T U : typ) : Prop := T = U. (*Thanks to usage of de Bruijn indices, alpha equivalence reduces to plain equivalence *)
+
+Fixpoint subst_tt' (T : typ) (Θ : substitution) :=
+  match Θ with
+  | nil => T
+  | (A, U) :: Θ' => subst_tt' (subst_tt A U T) Θ'
+  end.
+
+Definition subst_matches_typctx Σ Δ Θ :=
+  substitution_sources Θ = Δvars Δ /\
+  (forall A T, In (A,T) Θ -> wft Σ Δ T) /\
+  (forall T1 T2, In (T1 ≡ T2) (Δeqs Δ) ->
+            alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ)).
+
+Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
+  match eq with
+  | T1 ≡ T2 =>
+    forall Θ, subst_matches_typctx Σ Δ Θ ->
+         alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ)
   end.
 
 (** * Well-formedness of the GADT definitions and the envionment *)
+
+Fixpoint add_types (Δ : typctx) (args : list var) :=
+  match args with
+  | [] => Δ
+  | Th :: Tts => (add_var (add_types Δ Tts) Th)
+  end.
 
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
 | ok_constr_def : forall Tarity Carity argT Σ retTs,
     (* TODO the L may need to be moved inside the Alphas-props *)
     length retTs = Tarity ->
-    (forall Alphas L E,
+    (forall Alphas L Δ,
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
-        wft Σ (add_types E Alphas) (open_tt_many_var Alphas argT)
+        wft Σ (add_types Δ Alphas) (open_tt_many_var Alphas argT)
     ) ->
-    (forall Alphas L E,
+    (forall Alphas L Δ,
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         (forall retT,
             In retT retTs ->
-            wft Σ (add_types E Alphas) (open_tt_many_var Alphas retT))
+            wft Σ (add_types Δ Alphas) (open_tt_many_var Alphas retT))
     ) ->
     fv_typ argT = \{} ->
     (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* the types have no free variables, but can of course reference other GADTs since these are not counted as free vars *)
@@ -737,77 +837,80 @@ Definition okGadt (Σ : GADTEnv) : Prop :=
 (*     okGadt (Σ & Name ~ GADT arity Defs) *)
 (* . *)
 
-Inductive okt : GADTEnv -> ctx -> Prop :=
-| okt_empty : forall Σ,
+Definition oktypctx (Σ : GADTEnv) (Δ : typctx) : Prop :=
+  DistinctList (Δvars Δ) /\
+  (forall T1 T2, In (T1 ≡ T2) (Δeqs Δ) -> wft Σ Δ T1 /\ wft Σ Δ T2).
+
+Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
+| okt_empty : forall Σ Δ,
     okGadt Σ ->
-    okt Σ empty
-| okt_sub : forall Σ E X,
-    okt Σ E -> X # E -> okt Σ (E & withtyp X)
-| okt_typ : forall Σ E x T,
-    okt Σ E -> wft Σ E T -> x # E -> okt Σ (E & x ~: T).
+    oktypctx Σ Δ ->
+    okt Σ Δ empty
+| okt_typ : forall Σ Δ E x T,
+    okt Σ Δ E -> wft Σ Δ T -> x # E -> okt Σ Δ (E & x ~: T).
 
 (** * Typing *)
 
-Reserved Notation "{ Σ , E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
+Reserved Notation "{ Σ , Δ ,  E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
-Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
+Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
   (* TODO typing_eq *)
-| typing_unit : forall Σ E,
-    okt Σ E ->
-    {Σ, E} ⊢ trm_unit ∈ typ_unit
-| typing_var : forall Σ E x T,
+| typing_unit : forall Σ Δ E,
+    okt Σ Δ E ->
+    {Σ, Δ, E} ⊢ trm_unit ∈ typ_unit
+| typing_var : forall Σ E Δ x T,
     binds x (bind_var T) E ->
-    okt Σ E ->
-    {Σ, E} ⊢ (trm_fvar x) ∈ T
-| typing_cons : forall Σ E Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
-    {Σ, E} ⊢ e1 ∈ Targ ->
+    okt Σ Δ E ->
+    {Σ, Δ, E} ⊢ (trm_fvar x) ∈ T
+| typing_cons : forall Σ E Δ Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
+    {Σ, Δ, E} ⊢ e1 ∈ Targ ->
     binds Name (mkGADT Tarity Ctors) Σ ->
     nth_error Ctors Ctor = Some (mkGADTconstructor Carity CargType CretTypes) ->
     length Ts = Carity ->
     Targ = open_tt_many Ts CargType ->
-    (forall T, In T Ts -> wft Σ E T) ->
+    (forall T, In T Ts -> wft Σ Δ T) ->
     (* alternatively: Tret = open_tt_many (typ_gadt (List.map (fun T => open_tt_many T Ts) CretTypes) Name) Ts -> *)
     Tret = open_tt_many Ts (typ_gadt CretTypes Name) ->
-    {Σ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
-| typing_abs : forall L Σ E V e1 T1,
-    (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
-    {Σ, E} ⊢ trm_abs V e1 ∈ V ==> T1
-| typing_app : forall Σ E T1 T2 e1 e2,
-    {Σ, E} ⊢ e2 ∈ T1 ->
-    {Σ, E} ⊢ e1 ∈ T1 ==> T2 ->
-    {Σ, E} ⊢ trm_app e1 e2 ∈ T2
-| typing_tabs : forall L Σ E e1 T1,
+    {Σ, Δ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
+| typing_abs : forall L Σ Δ E V e1 T1,
+    (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
+    {Σ, Δ, E} ⊢ trm_abs V e1 ∈ V ==> T1
+| typing_app : forall Σ Δ E T1 T2 e1 e2,
+    {Σ, Δ, E} ⊢ e2 ∈ T1 ->
+    {Σ, Δ, E} ⊢ e1 ∈ T1 ==> T2 ->
+    {Σ, Δ, E} ⊢ trm_app e1 e2 ∈ T2
+| typing_tabs : forall L Σ Δ E e1 T1,
     (forall X, X \notin L -> (* TODO consider splitting value and term as this case may be problematic ? *)
           value (e1 open_te_var X)) ->
     (forall X, X \notin L ->
-          {Σ, E & withtyp X} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
-    {Σ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
-| typing_tapp : forall Σ E e1 T1 T T',
-    {Σ, E} ⊢ e1 ∈ typ_all T1 ->
-    wft Σ E T ->
+          {Σ, add_var Δ X, E} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
+    {Σ, Δ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
+| typing_tapp : forall Σ Δ E e1 T1 T T',
+    {Σ, Δ, E} ⊢ e1 ∈ typ_all T1 ->
+    wft Σ Δ T ->
     T' = open_tt T1 T ->
-    {Σ, E} ⊢ trm_tapp e1 T ∈ T'
-| typing_tuple : forall Σ E T1 T2 e1 e2,
-    {Σ, E} ⊢ e1 ∈ T1 ->
-    {Σ, E} ⊢ e2 ∈ T2 ->
-    {Σ, E} ⊢ trm_tuple e1 e2 ∈ T1 ** T2
-| typing_fst : forall Σ E T1 T2 e1,
-    {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
-    {Σ, E} ⊢ trm_fst e1 ∈ T1
-| typing_snd : forall Σ E T1 T2 e1,
-    {Σ, E} ⊢ e1 ∈ T1 ** T2 ->
-    {Σ, E} ⊢ trm_snd e1 ∈ T2
-| typing_fix : forall L Σ E T v,
+    {Σ, Δ, E} ⊢ trm_tapp e1 T ∈ T'
+| typing_tuple : forall Σ Δ E T1 T2 e1 e2,
+    {Σ, Δ, E} ⊢ e1 ∈ T1 ->
+    {Σ, Δ, E} ⊢ e2 ∈ T2 ->
+    {Σ, Δ, E} ⊢ trm_tuple e1 e2 ∈ T1 ** T2
+| typing_fst : forall Σ Δ E T1 T2 e1,
+    {Σ, Δ, E} ⊢ e1 ∈ T1 ** T2 ->
+    {Σ, Δ, E} ⊢ trm_fst e1 ∈ T1
+| typing_snd : forall Σ Δ E T1 T2 e1,
+    {Σ, Δ, E} ⊢ e1 ∈ T1 ** T2 ->
+    {Σ, Δ, E} ⊢ trm_snd e1 ∈ T2
+| typing_fix : forall L Σ Δ E T v,
     (forall x, x \notin L -> value (v open_ee_var x)) ->
-    (forall x, x \notin L -> {Σ, E & x ~: T} ⊢ (v open_ee_var x) ∈ T) ->
-    {Σ, E} ⊢ trm_fix T v ∈ T
-| typing_let : forall L Σ E V T2 e1 e2,
-    {Σ, E} ⊢ e1 ∈ V ->
-    (forall x, x \notin L -> {Σ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
-    {Σ, E} ⊢ trm_let e1 e2 ∈ T2
+    (forall x, x \notin L -> {Σ, Δ, E & x ~: T} ⊢ (v open_ee_var x) ∈ T) ->
+    {Σ, Δ, E} ⊢ trm_fix T v ∈ T
+| typing_let : forall L Σ Δ E V T2 e1 e2,
+    {Σ, Δ, E} ⊢ e1 ∈ V ->
+    (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
+    {Σ, Δ, E} ⊢ trm_let e1 e2 ∈ T2
 (* typing case merges rules ty-case and pat-cons from the original paper *)
-| typing_case : forall L Σ E e ms Ts T Name Tc Tarity Defs,
-    {Σ, E} ⊢ e ∈ T ->
+| typing_case : forall L Σ Δ E e ms Ts T Name Tc Tarity Defs,
+    {Σ, Δ, E} ⊢ e ∈ T ->
     T = (typ_gadt Ts Name) ->
     binds Name (mkGADT Tarity Defs) Σ ->
     length Defs = length ms -> (* implicit exhaustivity check *)
@@ -826,12 +929,13 @@ Inductive typing : GADTEnv -> ctx -> trm -> typ -> Prop :=
                     TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
                   *)
                  { Σ,
-                   (add_types E Alphas)
+                   (add_types Δ Alphas),
+                   E
                    & x ~: (open_tt_many_var Alphas (Cargtype def))
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
             ) ->
-    { Σ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
-where "{ Σ , E } ⊢ t ∈ T" := (typing Σ E t T).
+    { Σ, Δ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
+where "{ Σ , Δ , E } ⊢ t ∈ T" := (typing Σ Δ E t T).
 
 (** * Reduction rules (Small-step operational semantics) *)
 
@@ -903,71 +1007,13 @@ Inductive red : trm -> trm -> Prop :=
     trm_matchgadt e1 G ms --> trm_matchgadt e1' G ms
 where "e1 --> e2" := (red e1 e2).
 
-(** * Substitution *)
-
-Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
-  match T with
-  | typ_bvar J => typ_bvar J
-  (* | typ_fvar X => If X = Z then U else (typ_fvar X) *)
-  | typ_fvar X => If X = Z then U else (typ_fvar X)
-  | typ_unit   => typ_unit
-  | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2
-  | T1 ==> T2   => subst_tt Z U T1 ==> subst_tt Z U T2
-  | typ_all T1 => typ_all (subst_tt Z U T1)
-  | typ_gadt Ts Name => typ_gadt (map (subst_tt Z U) Ts) Name
-  end.
-
-Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
-  match e with
-  | trm_bvar i => trm_bvar i
-  | trm_fvar x => trm_fvar x
-  | trm_unit   => trm_unit
-  | trm_tuple e1 e2 => trm_tuple (subst_te Z U e1) (subst_te Z U e2)
-  | trm_fst e1 => trm_fst (subst_te Z U e1)
-  | trm_snd e1 => trm_snd (subst_te Z U e1)
-  | trm_abs T1 e1 => trm_abs (subst_tt Z U T1) (subst_te Z U e1)
-  | trm_app e1 e2 => trm_app (subst_te Z U e1) (subst_te Z U e2)
-  | trm_tabs e1 => trm_tabs (subst_te Z U e1)
-  | trm_tapp e1 T1 => trm_tapp (subst_te Z U e1) (subst_tt Z U T1)
-  | trm_fix T1 e1 => trm_fix (subst_tt Z U T1) (subst_te Z U e1)
-  | trm_let e1 e2 => trm_let (subst_te Z U e1) (subst_te Z U e2)
-  | trm_matchgadt e G cs =>
-    trm_matchgadt (subst_te Z U e) G (map_clause_trm_trm (subst_te Z U) cs)
-  | trm_constructor Ts N e1 => trm_constructor (map (subst_tt Z U) Ts) N (subst_te Z U e1)
-  end.
-
-Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
-  match e with
-  | trm_bvar i => trm_bvar i
-  | trm_fvar x => If x = z then u else (trm_fvar x)
-  | trm_unit   => trm_unit
-  | trm_tuple e1 e2 => trm_tuple (subst_ee z u e1) (subst_ee z u e2)
-  | trm_fst e1 => trm_fst (subst_ee z u e1)
-  | trm_snd e1 => trm_snd (subst_ee z u e1)
-  | trm_abs T1 e1 => trm_abs T1 (subst_ee z u e1)
-  | trm_app e1 e2 => trm_app (subst_ee z u e1) (subst_ee z u e2)
-  | trm_tabs e1 => trm_tabs (subst_ee z u e1)
-  | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
-  | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
-  | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
-  | trm_matchgadt e G cs =>
-    trm_matchgadt (subst_ee z u e) G (map_clause_trm_trm (subst_ee z u) cs)
-  | trm_constructor Ts N e1 => trm_constructor Ts N (subst_ee z u e1)
-  end.
-
-Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
-  match b with
-  | bind_typ => bind_typ
-  | bind_var T => bind_var (subst_tt Z P T)
-  end.
-
 (** * Statemenf of desired safety properties *)
 
 Definition progress := forall Σ e T,
-    {Σ, empty} ⊢ e ∈ T ->
+    {Σ, emptyΔ, empty} ⊢ e ∈ T ->
     (value e) \/ (exists e', e --> e').
 
 Definition preservation := forall Σ e T e',
-    {Σ, empty} ⊢ e ∈ T ->
+    {Σ, emptyΔ, empty} ⊢ e ∈ T ->
     e --> e' ->
-    {Σ, empty} ⊢ e' ∈ T.
+    {Σ, emptyΔ, empty} ⊢ e' ∈ T.

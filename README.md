@@ -35,4 +35,4 @@ This is my private repo where I put Work In Progress works on my master's thesis
   + [TLC LibLN](~/.opam/system/lib/coq/user-contrib/TLC/LibLN.v)
   + [Fsub soundness in TLC](../CoqLibs/formalmetacoq/ln/Fsub_Soundness.v)
 - [pDOT proof](../dot-calculus/src/extensions/paths/) - quick access to the pDOT proof
-  + [pDOT Definitions](../dot-calculus/src/extensions/paths/Definitions.v)
+  + [pDT Definitions](../dot-calculus/src/extensions/paths/Definitions.v)
