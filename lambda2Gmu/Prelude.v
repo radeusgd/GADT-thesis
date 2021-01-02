@@ -389,23 +389,23 @@ Lemma in_from_list : forall As (x : var),
       exists A. split*.
 Qed.
 
-Lemma add_types_assoc : forall E F As,
-    (add_types (E & F) As = E & add_types F As)%env.
-  induction As; cbn; eauto.
-  - rewrite IHAs. eauto using concat_assoc.
-Qed.
+(* Lemma add_types_assoc : forall E F As, *)
+(*     (add_types (E & F) As = E & add_types F As)%env. *)
+(*   induction As; cbn; eauto. *)
+(*   - rewrite IHAs. eauto using concat_assoc. *)
+(* Qed. *)
 
-Lemma add_types_dom_is_from_list : forall As,
-    (dom (add_types EnvOps.empty As) = from_list As)%env.
-  induction As; cbn.
-  - apply dom_empty.
-  - rewrite dom_concat.
-    rewrite IHAs.
-    rewrite union_comm.
-    unfold from_list.
-    rewrite dom_single.
-    trivial.
-Qed.
+(* Lemma add_types_dom_is_from_list : forall As, *)
+(*     (dom (add_types EnvOps.empty As) = from_list As)%env. *)
+(*   induction As; cbn. *)
+(*   - apply dom_empty. *)
+(*   - rewrite dom_concat. *)
+(*     rewrite IHAs. *)
+(*     rewrite union_comm. *)
+(*     unfold from_list. *)
+(*     rewrite dom_single. *)
+(*     trivial. *)
+(* Qed. *)
 
 Lemma fromlist_notin_restated : forall T (X : T) As,
     ~ List.In X As ->

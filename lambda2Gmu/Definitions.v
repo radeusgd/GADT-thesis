@@ -720,30 +720,32 @@ But in this calculus we apply 'naked' types, so there are no typing judgements f
  *)
 
 Definition substitution := list (var * typ).
-Definition substitution_sources (Θ : substitution) := map fst Θ.
+Definition substitution_sources (Θ : substitution) : fset var := from_list (map fst Θ).
 
 Inductive type_equation : Set := mk_type_equation (T U : typ).
 
 Notation "T ≡ U" := (mk_type_equation T U) (at level 30).
 
+Inductive typctx_elem : Set :=
+| tc_var (A : var)
+| tc_eq (eq : type_equation).
+
 Coercion typ_fvar : var >-> typ.
+Coercion tc_var : var >-> typctx_elem.
+Coercion tc_eq : type_equation >-> typctx_elem.
 
-Record typctx : Set := mkΔ {
-                           Δvars : list var;
-                           Δeqs : list type_equation
-                         }.
-
-Definition add_var (Δ : typctx) (A : var) : typctx :=
-  mkΔ (A :: Δvars Δ) (Δeqs Δ).
-Definition add_eq (Δ : typctx) (eq : type_equation) : typctx :=
-  mkΔ (Δvars Δ) (eq :: Δeqs Δ).
-Definition emptyΔ := mkΔ [] [].
+(* we keep the elements in reverse order, i.e. the head is the last added element *)
+Definition typctx := list typctx_elem.
+Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
+Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ.
+Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ.
+Definition emptyΔ : typctx := [].
 
 Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
 | wft_unit : forall Σ Δ,
     wft Σ Δ typ_unit
 | wft_var : forall Σ Δ X,
-    In X (Δvars Δ) ->
+    is_var_defined Δ X ->
     wft Σ Δ (typ_fvar X)
 | wft_arrow : forall Σ Δ T1 T2,
     wft Σ Δ  T1 ->
@@ -772,11 +774,27 @@ Fixpoint subst_tt' (T : typ) (Θ : substitution) :=
   | (A, U) :: Θ' => subst_tt' (subst_tt A U T) Θ'
   end.
 
-Definition subst_matches_typctx Σ Δ Θ :=
-  substitution_sources Θ = Δvars Δ /\
-  (forall A T, In (A,T) Θ -> wft Σ Δ T) /\
-  (forall T1 T2, In (T1 ≡ T2) (Δeqs Δ) ->
-            alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ)).
+(* Fixpoint subst_tt' (T : typ) (Θ : substitution) : typ := *)
+(*   match T with *)
+(*   | typ_bvar J => typ_bvar J *)
+(*   (* | typ_fvar X => If X = Z then U else (typ_fvar X) *) *)
+(*   | typ_fvar X => If X = Z then U else (typ_fvar X) *)
+(*   | typ_unit   => typ_unit *)
+(*   | T1 ** T2   => subst_tt Z U T1 ** subst_tt Z U T2 *)
+(*   | T1 ==> T2   => subst_tt Z U T1 ==> subst_tt Z U T2 *)
+(*   | typ_all T1 => typ_all (subst_tt Z U T1) *)
+(*   | typ_gadt Ts Name => typ_gadt (map (subst_tt Z U) Ts) Name *)
+(*   end. *)
+Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
+| tc_empty : subst_matches_typctx Σ [] []
+| tc_add_var : forall Θ Δ A T,
+    wft Σ Δ T ->
+    subst_matches_typctx Σ Δ Θ ->
+    subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
+| tc_add_eq : forall Θ Δ T1 T2,
+    subst_matches_typctx Σ Δ Θ ->
+    alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ) ->
+    subst_matches_typctx Σ (tc_eq (T1 ≡ T2) :: Δ) Θ.
 
 Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
   match eq with
@@ -837,14 +855,14 @@ Definition okGadt (Σ : GADTEnv) : Prop :=
 (*     okGadt (Σ & Name ~ GADT arity Defs) *)
 (* . *)
 
-Definition oktypctx (Σ : GADTEnv) (Δ : typctx) : Prop :=
-  DistinctList (Δvars Δ) /\
-  (forall T1 T2, In (T1 ≡ T2) (Δeqs Δ) -> wft Σ Δ T1 /\ wft Σ Δ T2).
+(* This seems to not be enforced in the paper, at least explicitly, and indeed maybe it is not necessary - in practice we will only add wft types, but for the equations that does not seem to matter *)
+(* Definition oktypctx (Σ : GADTEnv) (Δ : typctx) : Prop := *)
+(*   (forall T1 T2, (T1 ≡ T2) \in (Δeqs Δ) -> wft Σ Δ T1 /\ wft Σ Δ T2). *)
 
 Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
 | okt_empty : forall Σ Δ,
     okGadt Σ ->
-    oktypctx Σ Δ ->
+    (* oktypctx Σ Δ -> *)
     okt Σ Δ empty
 | okt_typ : forall Σ Δ E x T,
     okt Σ Δ E -> wft Σ Δ T -> x # E -> okt Σ Δ (E & x ~: T).
