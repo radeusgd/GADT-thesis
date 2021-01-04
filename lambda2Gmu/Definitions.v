@@ -737,9 +737,10 @@ Coercion tc_eq : type_equation >-> typctx_elem.
 (* we keep the elements in reverse order, i.e. the head is the last added element *)
 Definition typctx := list typctx_elem.
 Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
-Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ.
-Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ.
+(* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
+(* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
+Notation "A |,| B" := (A ++ B) (at level 32).
 
 Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
 | wft_unit : forall Σ Δ,
@@ -757,7 +758,7 @@ Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
     wft Σ Δ (typ_tuple T1 T2)
 | wft_all : forall (L : fset var) Σ Δ T2,
     (forall X, X \notin L ->
-          wft Σ (add_var Δ X) (T2 open_tt_var X)) ->
+          wft Σ (Δ |,| [tc_var X]) (T2 open_tt_var X)) ->
     wft Σ Δ (typ_all T2)
 | wft_gadt : forall Σ Δ Tparams Name Arity Defs,
     (forall T, In T Tparams -> wft Σ Δ T) ->
@@ -805,11 +806,13 @@ Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
 
 (** * Well-formedness of the GADT definitions and the envionment *)
 
-Fixpoint add_types (Δ : typctx) (args : list var) :=
-  match args with
-  | [] => Δ
-  | Th :: Tts => (add_var (add_types Δ Tts) Th)
-  end.
+(* Fixpoint add_types (Δ : typctx) (args : list var) := *)
+(*   match args with *)
+(*   | [] => Δ *)
+(*   | Th :: Tts => add_types (Δ |,| [tc_var Th]) Tts *)
+(*   end. *)
+Definition tc_vars (Xs : list var) : typctx :=
+  List.map tc_var Xs.
 
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
@@ -820,7 +823,7 @@ Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
-        wft Σ (add_types Δ Alphas) (open_tt_many_var Alphas argT)
+        wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas argT)
     ) ->
     (forall Alphas L Δ,
         DistinctList Alphas ->
@@ -828,7 +831,7 @@ Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         (forall retT,
             In retT retTs ->
-            wft Σ (add_types Δ Alphas) (open_tt_many_var Alphas retT))
+            wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas retT))
     ) ->
     fv_typ argT = \{} ->
     (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* the types have no free variables, but can of course reference other GADTs since these are not counted as free vars *)
@@ -901,7 +904,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
     (forall X, X \notin L -> (* TODO consider splitting value and term as this case may be problematic ? *)
           value (e1 open_te_var X)) ->
     (forall X, X \notin L ->
-          {Σ, add_var Δ X, E} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
+          {Σ, Δ |,| [tc_var X], E} ⊢ (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
     {Σ, Δ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ Δ E e1 T1 T T',
     {Σ, Δ, E} ⊢ e1 ∈ typ_all T1 ->
@@ -947,7 +950,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
                     TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
                   *)
                  { Σ,
-                   (add_types Δ Alphas),
+                   (Δ |,| tc_vars Alphas),
                    E
                    & x ~: (open_tt_many_var Alphas (Cargtype def))
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc

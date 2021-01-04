@@ -56,75 +56,80 @@ Ltac IHap IH := eapply IH; eauto;
                 try (unfold open_te; rewrite <- open_te_var_preserves_size);
                 cbn; lia.
 
-Lemma wft_weaken : forall Σ E F G T,
-    wft Σ (E & G) T ->
-    ok (E & F & G) ->
-    wft Σ (E & F & G) T.
-  introv Hwft Hok. gen_eq K: (E & G). gen E F G.
-  induction Hwft; intros; subst; auto.
-  - (* case: var *)
-    apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken.
-  - (* case: all *)
-    apply_fresh* wft_all as X. apply_ih_bind* H0.
-  - econstructor; eauto.
-Qed.
+(* Lemma wft_weaken : forall Σ Δ E F G T, *)
+(*     wft Σ Δ (E & G) T -> *)
+(*     ok (E & F & G) -> *)
+(*     wft Σ Δ (E & F & G) T. *)
+(*   introv Hwft Hok. gen_eq K: (E & G). gen E F G. *)
+(*   induction Hwft; intros; subst; auto. *)
+(*   - (* case: var *) *)
+(*     apply (@wft_var Σ (E0 & F & G) X).  apply* binds_weaken. *)
+(*   - (* case: all *) *)
+(*     apply_fresh* wft_all as X. apply_ih_bind* H0. *)
+(*   - econstructor; eauto. *)
+(* Qed. *)
 
 Hint Resolve subst_tt_type subst_te_term subst_ee_term.
 Hint Resolve subst_te_value subst_ee_value.
 
-Lemma okt_is_ok : forall Σ E, okt Σ E -> ok E.
+Lemma okt_is_ok : forall Σ Δ E, okt Σ Δ E -> ok E.
   introv. intro Hokt.
   induction Hokt; eauto.
 Qed.
 Hint Extern 1 (ok _) => apply okt_is_ok.
 
-Lemma wft_from_env_has_typ : forall Σ x U E,
-    okt Σ E -> binds x (bind_var U) E -> wft Σ E U.
+
+Lemma wft_from_env_has_typ : forall Σ Δ x U E,
+    okt Σ Δ E -> binds x (bind_var U) E -> wft Σ Δ U.
 Proof.
   induction E using env_ind; intros Ok B.
   false* binds_empty_inv.
   inversions Ok.
   - false (empty_push_inv H).
   - destruct (eq_push_inv H) as [? [? ?]]; subst. clear H.
-    destruct (binds_push_inv B) as [[? ?]|[? ?]]; subst.
-    + inversions H1.
-    + expand_env_empty (E & x0 ~ bind_typ); apply* wft_weaken; fold_env_empty.
-      econstructor. apply* okt_is_ok. auto.
-  - destruct (eq_push_inv H) as [? [? ?]]. clear H.
-    destruct (binds_push_inv B) as [[? Hbindeq]|[? Hbinds]]; subst.
-    + inversions Hbindeq.
-      expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty.
-      econstructor. apply* okt_is_ok. auto.
-    + inversions Hbinds.
-      expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty.
-      constructor*.
-      apply* okt_is_ok.
+    lets [[? HT] | [? HB]]: binds_push_inv B.
+    + inversion* HT.
+    + apply* IHE.
+  (* - destruct (eq_push_inv H) as [? [? ?]]; subst. clear H. *)
+  (*   destruct (binds_push_inv B) as [[? ?]|[? ?]]; subst. *)
+  (*   + admit. *)
+  (*   + expand_env_empty (E & x0 ~ bind_typ); apply* wft_weaken; fold_env_empty. *)
+  (*     econstructor. apply* okt_is_ok. auto. *)
+  (* - destruct (eq_push_inv H) as [? [? ?]]. clear H. *)
+  (*   destruct (binds_push_inv B) as [[? Hbindeq]|[? Hbinds]]; subst. *)
+  (*   + inversions Hbindeq. *)
+  (*     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty. *)
+  (*     econstructor. apply* okt_is_ok. auto. *)
+  (*   + inversions Hbinds. *)
+  (*     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty. *)
+  (*     constructor*. *)
+  (*     apply* okt_is_ok. *)
 Qed.
 
-Lemma wft_strengthen : forall Σ E F x U T,
- wft Σ (E & (x ~: U) & F) T -> wft Σ (E & F) T.
-Proof.
-  introv Hwft. gen_eq G: (E & (x ~: U) & F). gen F.
-  induction Hwft; intros F EQ; subst; auto.
-  -
-    match goal with
-    | H: binds _ _ _ |- _ =>
-      rename H into Hbinds_bindtyp end.
-    apply* (@wft_var).
-    destruct (binds_concat_inv Hbinds_bindtyp) as [?|[? Hbinds2]].
-    + apply~ binds_concat_right.
-    + destruct (binds_push_inv Hbinds2) as [[? ?]|[? ?]].
-      * subst. false.
-      * apply~ binds_concat_left.
-  - (* todo: binds_cases tactic *)
-    match goal with
-    | H: forall X, X \notin L -> forall F0, ?P1 -> ?P2 |- _ =>
-      rename H into H_ctxEq_implies_wft end.
-    apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft.
-  - econstructor; eauto.
-Qed.
+(* Lemma wft_strengthen : forall Σ Δ E F x U T, *)
+(*  wft Σ Δ (E & (x ~: U) & F) T -> wft Σ (E & F) T. *)
+(* Proof. *)
+(*   introv Hwft. gen_eq G: (E & (x ~: U) & F). gen F. *)
+(*   induction Hwft; intros F EQ; subst; auto. *)
+(*   - *)
+(*     match goal with *)
+(*     | H: binds _ _ _ |- _ => *)
+(*       rename H into Hbinds_bindtyp end. *)
+(*     apply* (@wft_var). *)
+(*     destruct (binds_concat_inv Hbinds_bindtyp) as [?|[? Hbinds2]]. *)
+(*     + apply~ binds_concat_right. *)
+(*     + destruct (binds_push_inv Hbinds2) as [[? ?]|[? ?]]. *)
+(*       * subst. false. *)
+(*       * apply~ binds_concat_left. *)
+(*   - (* todo: binds_cases tactic *) *)
+(*     match goal with *)
+(*     | H: forall X, X \notin L -> forall F0, ?P1 -> ?P2 |- _ => *)
+(*       rename H into H_ctxEq_implies_wft end. *)
+(*     apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft. *)
+(*   - econstructor; eauto. *)
+(* Qed. *)
 
-Lemma okt_implies_okgadt : forall Σ E, okt Σ E -> okGadt Σ.
+Lemma okt_implies_okgadt : forall Σ Δ E, okt Σ Δ E -> okGadt Σ.
   induction 1; auto.
 Qed.
 
@@ -134,121 +139,190 @@ Ltac find_ctxeq :=
     rename H into Hctx_eq
   end.
 
-Lemma okt_push_var_inv : forall Σ E x T,
-  okt Σ (E & x ~: T) -> okt Σ E /\ wft Σ E T /\ x # E.
+Lemma okt_push_var_inv : forall Σ Δ E x T,
+  okt Σ Δ (E & x ~: T) -> okt Σ Δ E /\ wft Σ Δ T /\ x # E.
 Proof.
   introv O; inverts O.
   - false* empty_push_inv.
-  - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false.
+  (* - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false. *)
   - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M.
 Qed.
 
-Lemma okt_push_typ_inv : forall Σ E X,
-  okt Σ (E & withtyp X) -> okt Σ E /\ X # E.
-Proof.
-  introv O. inverts O.
-  - false* empty_push_inv.
-  - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M.
-  - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false.
-Qed.
+(* Lemma okt_push_typ_inv : forall Σ Δ E X, *)
+(*   okt Σ (Δ |,| [tc_var X]) E -> okt Σ Δ E /\ X # E. *)
+(* Proof. *)
+(*   introv O. inverts O. *)
+(*   (* - false* empty_push_inv. *) *)
+(*   (* - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M. *) *)
+(*   (* - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false. *) *)
+(* Admitted. *)
 
-Lemma okt_push_inv : forall Σ E X B,
-  okt Σ (E & X ~ B) -> B = bind_typ \/ exists T, B = bind_var T.
-Proof.
-  introv O; inverts O.
-  - false* empty_push_inv.
-  - lets (?&?&?): (eq_push_inv H). subst*.
-  - lets (?&?&?): (eq_push_inv H). subst*.
-Qed.
+(* Lemma okt_push_inv : forall Σ E X B, *)
+(*   okt Σ (E & X ~ B) -> B = bind_typ \/ exists T, B = bind_var T. *)
+(* Proof. *)
+(*   introv O; inverts O. *)
+(*   - false* empty_push_inv. *)
+(*   - lets (?&?&?): (eq_push_inv H). subst*. *)
+(*   - lets (?&?&?): (eq_push_inv H). subst*. *)
+(* Qed. *)
 
-Lemma okt_strengthen : forall Σ E x U F,
-    okt Σ (E & (x ~: U) & F) -> okt Σ (E & F).
-  introv O. induction F using env_ind.
-  - rewrite concat_empty_r in *. lets*: (okt_push_var_inv O).
-  - rewrite concat_assoc in *.
-    lets Hinv: okt_push_inv O; inversions Hinv.
-    + lets (?&?): (okt_push_typ_inv O).
-      applys~ okt_sub.
-    + match goal with
-      | H: exists T, v = bind_var T |- _ =>
-        rename H into Hexists_bindvar end.
-      inversions Hexists_bindvar.
-      lets (?&?&?): (okt_push_var_inv O).
-      applys~ okt_typ. applys* wft_strengthen.
-Qed.
-
-Lemma okt_is_wft : forall Σ E x T,
-    okt Σ (E & x ~: T) -> wft Σ E T.
+Lemma okt_is_wft : forall Σ Δ E x T,
+    okt Σ Δ (E & x ~: T) -> wft Σ Δ T.
   introv Hokt.
   inversion Hokt.
   - false* empty_push_inv.
-  - lets (?&?&?): eq_push_inv H. false*.
+  (* - lets (?&?&?): eq_push_inv H. false*. *)
   - lets (?&?&?): eq_push_inv H. subst.
     match goal with Heq: bind_var ?T1 = bind_var ?T2 |- _ => inversions* Heq end.
 Qed.
 
-Lemma okt_is_type : forall Σ E x T,
-    okt Σ (E & x ~: T) -> type T.
+Lemma okt_strengthen : forall Σ Δ E x U F,
+    okt Σ Δ (E & (x ~: U) & F) -> okt Σ Δ (E & F).
+  introv O. induction F using env_ind.
+  - rewrite concat_empty_r in *. lets*: (okt_push_var_inv O).
+  - rewrite concat_assoc in *.
+    (* lets Hinv: okt_push_inv O; inversions Hinv. *)
+    (* + lets (?&?): (okt_push_typ_inv O). *)
+    (*   applys~ okt_sub. *)
+    (* + match goal with *)
+    (*   | H: exists T, v = bind_var T |- _ => *)
+    (*     rename H into Hexists_bindvar end. *)
+      (* inversions Hexists_bindvar. *)
+    (* lets (?&?&?): (okt_push_var_inv O). *)
+    destruct v.
+    inversions O.
+    + false* empty_push_inv.
+    + apply eq_push_inv in H.
+      destruct H as [? [? ?]]. subst.
+      inversions H2.
+      applys~ okt_typ.
+Qed.
+
+Lemma okt_is_type : forall Σ Δ E x T,
+    okt Σ Δ (E & x ~: T) -> type T.
   introv Hokt. apply okt_is_wft in Hokt. apply* type_from_wft.
 Qed.
 
-Ltac unsimpl_map_bind_typ Z P :=
-  match goal with
-  | |- context [ bind_typ ] =>
-    unsimpl (subst_tb Z P bind_typ)
-  end.
+(* Ltac unsimpl_map_bind_typ Z P := *)
+(*   match goal with *)
+(*   | |- context [ bind_typ ] => *)
+(*     unsimpl (subst_tb Z P bind_typ) *)
+(*   end. *)
 
-Lemma wft_type : forall Σ E T,
-    wft Σ E T -> type T.
+Lemma wft_type : forall Σ Δ T,
+    wft Σ Δ T -> type T.
 Proof.
   induction 1; eauto.
 Qed.
 
-Lemma wft_subst_tb : forall Σ F E Z P T,
-  wft Σ (E & (withtyp Z) & F) T ->
-  wft Σ E P ->
-  ok (E & map (subst_tb Z P) F) ->
-  wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T).
-Proof.
-  introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F.
-  induction WT as [ | | | | ? ? ? ? ? IH | ]; intros F EQ Ok; subst; simpl subst_tt; auto.
-  - case_var*.
-    + expand_env_empty (E & map (subst_tb Z P) F).
-      apply* wft_weaken; fold_env_empty.
-    + destruct (binds_concat_inv H) as [?|[? ?]].
-      * apply wft_var.
-        apply~ binds_concat_right.
-        unsimpl_map_bind_typ Z P.
-        apply~ binds_map.
-      * destruct (binds_push_inv H1) as [[? ?]|[? ?]].
-        -- subst. false~.
-        -- applys wft_var. apply* binds_concat_left.
+Lemma wft_weaken : forall Σ D1 D2 D3 T,
+    wft Σ (D1 |,| D3) T ->
+    wft Σ (D1 |,| D2 |,| D3) T.
+  introv WT. gen_eq K: (D1 |,| D3). gen D3.
+  induction WT; auto; introv EQ.
+  - constructor. unfold is_var_defined in *.
+    subst.
+    lets [? | ?]: List.in_app_or H;
+      auto using List.in_or_app.
   - apply_fresh* wft_all as Y.
-    unsimpl ((subst_tb Z P) bind_typ).
+    assert (Yfr: Y \notin L); eauto.
+    lets: H0 Yfr (D3 |,| [tc_var Y]).
+    assert (Hassoc: ((D1 |,| D2) |,| (D3 |,| [tc_var Y])) = (((D1 |,| D2) |,| D3) |,| [tc_var Y]));
+      auto using List.app_assoc.
+    rewrite <- Hassoc.
+    apply H1. subst. auto using List.app_assoc.
+  - apply* wft_gadt.
+Qed.
+
+Ltac destruct_app_list :=
+  match goal with
+  | [ H: List.In ?X (?L ++ ?K) |- _ ] =>
+    apply List.in_app_or in H; destruct H
+  end.
+
+Lemma wft_subst_tb : forall Σ D1 D2 Z P T,
+  wft Σ (D1 |,| [tc_var Z] |,| D2) T ->
+  wft Σ D1 P ->
+  wft Σ (D1 |,| D2) (subst_tt Z P T).
+Proof.
+  introv WT WP; gen_eq G: (D1 |,| [tc_var Z] |,| D2). gen D2.
+  induction WT; intros; subst; simpl subst_tt; auto.
+  - case_var*.
+    + lets Hw: wft_weaken D1 D2 emptyΔ.
+      repeat rewrite List.app_nil_r in *.
+      apply* Hw.
+    + constructor. unfold is_var_defined in *.
+      repeat destruct_app_list; auto using List.in_or_app.
+      cbn in H. destruct H.
+      * congruence.
+      * contradiction.
+  - apply_fresh* wft_all as Y.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
-    apply_ih_map_bind* IH.
-  - econstructor; eauto.
+    lets* IH: H0 Y (D2 |,| [tc_var Y]).
+    rewrite <- List.app_assoc.
+    apply IH. auto using List.app_assoc.
+  - apply* wft_gadt.
     + introv Tin.
       apply List.in_map_iff in Tin.
-      destruct Tin as [T' Tand].
-      destruct Tand as [Teq Tin].
-      rewrite <- Teq.
+      destruct Tin as [U [? Tin]]; subst.
       apply* H0.
     + apply List.map_length.
 Qed.
-Hint Resolve wft_subst_tb.
 
-Lemma wft_open : forall Σ E U T1,
-  ok E ->
-  wft Σ E (typ_all T1) ->
-  wft Σ E U ->
-  wft Σ E (open_tt T1 U).
+(* Lemma wft_subst_tb : forall Σ F E Z P T, *)
+(*   wft Σ (E & (withtyp Z) & F) T -> *)
+(*   wft Σ E P -> *)
+(*   ok (E & map (subst_tb Z P) F) -> *)
+(*   wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T). *)
+(* Proof. *)
+(*   introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F. *)
+(*   induction WT as [ | | | | ? ? ? ? ? IH | ]; intros F EQ Ok; subst; simpl subst_tt; auto. *)
+(*   - case_var*. *)
+(*     + expand_env_empty (E & map (subst_tb Z P) F). *)
+(*       apply* wft_weaken; fold_env_empty. *)
+(*     + destruct (binds_concat_inv H) as [?|[? ?]]. *)
+(*       * apply wft_var. *)
+(*         apply~ binds_concat_right. *)
+(*         unsimpl_map_bind_typ Z P. *)
+(*         apply~ binds_map. *)
+(*       * destruct (binds_push_inv H1) as [[? ?]|[? ?]]. *)
+(*         -- subst. false~. *)
+(*         -- applys wft_var. apply* binds_concat_left. *)
+(*   - apply_fresh* wft_all as Y. *)
+(*     unsimpl ((subst_tb Z P) bind_typ). *)
+(*     lets: wft_type. *)
+(*     rewrite* subst_tt_open_tt_var. *)
+(*     apply_ih_map_bind* IH. *)
+(*   - econstructor; eauto. *)
+(*     + introv Tin. *)
+(*       apply List.in_map_iff in Tin. *)
+(*       destruct Tin as [T' Tand]. *)
+(*       destruct Tand as [Teq Tin]. *)
+(*       rewrite <- Teq. *)
+(*       apply* H0. *)
+(*     + apply List.map_length. *)
+(* Qed. *)
+(* Hint Resolve wft_subst_tb. *)
+
+Ltac clean_empty_Δ :=
+  repeat match goal with
+  | [ H: context [ emptyΔ |,| ?D ] |- _ ] =>
+    rewrite List.app_nil_l in H
+  | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
+    rewrite List.app_nil_r in H
+  end.
+
+Lemma wft_open : forall Σ Δ U T1,
+  wft Σ Δ (typ_all T1) ->
+  wft Σ Δ U ->
+  wft Σ Δ (open_tt T1 U).
 Proof.
-  introv Ok WA WU. inversions WA. pick_fresh X.
+  introv WA WU. inversions WA. pick_fresh X.
   rewrite* (@subst_tt_intro X).
-  lets K: (@wft_subst_tb Σ empty).
-  specializes_vars K. clean_empty K. apply* K.
+  lets K: (@wft_subst_tb Σ Δ emptyΔ X).
+  clean_empty_Δ.
+  apply* K.
 Qed.
 
 (** ** GADT environment properties *)
@@ -277,43 +351,43 @@ Qed.
 
 (** ** More WFT Properties *)
 
-Lemma wft_weaken_many : forall Σ As E F T,
-    ok (E & F) ->
-    wft Σ (E & F) T ->
-    (* ok ((add_types E As) & F) -> *)
-    (forall A, List.In A As -> A \notin dom E) ->
-    (forall A, List.In A As -> A \notin dom F) ->
-    DistinctList As ->
-    wft Σ ((add_types E As) & F) T.
-  induction As; introv Hok HwT HE HF HAs.
-  - cbn. eauto.
-  - cbn.
-    rewrite <- concat_assoc.
-    apply* IHAs; try eauto with listin.
-    + rewrite concat_assoc.
-      eapply adding_free_is_ok; eauto with listin.
-    + rewrite concat_assoc.
-      apply* wft_weaken.
-      eapply adding_free_is_ok; eauto with listin.
-    + introv Hin.
-      simpl_dom.
-      rewrite notin_union.
-      split.
-      * apply* notin_singleton.
-        inversions HAs.
-        intro; subst. contradiction.
-      * eauto with listin.
-    + inversion* HAs.
-Qed.
+(* Lemma wft_weaken_many : forall Σ As E F T, *)
+(*     ok (E & F) -> *)
+(*     wft Σ (E & F) T -> *)
+(*     (* ok ((add_types E As) & F) -> *) *)
+(*     (forall A, List.In A As -> A \notin dom E) -> *)
+(*     (forall A, List.In A As -> A \notin dom F) -> *)
+(*     DistinctList As -> *)
+(*     wft Σ ((add_types E As) & F) T. *)
+(*   induction As; introv Hok HwT HE HF HAs. *)
+(*   - cbn. eauto. *)
+(*   - cbn. *)
+(*     rewrite <- concat_assoc. *)
+(*     apply* IHAs; try eauto with listin. *)
+(*     + rewrite concat_assoc. *)
+(*       eapply adding_free_is_ok; eauto with listin. *)
+(*     + rewrite concat_assoc. *)
+(*       apply* wft_weaken. *)
+(*       eapply adding_free_is_ok; eauto with listin. *)
+(*     + introv Hin. *)
+(*       simpl_dom. *)
+(*       rewrite notin_union. *)
+(*       split. *)
+(*       * apply* notin_singleton. *)
+(*         inversions HAs. *)
+(*         intro; subst. contradiction. *)
+(*       * eauto with listin. *)
+(*     + inversion* HAs. *)
+(* Qed. *)
 
-Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) (E : env bind) (T : typ),
+Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ),
     length As = length Us ->
-      wft Σ (add_types E As) T ->
-      (forall U, List.In U Us -> wft Σ E U) ->
-      (forall A, List.In A As -> A \notin dom E) ->
+      wft Σ (Δ |,| tc_vars As) T ->
+      (forall U, List.In U Us -> wft Σ Δ U) ->
+      (* (forall A, List.In A As -> A \notin dom E) -> *)
       DistinctList As ->
-      ok E ->
-      wft Σ E (subst_tt_many As Us T).
+      wft Σ Δ (subst_tt_many As Us T).
+  (* TODO continue here *)
   induction As as [|Ah Ats];
     introv Hlen HwftT WwftUs HE HD Hok;
     destruct Us as [|Uh Uts]; inversion Hlen.
