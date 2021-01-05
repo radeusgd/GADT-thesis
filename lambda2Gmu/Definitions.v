@@ -730,10 +730,6 @@ Inductive typctx_elem : Set :=
 | tc_var (A : var)
 | tc_eq (eq : type_equation).
 
-Coercion typ_fvar : var >-> typ.
-Coercion tc_var : var >-> typctx_elem.
-Coercion tc_eq : type_equation >-> typctx_elem.
-
 (* we keep the elements in reverse order, i.e. the head is the last added element *)
 Definition typctx := list typctx_elem.
 Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.

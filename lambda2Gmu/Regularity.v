@@ -307,10 +307,25 @@ Qed.
 
 Ltac clean_empty_Δ :=
   repeat match goal with
-  | [ H: context [ emptyΔ |,| ?D ] |- _ ] =>
-    rewrite List.app_nil_l in H
-  | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
-    rewrite List.app_nil_r in H
+         | [ H: context [ emptyΔ |,| ?D ] |- _ ] =>
+           rewrite List.app_nil_l in H
+         | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
+           rewrite List.app_nil_r in H
+         | [ H: context [ [] |,| ?D ] |- _ ] =>
+           rewrite List.app_nil_l in H
+         | [ H: context [ ?D |,| [] ] |- _ ] =>
+           rewrite List.app_nil_r in H
+         end.
+
+Ltac destruct_in_app :=
+  match goal with
+  | [ H: List.In ?X (?A ++ ?B) |- _ ] =>
+    apply List.in_app_or in H;
+    destruct H
+  | [ H: is_var_defined (?A ++ ?B) ?X |- _ ] =>
+    unfold is_var_defined in H;
+    apply List.in_app_or in H;
+    destruct H
   end.
 
 Lemma wft_open : forall Σ Δ U T1,
@@ -387,52 +402,52 @@ Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ)
       (* (forall A, List.In A As -> A \notin dom E) -> *)
       DistinctList As ->
       wft Σ Δ (subst_tt_many As Us T).
-  (* TODO continue here *)
   induction As as [|Ah Ats];
-    introv Hlen HwftT WwftUs HE HD Hok;
+    introv Hlen HwftT WwftUs HD;
     destruct Us as [|Uh Uts]; inversion Hlen.
-  - cbn.
-    cbn in HwftT. eauto.
-  - cbn. inversions HD.
+  - cbn in *.
+    clean_empty_Δ.
+    auto.
+  - cbn in *. inversions HD.
     apply IHAts; eauto with listin.
-    + cbn in HwftT.
-      lets* HS: wft_subst_tb Σ (@EnvOps.empty bind).
-      specializes_vars HS.
-      clean_empty HS.
-      apply* HS.
-      * lets* W: wft_weaken_many Σ Ats E (@EnvOps.empty bind) Uh.
-        clean_empty W.
-        apply W; eauto with listin.
-      * lets* OK: adding_free_is_ok_many Ats E (@EnvOps.empty bind).
-        clean_empty OK.
-        apply OK; eauto with listin.
+    fold (tc_vars Ats) in HwftT.
+    fold ([tc_var Ah] ++ tc_vars Ats) in HwftT.
+    apply* wft_subst_tb.
+    rewrite* List.app_assoc in HwftT.
 Qed.
 
-Lemma wft_open_many : forall E Σ Alphas Ts U,
-    ok E ->
+Lemma wft_open_many : forall Δ Σ Alphas Ts U,
     length Alphas = length Ts ->
     DistinctList Alphas ->
-    (forall A : var, List.In A Alphas -> A \notin dom E) ->
+    (* (forall A : var, List.In A Alphas -> A \notin dom E) -> *)
     (forall A : var, List.In A Alphas -> A \notin fv_typ U) ->
     (forall (A : var) (T : typ), List.In A Alphas -> List.In T Ts -> A \notin fv_typ T) ->
-    (forall T : typ, List.In T Ts -> wft Σ E T) ->
-    wft Σ (add_types E Alphas) (open_tt_many_var Alphas U) ->
-    wft Σ E (open_tt_many Ts U).
-  introv Hok Hlen Hdistinct FE FU FT WT WU.
+    (forall T : typ, List.In T Ts -> wft Σ Δ T) ->
+    wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas U) ->
+    wft Σ Δ (open_tt_many Ts U).
+  introv Hlen Hdistinct FU FT WT WU.
   rewrite* (@subst_tt_intro_many Alphas).
   - lets Htb: (@wft_subst_tb_many Σ Alphas Ts).
     specializes_vars Htb.
-    clean_empty Htb.
     apply* Htb.
 Qed.
 
-Lemma notin_fv_wf : forall Σ E X T,
-    wft Σ E T -> X # E -> X \notin fv_typ T.
+Hint Rewrite in_union : fsets.
+
+Lemma notin_fv_wf : forall Σ Δ X T,
+    wft Σ Δ T -> (~ is_var_defined Δ X) -> X \notin fv_typ T.
 Proof.
   induction 1 as [ | ? ? ? Hbinds | | | |];
     introv Fr; simpl; eauto.
-  - rewrite notin_singleton. intro. subst. applys binds_fresh_inv Hbinds Fr.
+  - rewrite notin_singleton. intro. subst. contradiction.
   - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
+    apply* H0.
+    intro HF.
+    destruct_in_app.
+    + contradiction.
+    + cbn in H1. destruct H1; try contradiction.
+      apply Fr0. inversions H1.
+      autorewrite with fsets. eauto using in_singleton_self.
   - intro Hin.
     lets* Hex: in_fold_exists Hin.
     destruct Hex as [Hex | Hex].
@@ -441,46 +456,53 @@ Proof.
     + apply* in_empty_inv.
 Qed.
 
-Lemma wft_strengthen_typ : forall Σ E F U T,
+Lemma wft_strengthen_typ : forall Σ D1 D2 U T,
     U \notin fv_typ T ->
-    wft Σ (E & (withtyp U) & F) T -> wft Σ (E & F) T.
+    wft Σ (D1 |,| [tc_var U] |,| D2) T -> wft Σ (D1 |,| D2) T.
 Proof.
-  introv Ufresh Hwft. gen_eq G: (E & (withtyp U) & F). gen F.
+  introv Ufresh Hwft. gen_eq G: (D1 |,| [tc_var U] |,| D2). gen D2.
   induction Hwft; intros F EQ; cbn in Ufresh; subst; auto.
-  - match goal with
-    | H: binds _ _ _ |- _ =>
-      rename H into Hbinds_bindtyp end.
-    apply* (@wft_var).
-    destruct (binds_concat_inv Hbinds_bindtyp) as [?|[? Hbinds2]].
-    + apply~ binds_concat_right.
-    + destruct (binds_push_inv Hbinds2) as [[? ?]|[? ?]].
-      * subst. false. apply* notin_same.
-      * apply~ binds_concat_left.
+  - apply* wft_var.
+    repeat destruct_in_app;
+      unfold is_var_defined; eauto using List.in_or_app.
+    cbn in H. intuition. inversions H0. exfalso; eauto using in_singleton_self.
   - (* todo: binds_cases tactic *)
     match goal with
     | H: forall X, X \notin L -> ?P3 -> forall F0, ?P1 -> ?P2 |- _ =>
       rename H into H_ctxEq_implies_wft end.
-    apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft.
-    unfold open_tt.
-    lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0; cbn in Hfv.
-    + rewrite Hfv. eauto.
-    + rewrite Hfv. eauto.
+    apply_fresh* wft_all as Y.
+    lets* IH: H_ctxEq_implies_wft Y (F |,| [tc_var Y]).
+    + lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0;
+        cbn in Hfv; unfold open_tt; rewrite Hfv; eauto.
+    + rewrite <- List.app_assoc.
+      apply IH. eauto using List.app_assoc.
   - econstructor; eauto.
 Qed.
 
-Lemma wft_strengthen_typ_many : forall Σ As E T,
-    wft Σ (add_types E As) T ->
+Ltac fold_delta :=
+  match goal with
+  | [ H: context [List.map tc_var ?As] |- _ ] =>
+    fold (tc_vars As) in H
+  | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
+    (* TODO check if As == [] to allow for repeating *)
+    fold ([tc_var X] ++ As) in H; idtac As
+  end.
+
+Lemma wft_strengthen_typ_many : forall Σ As Δ T,
+    wft Σ (Δ |,| tc_vars As) T ->
     (forall A, List.In A As -> A \notin fv_typ T) ->
-    wft Σ E T.
+    wft Σ Δ T.
   induction As as [| Ah Ats]; introv Hwft Asfresh.
-  - cbn in *. eauto.
-  - cbn in *.
+  - cbn in *. clean_empty_Δ.
+    trivial.
+  - cbn in *. fold_delta. fold_delta.
     apply* IHAts.
-    apply_folding (add_types E Ats) wft_strengthen_typ.
+    apply* wft_strengthen_typ.
+    rewrite* <- List.app_assoc.
 Qed.
 
-Lemma typing_regular : forall Σ E e T,
-   {Σ, E} ⊢ e ∈ T -> okt Σ E /\ term e /\ wft Σ E T.
+Lemma typing_regular : forall Σ Δ E e T,
+   {Σ, Δ, E} ⊢ e ∈ T -> okt Σ Δ E /\ term e /\ wft Σ Δ T.
 Proof.
   induction 1 as [ |
                    |
@@ -510,21 +532,24 @@ Proof.
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
       rewrite length_equality in A1.
       lets* HH: H10 Alphas CiC.
-      apply (@wft_open_many E Σ Alphas Ts); eauto;
+      apply (@wft_open_many Δ Σ Alphas Ts); eauto;
         intros A; lets* FA: A3 A.
       introv Ain Tin.
       apply* fv_typs_notin.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
-    specializes IH y. destructs~ IH.
-    forwards* Hctx: okt_push_inv.
-    destruct Hctx as [? | Hctx]; try congruence.
-    destruct Hctx as [U HU]. inversions HU.
+    assert (yL: y \notin L); eauto.
+    lets IH': IH yL.
+    lets [? [? ?]]: H yL.
+    (* forwards* Hctx: okt_push_inv. *)
+    (* destruct Hctx as [? | Hctx]; try congruence. *)
+    (* destruct Hctx as [U HU]. inversions HU. *)
     splits*.
     + apply_folding E okt_strengthen.
-    + econstructor. apply* okt_is_type.
-      intros. apply* IH1.
+    + apply (* TODO continue *)
+      * apply* okt_is_type.
+      * intros.  apply* IH1.
     + econstructor.
       apply* okt_is_wft.
       apply_folding E wft_strengthen.
