@@ -34,7 +34,7 @@ Hint Immediate oknat.
 
 Definition zero := trm_constructor [] (Nat, 0) trm_unit.
 
-Lemma zero_type : {natSigma, empty} ⊢ zero ∈ typ_gadt [] Nat.
+Lemma zero_type : {natSigma, emptyΔ, empty} ⊢ zero ∈ typ_gadt [] Nat.
   cbv.
   econstructor; eauto.
   - cbn.
@@ -49,7 +49,7 @@ Qed.
 
 Require Import Psatz.
 Definition one := trm_constructor [] (Nat, 1) zero.
-Lemma one_type : {natSigma, empty} ⊢ one ∈ typ_gadt [] Nat.
+Lemma one_type : {natSigma, emptyΔ, empty} ⊢ one ∈ typ_gadt [] Nat.
   cbv.
   econstructor; eauto.
   - cbn. econstructor; eauto.
@@ -67,7 +67,7 @@ Qed.
 
 Definition succ := trm_abs (typ_gadt [] Nat) (trm_constructor [] (Nat, 1) (#0)).
 
-Lemma succ_type : {natSigma, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt [] Nat).
+Lemma succ_type : {natSigma, emptyΔ, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt [] Nat).
   cbv.
   econstructor.
   intros.
@@ -78,6 +78,7 @@ Lemma succ_type : {natSigma, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt
     + econstructor; eauto using oknat.
     + econstructor; eauto.
       intros. contradiction.
+    + cbn; eauto.
   - instantiate (2:=0); cbn. eauto.
   - intros. contradiction.
   - cbv. auto.
@@ -85,7 +86,7 @@ Qed.
 
 Definition NAT := (typ_gadt [] Nat).
 Definition const := trm_abs NAT (trm_abs NAT (#1)).
-Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
+Lemma const_types : {natSigma, emptyΔ, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
   cbv.
   econstructor. introv xiL.
   econstructor. cbn.
@@ -93,8 +94,8 @@ Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
   Unshelve. 3: { exact \{x}. }
   econstructor.
   - auto.
-  - econstructor; eauto.
-    + econstructor; eauto.
+  - econstructor; cbn; eauto.
+    + econstructor; cbn; eauto.
       * econstructor; eauto.
         apply oknat.
       * econstructor; intuition.
@@ -103,7 +104,7 @@ Lemma const_types : {natSigma, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
 Qed.
 
 Definition const_test := (trm_app (trm_app const one) zero).
-Lemma const_test_types : {natSigma, empty} ⊢ const_test ∈ NAT.
+Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢ const_test ∈ NAT.
   cbv.
   econstructor.
   - apply zero_type.
@@ -157,7 +158,7 @@ Ltac crush_1 :=
         | cbn in *; solve_bind; try solve_dom all_distinct
         ].
 
-Lemma plus_types : {natSigma, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))).
+Lemma plus_types : {natSigma, emptyΔ, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))).
   cbv.
   crush_1.
   - intros. repeat destruct* H2; subst; cbn in *; destruct_const_len_list; cbn; eauto.
@@ -169,14 +170,73 @@ Lemma plus_types : {natSigma, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==> ((typ_g
     Unshelve. fs.
 Qed.
 
+Ltac destruct_clauses :=
+  repeat match goal with
+         | [ H: clause ?A ?B = ?cl \/ ?X |- _ ] =>
+           destruct H
+         end.
+
 Definition two := trm_constructor [] (Nat, 1) one.
 Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
   cbv.
   eapply eval_step.
-  - crush_1.
-    + with_fresh intros. cbn in *.
+  1:{
+    crush_1.
+    - with_fresh intros. cbn in *.
       repeat autodestruct; subst; cbn in *;
         destruct_const_len_list; cbn in *; crush_1.
-    + cbn in *. with_fresh intros.
-      cbn in *.
+    - cbn in *. with_fresh intros.
+      destruct_clauses;
+        subst; cbn in *; destruct_const_len_list;
+          cbn in *;
+          try contradiction; crush_1.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; cbn.
+    with_fresh intros.
+    destruct_clauses; subst; cbn in *; destruct_const_len_list; cbn in *;
+      crush_1; cbn; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  eapply eval_step; cbn.
+  1: {
+    crush_1; admit.
+  }
+  cbn.
+
+  apply eval_finish.
 Admitted.
