@@ -473,3 +473,21 @@ Lemma LibList_app_def : forall A (La Lb : list A),
   - fold (LibList.app La Lb).
     f_equal.
 Qed.
+
+Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
+    binds x v1 E ->
+    binds x v2 E ->
+    v1 = v2.
+  induction E using env_ind; introv b1 b2.
+  - exfalso. apply* binds_empty_inv.
+  - lets* [[? ?] | [? ?]]: binds_push_inv b1;
+      lets* [[? ?] | [? ?]]: binds_push_inv b2.
+      subst; trivial.
+Qed.
+
+Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A -> A) (z : B),
+    List.fold_left (fun a b => f a b) (List.map g ls) z
+    =
+    List.fold_left (fun a b => f a (g b)) ls z.
+  induction ls; introv; cbn; eauto.
+Qed.
