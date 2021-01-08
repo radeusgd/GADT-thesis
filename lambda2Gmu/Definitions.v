@@ -737,6 +737,12 @@ Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
 Notation "A |,| B" := (A ++ B) (at level 32).
+Fixpoint domΔ (Δ : typctx) : fset var :=
+  match Δ with
+  | [] => \{}
+  | tc_var A :: r => \{ A } \u domΔ r
+  | tc_eq _ :: r => domΔ r
+  end.
 
 Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
 | wft_unit : forall Σ Δ,
@@ -864,7 +870,11 @@ Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
     (* oktypctx Σ Δ -> *)
     okt Σ Δ empty
 | okt_typ : forall Σ Δ E x T,
-    okt Σ Δ E -> wft Σ Δ T -> x # E -> okt Σ Δ (E & x ~: T).
+    okt Σ Δ E ->
+    wft Σ Δ T ->
+    x # E ->
+    x \notin domΔ Δ ->
+    okt Σ Δ (E & x ~: T).
 
 (** * Typing *)
 

@@ -8,6 +8,7 @@ Require Export Psatz.
 Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.EqNat.
+Require Import List.
 
 (* WIP *)
 
@@ -443,3 +444,24 @@ Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : 
     rewrite IH; auto.
     rewrite Hcomp. trivial.
 Qed.
+
+Ltac clean_empty_Δ :=
+  repeat match goal with
+         | [ H: context [ emptyΔ |,| ?D ] |- _ ] =>
+           rewrite List.app_nil_l in H
+         | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
+           rewrite List.app_nil_r in H
+         | [ H: context [ [] |,| ?D ] |- _ ] =>
+           rewrite List.app_nil_l in H
+         | [ H: context [ ?D |,| [] ] |- _ ] =>
+           rewrite List.app_nil_r in H
+         | [ |- context [ emptyΔ |,| ?D ] ] =>
+           rewrite List.app_nil_l
+         | [ |- context [ ?D |,| emptyΔ ] ] =>
+           rewrite List.app_nil_r
+         | [ |- context [ [] |,| ?D ] ] =>
+           rewrite List.app_nil_l
+         | [ |- context [ ?D |,| [] ] ] =>
+           rewrite List.app_nil_r
+         end.
+
