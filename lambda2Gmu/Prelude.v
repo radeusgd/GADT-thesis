@@ -30,10 +30,11 @@ Ltac gather_vars :=
   let B := gather_vars_with (fun x : var => \{x}) in
   let C := gather_vars_with (fun x : trm => fv_trm x) in
   let E := gather_vars_with (fun x : typ => fv_typ x) in
-  let F := gather_vars_with (fun x : ctx => dom x) in
+  let F := gather_vars_with (fun x : ctx => dom x \u fv_env x) in
   let G := gather_vars_with (fun x : list var => from_list x) in
   let H := gather_vars_with (fun x : list typ => fv_typs x) in
-  constr:(A \u B \u C \u E \u F \u G \u H).
+  let I := gather_vars_with (fun x : typctx => domΔ x) in
+  constr:(A \u B \u C \u E \u F \u G \u H \u I).
 
 (** "pick_fresh x" tactic create a fresh variable with name x *)
 
@@ -465,3 +466,10 @@ Ltac clean_empty_Δ :=
            rewrite List.app_nil_r
          end.
 
+Lemma LibList_app_def : forall A (La Lb : list A),
+    LibList.app La Lb = La ++ Lb.
+  induction La; intros; cbn.
+  - clean_empty_Δ. trivial.
+  - fold (LibList.app La Lb).
+    f_equal.
+Qed.

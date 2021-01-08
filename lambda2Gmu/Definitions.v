@@ -744,6 +744,9 @@ Fixpoint domΔ (Δ : typctx) : fset var :=
   | tc_eq _ :: r => domΔ r
   end.
 
+Definition fv_env (E : ctx) : fset var :=
+  List.fold_right (fun p acc => match snd p with bind_var T => fv_typ T \u acc end) \{} E.
+
 Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
 | wft_unit : forall Σ Δ,
     wft Σ Δ typ_unit

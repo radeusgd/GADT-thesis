@@ -260,48 +260,6 @@ Lemma okt_strengthen : forall Σ Δ E x U F,
       applys~ okt_typ.
 Qed.
 
-Definition fv_env (E : ctx) : fset var :=
-  List.fold_right (fun p acc => match snd p with bind_var T => fv_typ T \u acc end) \{} E.
-
-Lemma LibList_app_def : forall A (La Lb : list A),
-    LibList.app La Lb = La ++ Lb.
-  induction La; intros; cbn.
-  - clean_empty_Δ. trivial.
-  - fold (LibList.app La Lb).
-    f_equal.
-    apply IHLa.
-Qed.
-
-Lemma fv_env_extend : forall E x T,
-    fv_env (E & x ~: T) = fv_typ T \u fv_env E.
-  intros.
-  rewrite concat_def.
-  rewrite LibList_app_def.
-  rewrite single_def.
-  cbn.
-  fold (fv_env E).
-  trivial.
-Qed.
-
-Lemma notin_env_inv : forall E X x T,
-    X \notin fv_env (E & x ~: T) ->
-    X \notin fv_env E /\ X \notin fv_typ T.
-  introv Fr.
-  rewrite fv_env_extend in Fr.
-  rewrite* notin_union in Fr.
-Qed.
-
-Lemma notin_domΔ_eq : forall D1 D2 X,
-    X \notin domΔ (D1 |,| D2) <->
-    X \notin domΔ D1 /\ X \notin domΔ D2.
-  induction D1; intros; constructor;
-    try solve [cbn in *; intuition]; intro H;
-      destruct a; cbn in *;
-        repeat rewrite notin_union in *;
-        destruct (IHD1 D2 X) as [IH1 IH2];
-        intuition.
-Qed.
-
 Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
     X # E ->
     X \notin fv_env E ->
