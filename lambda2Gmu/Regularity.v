@@ -11,8 +11,13 @@ Ltac fold_delta :=
     fold (tc_vars As) in H
   | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
     (* TODO check if As == [] to allow for repeating *)
-    fold ([tc_var X] ++ As) in H; idtac As
+    match As with
+    | [] => fail
+    | _ =>
+      fold ([tc_var X] ++ As) in H
+    end
   end.
+
 Ltac destruct_in_app :=
   match goal with
   | [ H: List.In ?X (?A ++ ?B) |- _ ] =>
@@ -258,6 +263,45 @@ Qed.
 Definition fv_env (E : ctx) : fset var :=
   List.fold_right (fun p acc => match snd p with bind_var T => fv_typ T \u acc end) \{} E.
 
+Lemma LibList_app_def : forall A (La Lb : list A),
+    LibList.app La Lb = La ++ Lb.
+  induction La; intros; cbn.
+  - clean_empty_Δ. trivial.
+  - fold (LibList.app La Lb).
+    f_equal.
+    apply IHLa.
+Qed.
+
+Lemma fv_env_extend : forall E x T,
+    fv_env (E & x ~: T) = fv_typ T \u fv_env E.
+  intros.
+  rewrite concat_def.
+  rewrite LibList_app_def.
+  rewrite single_def.
+  cbn.
+  fold (fv_env E).
+  trivial.
+Qed.
+
+Lemma notin_env_inv : forall E X x T,
+    X \notin fv_env (E & x ~: T) ->
+    X \notin fv_env E /\ X \notin fv_typ T.
+  introv Fr.
+  rewrite fv_env_extend in Fr.
+  rewrite* notin_union in Fr.
+Qed.
+
+Lemma notin_domΔ_eq : forall D1 D2 X,
+    X \notin domΔ (D1 |,| D2) <->
+    X \notin domΔ D1 /\ X \notin domΔ D2.
+  induction D1; intros; constructor;
+    try solve [cbn in *; intuition]; intro H;
+      destruct a; cbn in *;
+        repeat rewrite notin_union in *;
+        destruct (IHD1 D2 X) as [IH1 IH2];
+        intuition.
+Qed.
+
 Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
     X # E ->
     X \notin fv_env E ->
@@ -272,14 +316,15 @@ Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
       match goal with
       | H: bind_var ?A = bind_var ?B |- _ => inversions H
       end.
+      lets [? ?]: notin_env_inv FXTE.
       constructor; auto.
-      * apply IHE; auto.
-        admit.
       * apply wft_strengthen_typ with X; auto.
-        admit.
-      * intro HF.
-        admit.
-Admitted.
+      * apply notin_domΔ_eq.
+        apply notin_domΔ_eq in H5.
+        destruct H5.
+        apply notin_domΔ_eq in H5.
+        intuition.
+Qed.
 
 Lemma okt_is_type : forall Σ Δ E x T,
     okt Σ Δ (E & x ~: T) -> type T.

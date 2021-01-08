@@ -13,9 +13,9 @@ Ltac empty_binding :=
 
 Ltac IHT e :=
   match goal with
-  | Ht: {?Σ, ?E} ⊢ e ∈ ?T |- _ =>
+  | Ht: {?Σ, ?D, ?E} ⊢ e ∈ ?T |- _ =>
     match goal with
-    | IH: forall T, ?P0 -> {Σ, E} ⊢ e ∈ T -> ?P |- _ =>
+    | IH: forall T, ?P0 -> {Σ, D, E} ⊢ e ∈ T -> ?P |- _ =>
       let H := fresh "IHt" in
       assert P as H; eauto
     end
@@ -88,15 +88,28 @@ Theorem progress_thm : progress.
     + lets* [GCargs [GCind [GCterm Heq]]]: CanonicalFormGadt H2.
       subst.
 
-      inversions H3.
-      lets* bindeq: binds_ext H6 H11.
+      match goal with
+      | [ H: {?A, ?B, ?C} ⊢ trm_constructor ?D ?E ?F ∈ ?G |- _ ] =>
+        inversions H
+      end.
+      lets* bindeq: binds_ext H4 H6.
       inversions bindeq.
-      lets* bindeq: binds_ext H4 H11.
+      lets* bindeq: binds_ext H4 H9.
       inversions bindeq.
 
-      lets* [[clA clT] [nth_cl inzip]]: nth_error_implies_zip H14 H12.
+      lets: nth_error_implies_zip.
+      match goal with
+      | [ Hnth: List.nth_error ?As ?i = Some ?A |- _ ] =>
+        match goal with
+        | [ Hlen: length As = length ?Bs |- _ ] =>
+          lets* [[clA clT] [nth_cl inzip]]: nth_error_implies_zip Hnth Hlen
+        end
+      end.
       assert (clA = length GCargs).
-      * lets*: H9 inzip.
+      * match goal with
+        | [ H: forall def clause, List.In (def, clause) ?A -> clauseArity clause = Carity def |- _ ] =>
+          lets*: H inzip
+        end.
       * subst.
         eexists.
         econstructor; eauto.
