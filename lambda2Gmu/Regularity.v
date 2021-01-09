@@ -11,11 +11,12 @@ Ltac fold_delta :=
     fold (tc_vars As) in H
   | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
     (* TODO check if As == [] to allow for repeating *)
-    match As with
-    | [] => fail
-    | _ =>
-      fold ([tc_var X] ++ As) in H
-    end
+    fold ([tc_var X] ++ As) in H
+  | [ |- context [List.map tc_var ?As] ] =>
+    fold (tc_vars As)
+  | [ |- context [ (tc_var ?X) :: ?As] ] =>
+    (* TODO check if As == [] to allow for repeating *)
+    fold ([tc_var X] ++ As)
   end.
 
 Ltac destruct_in_app :=
@@ -204,27 +205,8 @@ Lemma okt_push_var_inv : forall Σ Δ E x T,
 Proof.
   introv O; inverts O.
   - false* empty_push_inv.
-  (* - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false. *)
   - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M.
 Qed.
-
-(* Lemma okt_push_typ_inv : forall Σ Δ E X, *)
-(*   okt Σ (Δ |,| [tc_var X]) E -> okt Σ Δ E /\ X # E. *)
-(* Proof. *)
-(*   introv O. inverts O. *)
-(*   (* - false* empty_push_inv. *) *)
-(*   (* - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M. *) *)
-(*   (* - find_ctxeq. lets (?&?&?): (eq_push_inv Hctx_eq). false. *) *)
-(* Admitted. *)
-
-(* Lemma okt_push_inv : forall Σ E X B, *)
-(*   okt Σ (E & X ~ B) -> B = bind_typ \/ exists T, B = bind_var T. *)
-(* Proof. *)
-(*   introv O; inverts O. *)
-(*   - false* empty_push_inv. *)
-(*   - lets (?&?&?): (eq_push_inv H). subst*. *)
-(*   - lets (?&?&?): (eq_push_inv H). subst*. *)
-(* Qed. *)
 
 Lemma okt_is_wft : forall Σ Δ E x T,
     okt Σ Δ (E & x ~: T) -> wft Σ Δ T.
@@ -429,17 +411,18 @@ Qed.
 
 (** ** More WFT Properties *)
 
-(* Lemma wft_weaken_many : forall Σ As E F T, *)
-(*     ok (E & F) -> *)
-(*     wft Σ (E & F) T -> *)
-(*     (* ok ((add_types E As) & F) -> *) *)
-(*     (forall A, List.In A As -> A \notin dom E) -> *)
-(*     (forall A, List.In A As -> A \notin dom F) -> *)
+(* Most likely not needed anymore as wft_weaken already supports arbitrary middle *)
+(* Lemma wft_weaken_many : forall Σ As D1 D2 T, *)
+(*     wft Σ (D1 |,| D2) T -> *)
+(*     (forall A, List.In A As -> A \notin domΔ D1) -> *)
+(*     (forall A, List.In A As -> A \notin domΔ D2) -> *)
 (*     DistinctList As -> *)
-(*     wft Σ ((add_types E As) & F) T. *)
-(*   induction As; introv Hok HwT HE HF HAs. *)
-(*   - cbn. eauto. *)
-(*   - cbn. *)
+(*     wft Σ (D1 |,| tc_vars As |,| D2) T. *)
+(*   induction As as [| Ah Ats]; introv Hwft FD1 FD2 Hdist. *)
+(*   - cbn. clean_empty_Δ. auto. *)
+(*   - cbn. fold (tc_vars Ats). *)
+(*     fold_delta. *)
+(*     apply wft_weaken. *)
 (*     rewrite <- concat_assoc. *)
 (*     apply* IHAs; try eauto with listin. *)
 (*     + rewrite concat_assoc. *)

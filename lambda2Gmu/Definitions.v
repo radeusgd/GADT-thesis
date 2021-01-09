@@ -707,8 +707,8 @@ Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
 
 Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   match b with
-  | bind_typ => bind_typ
-  (* | bind_var T => bind_var (subst_tt Z P T) *)
+  (* | bind_typ => bind_typ *)
+  | bind_var T => bind_var (subst_tt Z P T)
   end.
 
 (** * Well-formed types *)
