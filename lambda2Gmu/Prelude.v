@@ -491,3 +491,12 @@ Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A
     List.fold_left (fun a b => f a (g b)) ls z.
   induction ls; introv; cbn; eauto.
 Qed.
+
+Lemma notin_inverse : forall A (x y : A),
+    x \notin \{ y } ->
+    y \notin \{ x }.
+  intros.
+  assert (x <> y).
+  - intro. subst. apply H. apply in_singleton_self.
+  - apply* notin_singleton.
+Qed.

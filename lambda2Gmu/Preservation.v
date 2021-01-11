@@ -602,32 +602,69 @@ Lemma typing_through_subst_te_2 :
   apply* typing_through_subst_te.
 Qed.
 
-Lemma typing_through_subst_te_many : forall As Σ Δ E e T Ps,
-    {Σ, (Δ |,| tc_vars As), E} ⊢ e ∈ T ->
+Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
+    map (subst_tb_many (Ah :: Ats) (Ph :: Pts)) F
+    =
+    map (subst_tb_many Ats Pts) (map (subst_tb Ah Ph) F).
+  intros.
+  rewrite map_def.
+  rewrite map_map.
+  repeat rewrite <- LibList_map.
+  apply List.map_ext_in.
+  intros [? [?]] Hin.
+  cbn. f_equal.
+Qed.
+
+Lemma fv_env_subst : forall X Z P E,
+    X \notin fv_env E ->
+    X \notin fv_typ P ->
+    X \notin fv_env (map (subst_tb Z P) E).
+Admitted.
+
+Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps,
+    {Σ, (Δ |,| tc_vars As), E & F} ⊢ e ∈ T ->
     length As = length Ps ->
     (forall P, List.In P Ps -> wft Σ Δ P) ->
     (forall A, List.In A As -> A # E) ->
+    (forall A, List.In A As -> A # F) ->
     (forall A P, List.In A As -> List.In P Ps -> A \notin fv_typ P) ->
     (forall A, List.In A As -> A \notin fv_env E) ->
     DistinctList As ->
-    {Σ, Δ, map (subst_tb_many As Ps) E} ⊢ (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
-  induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP Adist;
+    {Σ, Δ, E & map (subst_tb_many As Ps) F} ⊢ (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
+  induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP AEE Adist;
     destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence].
-  - rewrite* subst_tb_many_id_on_fresh_env.
-    cbn in *. clean_empty_Δ. auto.
+  - cbn in *. clean_empty_Δ.
+    rewrite map_def.
+    rewrite <- LibList_map.
+    rewrite <- map_id; auto.
+    intros. destruct x as [? [?]].
+    cbv. auto.
   - cbn.
     inversions Adist.
-    (* TODO continue here *)
-    apply IHAts; auto with listin.
-    apply typing_through_subst_te_2; auto with listin.
-    + cbn in Htyp. fold (tc_vars Ats) in Htyp.
-      fold_delta.
-      rewrite <- (List.app_assoc).
-      auto.
-    + rewrite <- (List.app_nil_r (Δ |,| tc_vars Ats)).
-      apply wft_weaken.
-      clean_empty_Δ. auto with listin.
-Admitted.
+    Print subst_tb_many.
+    Print subst_tt_many.
+    lets IH0: IHAts Σ (Δ) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F)
+                   (subst_te Ah Ph e).
+    lets IH: IH0 (subst_tt Ah Ph T) Pts.
+    rewrite <- (@subst_tb_id_on_fresh E Ah Ph).
+    rewrite subst_tb_many_split.
+    apply IH; auto with listin.
+    + lets: typing_through_subst_te Σ Δ (tc_vars Ats) Ah.
+      rewrite <- map_concat.
+      apply H; auto with listin.
+      * rewrite <- List.app_assoc.
+        cbn.
+        unfold tc_vars.
+        rewrite <- List.map_cons.
+        fold (tc_vars (Ah :: Ats)).
+        auto.
+      * rewrite <- (List.app_nil_r (Δ ++ tc_vars Ats)).
+        apply wft_weaken.
+        clean_empty_Δ. auto with listin.
+    + lets: fv_env_subst.
+      auto with listin.
+    + auto with listin.
+Qed.
 
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
@@ -765,26 +802,29 @@ Theorem preservation_thm : preservation.
         intro; subst; auto
       ].
 
-    (* fold (subst_tb_many Alphas Ts0 (bind_var (open_tt_many_var Alphas (Cargtype Def)))). *)
-    (* rewrite <- map_single. *)
-    (* fold_env_empty. *)
+    fold (subst_tb_many Alphas Ts0 (bind_var (open_tt_many_var Alphas (Cargtype Def)))).
+    rewrite <- map_single.
+    fold_env_empty.
 
     rewrite subst_tt_many_free with Alphas Ts0 Tc;
       [ idtac | introv Ain; lets*: Afresh Ain ].
-    rewrite (subst_tb_id_on_fresh
 
     apply typing_through_subst_te_many; trivial.
-    + app;ly
-    + rewrite <- add_types_assoc.
-      rewrite* concat_empty_r.
     + inversions Htyp.
+      intros; auto with listin.
+    + intros A Ain.
+      lets: Afresh Ain. auto.
+    + autorewrite with rew_env_dom.
+      intros A Ain.
+      apply notin_inverse.
+      intro HF.
+      apply xfreshA.
+      rewrite in_singleton in HF. subst.
+      apply from_list_spec2. auto.
+    + introv Ain Tin.
+      apply fv_typs_notin with Ts0; auto.
+      lets: Afresh Ain.
       auto with listin.
     + introv Ain; lets*: Afresh Ain.
-    + autorewrite with rew_env_dom.
-      introv Ain.
-      intro HF. rewrite in_singleton in HF. subst.
-      apply xfreshA.
-      apply* from_list_spec2.
-    + introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin.
-Admitted.
+Qed.
 
