@@ -136,9 +136,9 @@ where c1, ..., cn are constructors of type TG (as explained in other notes, we d
 
 becomes
 case e matching TG of
-| [M1] => e1'
+| [m1] => e1'
 | ...
-| [Mn] => en'
+| [mn] => en'
 
 where ei' := ei[ T1 -> @0, ..., Tm -> @(m-1), xi -> #0 ]
 TODO: or is type translation order in reverse?
@@ -513,7 +513,7 @@ Inductive type : typ -> Prop :=
       type (typ_arrow T1 T2)
   | type_all : forall L T2,
       (forall X, X \notin L -> type (T2 open_tt_var X)) ->
-      type (typ_all T2)
+      type (typ_all T2) (* type (typ_all @0) <- type (X) *)
   | type_gadt : forall Tparams Name,
       (forall Tparam, In Tparam Tparams -> type Tparam) ->
        type (typ_gadt Tparams Name) (* TODO shouldn't this check the constructor arity already? *)
@@ -592,7 +592,6 @@ value : trm -> Prop :=
     value (trm_constructor Tparams Name e1)
 .
 
-(** * GADT Environment definition *)
 (*
 
 
@@ -604,11 +603,9 @@ f' = λx : T. Λα. λignored: Unit. x
 
 and instead of applying (f x)[U]
 we would apply ((f x)[U]) <> to get the result
+ *)
 
-
-
-
-*)
+(** * GADT Environment definition *)
 Record GADTConstructorDef : Set :=
   (* a constructor of type ∀(α...). τ → (β...) T)
      arity specifies how many type parameters (α) there are, they are referred to inside the types by DeBruijn indices
