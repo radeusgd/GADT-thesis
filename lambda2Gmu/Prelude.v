@@ -500,3 +500,25 @@ Lemma notin_inverse : forall A (x y : A),
   - intro. subst. apply H. apply in_singleton_self.
   - apply* notin_singleton.
 Qed.
+
+Lemma LibList_map : forall T U (l : list T) (f : T -> U),
+    List.map f l = LibList.map f l.
+  induction l; intros; cbn in *; auto.
+  rewrite IHl. fold (LibList.map f l). auto.
+Qed.
+
+Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
+    EnvOps.map (subst_tb_many (Ah :: Ats) (Ph :: Pts)) F
+    =
+    EnvOps.map (subst_tb_many Ats Pts) (EnvOps.map (subst_tb Ah Ph) F).
+  intros.
+  rewrite map_def.
+  rewrite map_map.
+  repeat rewrite <- LibList_map.
+  cbn.
+  apply List.map_ext_in.
+  intros.
+  destruct a as [? [?]].
+  cbn.
+  f_equal.
+Qed.

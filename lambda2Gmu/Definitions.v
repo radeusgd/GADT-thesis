@@ -708,6 +708,24 @@ Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   | bind_var T => bind_var (subst_tt Z P T)
   end.
 
+Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
+  match (Xs, Us) with
+  (* | ((List.cons X Xt), (List.cons U Ut)) => subst_tt X U (subst_tt_many Xt Ut T) *)
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_tt_many Xt Ut (subst_tt X U T)
+  | _ => T
+  end.
+
+(* Fixpoint subst_tb_many (As : list var) (Us : list typ) (b : bind) : bind := *)
+(*   match (As, Us) with *)
+(*   | (List.cons Ah At, List.cons Uh Ut) => subst_tb_many At Ut (subst_tb Ah Uh b) *)
+(*   | _ => b *)
+(*   end. *)
+Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
+  match b with
+  | bind_var T => bind_var (subst_tt_many As Ps T)
+  end.
+
+
 (** * Well-formed types *)
 (* (TODO clarify) In pDOT there is no such notion as a type is well formed if it is used in a typing judgement.
 But this language requires it, because like in System F we have type-abstractions and type-applications.

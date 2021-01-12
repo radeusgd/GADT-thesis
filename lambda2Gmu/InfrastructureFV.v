@@ -315,3 +315,36 @@ Lemma in_fold_exists : forall TV TT P ls Z X,
     + rewrite in_union in IH.
       destruct IH as [IH | IH]; eauto with listin.
 Qed.
+
+Lemma fv_subst_tt : forall X Z P T,
+    X \notin fv_typ T ->
+    X \notin fv_typ P ->
+    X \notin fv_typ (subst_tt Z P T).
+  induction T using typ_ind'; introv FT FP; cbn in *; auto.
+  - case_if*.
+  - apply notin_fold.
+    + intros T Tin.
+      apply List.in_map_iff in Tin.
+      destruct Tin as [U [? ?]]. subst.
+      rewrite List.Forall_forall in H.
+      apply* H.
+    + auto.
+Qed.
+
+Lemma fv_env_subst : forall X Z P E,
+    X \notin fv_env E ->
+    X \notin fv_typ P ->
+    X \notin fv_env (map (subst_tb Z P) E).
+  intros.
+  induction E using env_ind.
+  - rewrite map_empty. auto.
+  - destruct v as [T]; lets [? ?]: notin_env_inv H.
+    rewrite map_concat.
+    rewrite map_single.
+    cbn.
+    rewrite fv_env_extend.
+    rewrite notin_union.
+    split.
+    + apply* fv_subst_tt.
+    + apply* IHE.
+Qed.

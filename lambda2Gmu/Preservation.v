@@ -526,69 +526,6 @@ Ltac crush_ihred_gen :=
     crush_ihred e
   end.
 
-Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
-  match b with
-  | bind_var T => bind_var (subst_tt_many As Ps T)
-  end.
-
-Lemma subst_tb_id_on_fresh : forall E Z P,
-    Z \notin fv_env E ->
-    map (subst_tb Z P) E = E.
-  induction E using env_ind; introv FE.
-  - rewrite map_empty. trivial.
-  - rewrite map_push.
-    destruct v.
-    rewrite fv_env_extend in FE.
-    f_equal.
-    + apply* IHE.
-    + cbn.
-      f_equal. f_equal.
-      apply subst_tt_fresh. auto.
-Qed.
-
-Lemma LibList_map : forall T U (l : list T) (f : T -> U),
-    List.map f l = LibList.map f l.
-  induction l; intros; cbn in *; auto.
-  rewrite IHl. fold (LibList.map f l). auto.
-Qed.
-
-Lemma subst_tt_many_id_on_fresh : forall T As Ps,
-    (forall A, List.In A As -> A \notin fv_typ T) ->
-    subst_tt_many As Ps T = T.
-  induction As; destruct Ps; intros; try solve [cbn in *; congruence].
-  cbn.
-  rewrite subst_tt_fresh.
-  - apply IHAs; auto with listin.
-  - auto with listin.
-Qed.
-
-Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
-    length As = length Ps ->
-    (forall A, List.In A As -> A \notin fv_env E) ->
-    map (subst_tb_many As Ps) E = E.
-  intros.
-  rewrite map_def.
-  rewrite <- LibList_map.
-  symmetry.
-  rewrite <- map_id; auto.
-  intros vb xin.
-  destruct vb. cbn.
-  f_equal; auto.
-  unfold subst_tb_many. destruct b.
-  rewrite subst_tt_many_id_on_fresh; auto.
-  intros.
-  induction E as [| B E].
-  - contradiction.
-  - lets HA: H0 H1.
-    cbn in HA. fold (fv_env E) in HA.
-    lets [? | ?]: List.in_inv xin; subst; cbn in HA; auto.
-    apply IHE; auto.
-    intros A' Ain.
-    lets HA': H0 Ain.
-    destruct B; destruct b; cbn in HA'. fold (fv_env E) in HA'.
-    auto.
-Qed.
-
 Lemma typing_through_subst_te_2 :
   forall Σ Δ1 Δ2 E Z e P T,
     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢ e ∈ T ->
@@ -601,25 +538,6 @@ Lemma typing_through_subst_te_2 :
   rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin.
   apply* typing_through_subst_te.
 Qed.
-
-Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
-    map (subst_tb_many (Ah :: Ats) (Ph :: Pts)) F
-    =
-    map (subst_tb_many Ats Pts) (map (subst_tb Ah Ph) F).
-  intros.
-  rewrite map_def.
-  rewrite map_map.
-  repeat rewrite <- LibList_map.
-  apply List.map_ext_in.
-  intros [? [?]] Hin.
-  cbn. f_equal.
-Qed.
-
-Lemma fv_env_subst : forall X Z P E,
-    X \notin fv_env E ->
-    X \notin fv_typ P ->
-    X \notin fv_env (map (subst_tb Z P) E).
-Admitted.
 
 Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps,
     {Σ, (Δ |,| tc_vars As), E & F} ⊢ e ∈ T ->
@@ -641,8 +559,6 @@ Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps,
     cbv. auto.
   - cbn.
     inversions Adist.
-    Print subst_tb_many.
-    Print subst_tt_many.
     lets IH0: IHAts Σ (Δ) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F)
                    (subst_te Ah Ph e).
     lets IH: IH0 (subst_tt Ah Ph T) Pts.
