@@ -74,33 +74,6 @@ Ltac renameIHs H Heq :=
   | IH: forall X, X \notin ?L -> forall E0 G0, ?P1 -> ?P2 |- _ =>
     rename IH into Heq end.
 
-(* Lemma okt_Alphas_strengthen : forall Σ D E As, *)
-(*     (forall A, List.In A As -> A # E) -> *)
-(*     DistinctList As -> *)
-(*     okt Σ D E -> *)
-(*     okt Σ (D |,| tc_vars As) E. *)
-(*   induction As as [| Ah Ats]; introv Afresh Adist Hok. *)
-(*   (* - cbn. rewrite concat_empty_r. trivial. *) *)
-(*   (* - cbn. rewrite concat_assoc. *) *)
-(*   (*   econstructor. *) *)
-(*   (*   + apply IHAts. *) *)
-(*   (*     * introv Ain. eauto with listin. *) *)
-(*   (*     * inversion* Adist. *) *)
-(*   (*     * trivial. *) *)
-(*   (*   + rewrite dom_concat. *) *)
-(*   (*     apply notin_union. constructor. *) *)
-(*   (*     * eauto with listin. *) *)
-(*   (*     * inversions Adist. *) *)
-(*   (*       rewrite add_types_dom_is_from_list. *) *)
-(*   (*       apply* fromlist_notin_restated. *) *)
-(*   Admitted. *)
-
-(* Lemma typing_weakening_delta : forall Σ Δ E F G e T, *)
-(*     {Σ, Δ, E & G} ⊢ e ∈ T -> *)
-(*     okt Σ Δ (E & F & G) -> *)
-(*     {Σ, Δ, E & F & G} ⊢ e ∈ T. *)
-(* Proof. *)
-
 Lemma wft_weaken_simple : forall Σ D1 D2 E,
     wft Σ D1 E ->
     wft Σ (D1 |,| D2) E.
@@ -416,12 +389,6 @@ Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
   clean_empty_Δ. auto.
 Qed.
 
-Lemma okt_strengthen_delta_var_subst : forall Σ D1 D2 E X P,
-    X # E ->
-    wft Σ (D1 |,| D2) P ->
-    okt Σ (D1 |,| [tc_var X] |,| D2) E -> okt Σ (D1 |,| D2) (map (subst_tb X P) E).
-Admitted.
-
 (* TODO move and merge with _1 *)
 Lemma wft_subst_tb_2 : forall Σ D1 D2 Z P T,
   wft Σ (D1 |,| [tc_var Z] |,| D2) T ->
@@ -451,6 +418,24 @@ Proof.
       destruct Tin as [U [? Tin]]; subst.
       apply* H0.
     + apply List.map_length.
+Qed.
+
+Lemma okt_strengthen_delta_var_subst : forall Σ D1 D2 E X P,
+    wft Σ (D1 |,| D2) P ->
+    okt Σ (D1 |,| [tc_var X] |,| D2) E ->
+    X # E ->
+    okt Σ (D1 |,| D2) (map (subst_tb X P) E).
+  introv WFT OKT.
+  gen_eq G: (D1 |,| [tc_var X] |,| D2). gen D2 X.
+  induction OKT; introv WFT Heq XE; subst.
+  - rewrite map_empty.
+    econstructor; auto.
+  - rewrite map_concat.
+    rewrite map_single.
+    constructor; auto.
+    + apply* wft_subst_tb_2.
+    + repeat (apply notin_domΔ_eq in H1; destruct H1).
+      apply notin_domΔ_eq; split*.
 Qed.
 
 Lemma typing_through_subst_te:

@@ -120,20 +120,6 @@ Proof.
     lets [[? HT] | [? HB]]: binds_push_inv B.
     + inversion* HT.
     + apply* IHE.
-  (* - destruct (eq_push_inv H) as [? [? ?]]; subst. clear H. *)
-  (*   destruct (binds_push_inv B) as [[? ?]|[? ?]]; subst. *)
-  (*   + admit. *)
-  (*   + expand_env_empty (E & x0 ~ bind_typ); apply* wft_weaken; fold_env_empty. *)
-  (*     econstructor. apply* okt_is_ok. auto. *)
-  (* - destruct (eq_push_inv H) as [? [? ?]]. clear H. *)
-  (*   destruct (binds_push_inv B) as [[? Hbindeq]|[? Hbinds]]; subst. *)
-  (*   + inversions Hbindeq. *)
-  (*     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty. *)
-  (*     econstructor. apply* okt_is_ok. auto. *)
-  (*   + inversions Hbinds. *)
-  (*     expand_env_empty (E & x0 ~ bind_var T); apply* wft_weaken; fold_env_empty. *)
-  (*     constructor*. *)
-  (*     apply* okt_is_ok. *)
 Qed.
 
 Lemma wft_strengthen_typ : forall Σ D1 D2 U T,
