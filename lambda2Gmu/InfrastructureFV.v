@@ -348,3 +348,25 @@ Lemma fv_env_subst : forall X Z P E,
     + apply* fv_subst_tt.
     + apply* IHE.
 Qed.
+
+Lemma notin_dom_tc_vars : forall As x,
+    x \notin from_list As ->
+    x \notin domΔ (tc_vars As).
+  induction As; introv Hin; cbn in *; auto.
+  rewrite notin_union. split; auto.
+  fold (tc_vars As).
+  apply IHAs.
+  fold (from_list As) in Hin.
+  auto.
+Qed.
+
+Lemma notin_env_binds:
+  forall (Z : var) (E : env bind) (x : var) (T : typ),
+    binds x (bind_var T) E ->
+    Z \notin fv_env E -> Z \notin fv_typ T.
+Proof.
+  induction E using env_ind; introv Hbind FE.
+  - false* binds_empty_inv.
+  - lets [[? ?] | [? ?]]: binds_push_inv Hbind; subst;
+      try destruct v; lets* [? ?]: notin_env_inv FE.
+Qed.

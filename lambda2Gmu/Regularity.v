@@ -6,17 +6,21 @@ Require Import TLC.LibEnv.
 
 
 Ltac fold_delta :=
-  match goal with
+  repeat match goal with
   | [ H: context [List.map tc_var ?As] |- _ ] =>
     fold (tc_vars As) in H
   | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
-    (* TODO check if As == [] to allow for repeating *)
-    fold ([tc_var X] ++ As) in H
+    match As with
+    | [] => fail 1
+    | _ => fold ([tc_var X] ++ As) in H
+    end
   | [ |- context [List.map tc_var ?As] ] =>
     fold (tc_vars As)
   | [ |- context [ (tc_var ?X) :: ?As] ] =>
-    (* TODO check if As == [] to allow for repeating *)
-    fold ([tc_var X] ++ As)
+    match As with
+    | [] => fail 1
+    | _ => fold ([tc_var X] ++ As)
+    end
   end.
 
 Ltac destruct_in_app :=

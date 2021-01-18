@@ -507,6 +507,11 @@ Lemma LibList_map : forall T U (l : list T) (f : T -> U),
   rewrite IHl. fold (LibList.map f l). auto.
 Qed.
 
+Lemma LibList_mem : forall A (x : A) L,
+    LibList.mem x L -> List.In x L.
+  induction L; introv Hin; cbn in *; inversion Hin; eauto.
+Qed.
+
 Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
     EnvOps.map (subst_tb_many (Ah :: Ats) (Ph :: Pts)) F
     =

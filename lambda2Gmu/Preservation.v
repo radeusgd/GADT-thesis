@@ -137,16 +137,6 @@ Ltac fresh_intros :=
         instantiate (1:=envvars) in H
            end.
 
-Lemma notin_dom_tc_vars : forall As x,
-    x \notin from_list As ->
-    x \notin domΔ (tc_vars As).
-Admitted.
-
-Lemma LibList_mem : forall A (x : A) L,
-    LibList.mem x L -> List.In x L.
-  induction L; introv Hin; cbn in *; inversion Hin; eauto.
-Qed.
-
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var),
     {Σ, D1 |,| D2, E} ⊢ u ∈ U ->
@@ -194,90 +184,115 @@ Qed.
 Lemma typing_weakening_delta_many : forall Σ Δ E As u U,
     (forall A, List.In A As -> A # E) ->
     (forall A, List.In A As -> A \notin domΔ Δ) ->
+    DistinctList As ->
     {Σ, Δ, E} ⊢ u ∈ U ->
     {Σ, Δ |,| tc_vars As, E} ⊢ u ∈ U.
-Admitted.
+  induction As as [| Ah Ats]; introv AE AD Adist Typ.
+  - cbn. clean_empty_Δ. auto.
+  - cbn. fold_delta.
+    inversions Adist.
+    rewrite List.app_assoc.
+    apply typing_weakening_delta; auto with listin.
+    apply notin_dom_tc_vars.
+    intro HF.
+    apply from_list_spec in HF.
+    apply LibList_mem in HF.
+    auto.
+Qed.
+
+Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
+    (forall A, List.In A As -> A # E) ->
+    (forall A, List.In A As -> A \notin domΔ D1) ->
+    (forall A, List.In A As -> A \notin domΔ D2) ->
+    DistinctList As ->
+    okt Σ (D1 |,| D2) E ->
+    okt Σ (D1 |,| tc_vars As |,| D2) E.
+  induction As as [| Ah Ats]; introv AE AD1 AD2 Adist Hok.
+  - cbn. clean_empty_Δ. auto.
+  - cbn. fold_delta.
+    inversions Adist.
+    rewrite List.app_assoc.
+    rewrite <- (List.app_assoc (D1 |,| [tc_var Ah]) (tc_vars Ats)).
+    apply okt_weakening_delta; auto with listin.
+    + rewrite List.app_assoc.
+      apply IHAts; auto with listin.
+    + apply notin_domΔ_eq. split; auto with listin.
+      apply notin_dom_tc_vars.
+      intro HF.
+      apply from_list_spec in HF.
+      apply LibList_mem in HF.
+      auto.
+Qed.
 
 Lemma typing_weakening : forall Σ Δ E F G e T,
     {Σ, Δ, E & G} ⊢ e ∈ T ->
     okt Σ Δ (E & F & G) ->
     {Σ, Δ, E & F & G} ⊢ e ∈ T.
 Proof.
-(*   introv HTyp. gen F. *)
-(*   inductions HTyp; introv Ok; eauto. *)
-(*   - apply* typing_var. apply* binds_weaken. *)
-  (* - econstructor; eauto. *)
-  (*   introv Tin. *)
-  (*   apply* wft_weaken. *)
-  (* - renameIHs IH IHeq. *)
-  (*   apply_fresh* typing_abs as x. *)
-  (*   forwards~ K: (IH x). *)
-  (*   apply_ih_bind (IHeq x); eauto. *)
-  (*   econstructor; eauto. *)
-  (*   lets (Hokt&?&?): typing_regular K. *)
-  (*   lets (?&?&?): okt_push_var_inv Hokt. *)
-  (*   apply* wft_weaken. *)
-  (* - renameIHs IH IHeq. *)
-  (*   apply_fresh* typing_tabs as X. *)
-  (*   forwards~ K: (IH X). *)
-  (*   apply_ih_bind (IHeq X); auto. *)
-  (*   econstructor; eauto. *)
-  (* - apply* typing_tapp. apply* wft_weaken. *)
-  (* - renameIHs IH IHeq. *)
-  (*   apply_fresh* typing_fix as x. *)
-  (*   forwards~ K: (IH x). *)
-  (*   apply_ih_bind (IHeq x); eauto. *)
-  (*   econstructor; eauto. *)
-  (*   lets (Hokt&?&?): typing_regular K. *)
-  (*   lets (?&?&?): okt_push_var_inv Hokt. *)
-  (*   apply* wft_weaken. *)
-  (* - renameIHs IH IHeq. *)
-  (*   apply_fresh* typing_let as x. *)
-  (*   forwards~ K: (IH x). *)
-  (*   apply_ih_bind (IHeq x); eauto. *)
-  (*   econstructor; eauto. *)
-  (*   lets (Hokt&?&?): typing_regular K. *)
-  (*   lets (?&?&?): okt_push_var_inv Hokt. *)
-  (*   apply* wft_weaken. *)
-  (* - apply* typing_case. *)
-  (*   let envvars := gather_vars in *)
-  (*   (introv Inzip AlphasArity ADistinct Afresh xfresh xfreshA; *)
-  (*    instantiate (1:=envvars) in Afresh). *)
-  (*   assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L); *)
-  (*     [ introv Ain; lets*: Afresh Ain | idtac ]. *)
-  (*   assert (xfreshL: x \notin L); eauto. *)
-  (*   lets* IH1: H3 Inzip Alphas x AlphasArity ADistinct. *)
-  (*   lets* IH2: IH1 AfreshL xfreshL xfreshA. *)
-  (*   lets IHeq1: H4 Inzip Alphas x AlphasArity ADistinct. *)
-  (*   lets* IHeq2: IHeq1 AfreshL xfreshL xfreshA. *)
-  (*   rewrite add_types_assoc. *)
+  introv HTyp. gen F.
+  inductions HTyp; introv Ok; eauto.
+  - apply* typing_var. apply* binds_weaken.
+  - econstructor; eauto.
+    let env := gather_vars in
+    instantiate (1:=env).
+    introv xfresh.
+    lets IH: H0 x E (G & x ~: V); auto.
+    rewrite <- concat_assoc.
+    apply IH.
+    + apply JMeq_from_eq. auto using concat_assoc.
+    + rewrite concat_assoc.
+      econstructor; eauto.
+      assert (xL: x \notin L); auto.
+      lets Typ: H xL.
+      lets [? [? ?]]: typing_regular Typ.
+      eapply okt_is_wft. eauto.
+  - apply_fresh* typing_tabs as X.
+    lets IH: H1 X E G; auto.
+    apply IH.
+    + auto using JMeq_from_eq.
+    + rewrite <- (List.app_nil_r (Δ |,| [tc_var X])).
+      apply okt_weakening_delta; clean_empty_Δ; cbn; auto.
+  - apply_fresh* typing_fix as x.
+    lets IH: H1 x E (G & x ~: T); auto.
+    rewrite <- concat_assoc.
+    apply IH; repeat rewrite concat_assoc; auto.
+    constructor; auto.
+    lets [? [? ?]]: typing_regular T; eauto.
+  - apply_fresh* typing_let as x.
+    lets IH: H0 x E (G & x ~: V); auto.
+    rewrite <- concat_assoc.
+    apply IH; repeat rewrite concat_assoc; auto.
+    constructor; auto.
+    lets [? [? ?]]: typing_regular V; eauto.
+  - eapply typing_case; eauto.
+    let envvars := gather_vars in
+    (introv Inzip AlphasArity ADistinct Afresh xfresh xfreshA;
+     instantiate (1:=envvars) in Afresh).
+    assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
+      [ introv Ain; lets*: Afresh Ain | idtac ].
+    assert (xfreshL: x \notin L); eauto.
+    lets* IH1: H3 Inzip Alphas x AlphasArity ADistinct.
+    lets* IH2: IH1 AfreshL xfreshL xfreshA.
+    lets IHeq1: H4 Inzip Alphas x AlphasArity ADistinct.
+    lets* IHeq2: IHeq1 AfreshL xfreshL xfreshA.
 
-  (*   lets IHeq3: IHeq2 E (add_types G Alphas & x ~ bind_var (open_tt_many_var Alphas (Cargtype def))) F. *)
-  (*   + apply JMeq_from_eq. *)
-  (*     rewrite add_types_assoc. *)
-  (*     rewrite concat_assoc. trivial. *)
-  (*   + rewrite concat_assoc in IHeq3. *)
-  (*     apply IHeq3. *)
-  (*     rewrite <- (concat_empty_r G). *)
-  (*     rewrite add_types_assoc. *)
-  (*     rewrite concat_assoc. *)
-  (*     econstructor. *)
-  (*     * apply okt_Alphas_strengthen; trivial. *)
-  (*       introv Ain; lets*: Afresh Ain. *)
-  (*     * match goal with | H: okt Σ ?E |- _ => lets okgadt: okt_implies_okgadt H end. *)
-  (*       unfold okGadt in okgadt. *)
-  (*       destruct okgadt as [okΣ okCtors]. *)
-  (*       lets [defsNe okDefs]: okCtors H0. *)
-  (*       lets indef: fst_from_zip Inzip. *)
-  (*       lets okCtor: okDefs indef. *)
-  (*       inversions okCtor. *)
-  (*       cbn. *)
-  (*       rewrite <- add_types_assoc. rewrite concat_empty_r. *)
-  (*       lets*: H5 Alphas (E & F & G). *)
-  (*     * repeat rewrite dom_concat. *)
-  (*       rewrite add_types_dom_is_from_list. *)
-  (*       eauto. *)
-Admitted.
+    lets IHeq3: IHeq2 E (G & x ~ bind_var (open_tt_many_var Alphas (Cargtype def))) F.
+    + apply JMeq_from_eq.
+      rewrite concat_assoc. trivial.
+    + rewrite concat_assoc in IHeq3.
+      apply IHeq3.
+      constructor; auto.
+      * rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas)).
+        apply okt_weakening_delta_many; clean_empty_Δ;
+        try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto.
+      * lets [Hokt [? ?]]: typing_regular IH2.
+        inversions Hokt.
+        -- false* empty_push_inv.
+        -- lets [? [Heq ?]]: eq_push_inv H6; subst.
+           inversions Heq; auto.
+      * apply notin_domΔ_eq. split; auto.
+        apply notin_dom_tc_vars. auto.
+Qed.
 
 (* Hint Resolve typing_implies_term wft_strengthen okt_strengthen. *)
 
@@ -310,7 +325,8 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T,
     | [ H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ ] =>
       apply* H
     end.
-    apply* typing_weakening_delta.
+    rewrite <- (List.app_nil_r (Δ |,| [tc_var Y])).
+    apply typing_weakening_delta; clean_empty_Δ; cbn; auto.
   - apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
     apply_ih.
   - apply_fresh* typing_let as y.
@@ -398,17 +414,6 @@ Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
   rewrite <- (List.app_nil_r Δ).
   eapply okt_strengthen_delta_var with Z; auto.
   clean_empty_Δ. auto.
-Qed.
-
-Lemma notin_env_binds:
-  forall (Z : var) (E : env bind) (x : var) (T : typ),
-    binds x (bind_var T) E ->
-    Z \notin fv_env E -> Z \notin fv_typ T.
-Proof.
-  induction E using env_ind; introv Hbind FE.
-  - false* binds_empty_inv.
-  - lets [[? ?] | [? ?]]: binds_push_inv Hbind; subst;
-      try destruct v; lets* [? ?]: notin_env_inv FE.
 Qed.
 
 Lemma okt_strengthen_delta_var_subst : forall Σ D1 D2 E X P,
