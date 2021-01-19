@@ -63,15 +63,16 @@ Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢ const_test ∈ NAT.
   autotyper1.
 Qed.
 
+
+Ltac simpl_op := cbn; try case_if; auto.
+Ltac crush_eval := repeat (try (apply eval_finish; eauto);
+                           try (eapply eval_step; eauto);
+                           autotyper1;
+                           try econstructor;
+                           simpl_op).
 Lemma const_test_evals : evals const_test one.
   cbv.
-  eapply eval_step.
-  - repeat econstructor; intuition.
-  - eapply eval_step.
-    + repeat econstructor; intuition.
-    + cbv.
-      apply eval_finish.
-      Unshelve. fs. fs. fs.
+  crush_eval.
 Qed.
 
 Definition plus := trm_fix ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))) (trm_abs (typ_gadt [] Nat) (trm_abs (typ_gadt [] Nat) (trm_matchgadt (#1) Nat [clause 0 (#1); clause 0 (trm_app (trm_app (#3) (#0)) (trm_constructor [] (Nat, 1) (#1)))]))).
@@ -126,16 +127,21 @@ Lemma plus_types : {natSigma, emptyΔ, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==
         instantiate (1 := fr) in H
           end;
       autotyper1;
-      try clauseDefResolver1.
-  - inversions H0. cbn.
-    econstructor.
-    + apply binds_concat_left.
-      * solve_bind.
-      * rewrite dom_def.
-        rewrite single_def.
-        cbn.
-        rewrite notin_union; split.
-        -- apply notin_inverse.
+      try inversions H0; eauto.
+  - cbn.
+  (* - inversions H0. eauto. *)
+  (* - inversions H0. auto. *)
+  (*     try clauseDefResolver1. *)
+  (* - inversions H0. cbn. *)
+  (*   econstructor. *)
+  (*   + apply binds_concat_left. *)
+  (*     * solve_bind. *)
+  (*     * rewrite dom_def. *)
+  (*       rewrite single_def. *)
+  (*       cbn. *)
+  (*       rewrite notin_union; split. *)
+  (*       -- apply notin_inverse. *)
+
            (* something weird is happening here *)
 Admitted.
 
@@ -148,64 +154,26 @@ Ltac destruct_clauses :=
 Definition two := trm_constructor [] (Nat, 1) one.
 Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
   cbv.
-  eapply eval_step.
-  1:{
-    crush_1.
-    - with_fresh intros. cbn in *.
-      repeat autodestruct; subst; cbn in *;
-        destruct_const_len_list; cbn in *; crush_1.
-    - cbn in *. with_fresh intros.
-      destruct_clauses;
-        subst; cbn in *; destruct_const_len_list;
-          cbn in *;
-          try contradiction; crush_1.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; cbn.
-    with_fresh intros.
-    destruct_clauses; subst; cbn in *; destruct_const_len_list; cbn in *;
-      crush_1; cbn; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  eapply eval_step; cbn.
-  1: {
-    crush_1; admit.
-  }
-  cbn.
-
-  apply eval_finish.
-Admitted.
+  crush_eval;
+    repeat (
+        cbn in *;
+        destruct_const_len_list;
+        autotyper1).
+  Unshelve.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+Qed.

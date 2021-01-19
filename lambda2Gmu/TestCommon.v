@@ -71,6 +71,12 @@ Inductive evals : trm -> trm -> Prop :=
 | eval_step : forall a b c, a --> b -> evals b c -> evals a c
 | eval_finish : forall a, evals a a.
 
+Lemma is_var_defined_split : forall A B c, (is_var_defined A c \/ is_var_defined B c) -> is_var_defined (A |,| B) c.
+  unfold is_var_defined.
+  intros.
+  apply List.in_or_app. auto.
+Qed.
+
 Ltac autotyper1 :=
   repeat progress (
            cbn;
@@ -97,6 +103,7 @@ Ltac autotyper1 :=
            | [ H: {| Tarity := ?A; Tconstructors := ?B |} = ?C |- _ ] =>
              inversions H
            | [ H: ?A \/ ?B |- _ ] => destruct H
+           | [ |- is_var_defined (?A |,| ?B) ?c ] => apply is_var_defined_split
            | _ => intros; auto
            end;
            cbn; subst).

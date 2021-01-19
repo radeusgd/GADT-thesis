@@ -77,65 +77,24 @@ Definition sigma :=
 
 Lemma oksigma : okGadt sigma.
   unfold sigma.
-  constructor*.
-  - repeat constructor*; try (introv Hfalse; inversions Hfalse);
-      solve_dom all_distinct.
-  - intros.
-    binds_inv; inversions EQ; repeat ininv.
-    + econstructor; cbn; intuition; subst; intuition; try congruence; econstructor;
-        try solve [intros; destruct_const_len_list; econstructor | intros; repeat ininv].
-    + econstructor; cbn; intuition; subst; intuition; try congruence; econstructor;
-        try solve [intros; destruct_const_len_list; econstructor | intros; repeat ininv].
-      * intros. repeat ininv. destruct_const_len_list. cbn.
-        econstructor. solve_bind.
-        admit.
-      * intros. repeat ininv. cbn. eauto.
-    + econstructor; cbn; intuition; subst; intuition; try congruence; econstructor;
-        try solve [intros; destruct_const_len_list; econstructor | intros; repeat ininv].
-      (* * intros; repeat ininv; destruct_const_len_list; cbn; *)
-      (*     econstructor; solve_bind; eauto; solve [ *)
-      (*                                          intros; contradiction *)
-      (*                                        | solve_dom all_distinct *)
-      (*                                        ]. *)
-      * admit.
-      * intros. repeat ininv; cbn; eauto.
-      (* * intros. destruct_const_len_list; cbn. repeat econstructor; try solve_bind. *)
-      (*   intros. repeat ininv; cbn; econstructor; solve_bind. *)
-      (*   solve_dom all_distinct. distinct2. *)
-      * admit.
-      * intros. repeat ininv; cbn; eauto; destruct_const_len_list; cbn; eauto; econstructor; intros; try solve_bind; solve_dom all_distinct.
-        (* -- repeat ininv. cbn. econstructor. solve_bind. solve_dom all_distinct; distinct2. *)
-        -- admit.
-        -- cbn. eauto.
-           admit.
-        -- cbn. auto.
-      * cbn. repeat rewrite union_empty_r. trivial.
-      * intros. repeat ininv; cbn; eauto using union_empty_r.
-Admitted.
+  unfold VectorDef.
+  lets [? [? ?]]: all_distinct.
+  lets: is_var_defined_split.
+  econstructor; autotyper1;
+    try congruence;
+    try econstructor; autotyper1;
+      destruct_const_len_list;
+      autotyper1;
+      repeat rewrite union_empty_r; auto.
+Qed.
 
 Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
 Definition cons A N h t := trm_constructor [A; N] (Vector, 1) (trm_tuple h t).
 
 Lemma nil_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (nil (@0))) ∈ typ_all (typ_gadt [@0; typ_gadt [] Zero] Vector).
   cbv.
-  econstructor.
-  - introv xiL.
-    repeat econstructor; cbv.
-    introv Heq.
-    repeat destruct Heq as [Heq | Heq];
-      subst; try econstructor; contradiction.
-  - introv xiL.
-    repeat (try apply oksigma; econstructor); cbn.
-    + solve_bind.
-    + cbv.
-      f_equal.
-    + cbn. auto.
-    + intros.
-      (* some of these should get automated... *)
-      inversions H.
-      * econstructor. cbn. auto.
-      * contradiction.
-      Unshelve. fs.
+  lets: oksigma.
+  autotyper1.
 Qed.
 
 Ltac distinct22 :=
@@ -160,36 +119,9 @@ Qed.
 
 Lemma cons_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (trm_tabs (trm_abs (@1) (trm_abs (typ_gadt [@1; @0] Vector) (cons (@1) (@0) (#1) (#0)))))) ∈ typ_all (typ_all (typ_arrow (@1) (typ_arrow (typ_gadt [@1; @0] Vector) (typ_gadt [@1; typ_gadt [@0] Succ] Vector)))).
   cbv.
-  econstructor.
-  - introv XiL.
-    repeat econstructor; cbv;
-      introv Heq; repeat destruct Heq as [Heq | Heq];
-        subst; try econstructor; contradiction.
-  - introv XiL.
-    free_abs.
-    + introv X0iX.
-      repeat econstructor;
-        introv Heq; repeat destruct Heq as [Heq | Heq];
-          subst; try econstructor; contradiction.
-    + introv X0iX.
-      free_abs.
-      introv xiL.
-      free_abs.
-      introv xix.
-      admit.
-      (* (repeat (try apply oksigma; econstructor); solve_bind); *)
-      (*   try solve [ *)
-      (*         rewrite notin_eqv in *; eauto *)
-      (*       | cbv; auto *)
-      (*       | introv LiT; *)
-      (*         repeat destruct LiT as [LiT | LiT]; subst; *)
-      (*         solve [ *)
-      (*             contradiction *)
-      (*           | econstructor; solve_bind; rewrite notin_eqv in *; eauto *)
-      (*           ] *)
-      (*       ]. *)
-      Unshelve. fs. fs. fs. fs. fs. fs. fs.
-Admitted.
+  lets: oksigma.
+  autotyper1.
+Qed.
 
 Definition GZ := typ_gadt [] Zero.
 Definition GS (T : typ) := typ_gadt [T] Succ.
@@ -198,24 +130,7 @@ Definition uvec2 := cons typ_unit (GS GZ) trm_unit (cons typ_unit GZ trm_unit (n
 
 Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢ uvec2 ∈ typ_gadt [typ_unit; GS (GS GZ)] Vector.
   cbv.
-  econstructor; eauto.
-  2: {
-    cbn. f_equal.
-  }
-  - cbv.
-    repeat ((try apply oksigma); eauto; econstructor);
-      intros; repeat ininv; econstructor.
-    + intros; contradiction.
-    + solve_bind; solve_dom all_distinct.
-    + cbn; trivial.
-  - intros. repeat ininv.
-    + econstructor.
-    + econstructor.
-      * intros; repeat ininv; econstructor.
-        -- intros; contradiction.
-        -- solve_bind; solve_dom all_distinct.
-        -- cbn; trivial.
-      * solve_bind; solve_dom all_distinct.
-      * cbn; trivial.
-  - cbv. f_equal.
+  lets: oksigma.
+  lets [? [? ?]]: all_distinct.
+  autotyper1.
 Qed.
