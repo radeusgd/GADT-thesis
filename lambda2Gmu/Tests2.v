@@ -30,7 +30,7 @@ Lemma oknat : okGadt natSigma.
       contradiction.
 Qed.
 
-Hint Immediate oknat.
+#[export] Hint Immediate oknat.
 
 Definition zero := trm_constructor [] (Nat, 0) trm_unit.
 

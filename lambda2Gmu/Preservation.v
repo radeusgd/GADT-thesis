@@ -17,7 +17,7 @@ Lemma term_through_subst : forall e x u,
         ].
 Qed.
 
-Hint Resolve okt_is_ok.
+#[export] Hint Resolve okt_is_ok.
 
 (* Lemma okt_subst_tb : forall Σ Z P E F, *)
 (*     okt Σ (E & (withtyp Z) & F) -> *)
@@ -48,7 +48,7 @@ Lemma okt_strengthen_simple : forall Σ D E F,
     + lets [? [? ?]]: eq_push_inv H; subst. auto.
 Qed.
 
-Hint Resolve okt_strengthen_simple.
+#[export] Hint Resolve okt_strengthen_simple.
 
 (** ** Environment is unchanged by substitution from a fresh name *)
 

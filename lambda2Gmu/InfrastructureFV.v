@@ -66,7 +66,7 @@ Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
     eauto with listin.
 Qed.
 
-Hint Resolve fv_fold_base fv_fold_in fv_fold_general fv_fold_in_general.
+#[export] Hint Resolve fv_fold_base fv_fold_in fv_fold_general fv_fold_in_general.
 
 Lemma fv_open : forall T U k,
     fv_typ (open_tt_rec k U T) = (fv_typ T \u fv_typ U)

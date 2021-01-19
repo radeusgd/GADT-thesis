@@ -49,7 +49,7 @@ Proof.
   induction 1; eauto.
 Qed.
 
-Hint Resolve type_from_wft.
+#[export] Hint Resolve type_from_wft.
 
 Lemma values_decidable : forall t,
     term t ->
@@ -99,14 +99,14 @@ Ltac IHap IH := eapply IH; eauto;
 (*   - econstructor; eauto. *)
 (* Qed. *)
 
-Hint Resolve subst_tt_type subst_te_term subst_ee_term.
-Hint Resolve subst_te_value subst_ee_value.
+#[export] Hint Resolve subst_tt_type subst_te_term subst_ee_term.
+#[export] Hint Resolve subst_te_value subst_ee_value.
 
 Lemma okt_is_ok : forall Σ Δ E, okt Σ Δ E -> ok E.
   introv. intro Hokt.
   induction Hokt; eauto.
 Qed.
-Hint Extern 1 (ok _) => apply okt_is_ok.
+#[export] Hint Extern 1 (ok _) => apply okt_is_ok.
 
 
 Lemma wft_from_env_has_typ : forall Σ Δ x U E,
@@ -377,7 +377,7 @@ Qed.
 
 (** ** GADT environment properties *)
 
-Hint Resolve okt_is_ok.
+#[export] Hint Resolve okt_is_ok.
 
 Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType CretTypes,
     binds Name (mkGADT Tarity Ctors) Σ ->

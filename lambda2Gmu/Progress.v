@@ -3,7 +3,7 @@ Require Import Infrastructure.
 Require Import Regularity.
 Require Import CanonicalForms.
 
-Hint Resolve binds_empty_inv.
+#[export] Hint Resolve binds_empty_inv.
 
 Ltac empty_binding :=
   match goal with
@@ -21,7 +21,7 @@ Ltac IHT e :=
     end
   end.
 
-Hint Constructors value red.
+#[export] Hint Constructors value red.
 Theorem progress_thm : progress.
   unfold progress.
   intros.

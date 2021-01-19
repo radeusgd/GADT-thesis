@@ -27,7 +27,7 @@ Lemma CanonicalConstructorTypeGen : forall Σ Δ E Tparams Ctor e1 T,
   eexists. eexists. eauto.
 Qed.
 
-Hint Resolve CanonicalConstructorTypeGen.
+#[export] Hint Resolve CanonicalConstructorTypeGen.
 
 Ltac contradictory_constructor_type :=
   lazymatch goal with
