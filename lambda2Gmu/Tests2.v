@@ -120,30 +120,28 @@ Lemma plus_types : {natSigma, emptyΔ, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==
   lets: oknat.
   autotyper1;
     cbn in *;
-    let fr := gather_vars in
+    (* let fr := gather_vars in *)
     destruct_const_len_list;
-      try match goal with
-      | [ H: ?x \notin ?L |- _ ] =>
-        instantiate (1 := fr) in H
-          end;
-      autotyper1;
-      try inversions H0; eauto.
-  - cbn.
-  (* - inversions H0. eauto. *)
-  (* - inversions H0. auto. *)
-  (*     try clauseDefResolver1. *)
-  (* - inversions H0. cbn. *)
-  (*   econstructor. *)
-  (*   + apply binds_concat_left. *)
-  (*     * solve_bind. *)
-  (*     * rewrite dom_def. *)
-  (*       rewrite single_def. *)
-  (*       cbn. *)
-  (*       rewrite notin_union; split. *)
-  (*       -- apply notin_inverse. *)
-
-           (* something weird is happening here *)
-Admitted.
+    autotyper1.
+  - inversions H0.
+    cbn. trivial.
+  - inversions H0.
+    cbn. trivial.
+  - inversions H0.
+    cbn.
+    instantiate (1:= \{ x0 } \u \{ x1 } \u \{ x2 }) in H4.
+    autotyper1.
+  - inversions H0.
+    cbn in *.
+    congruence.
+  - inversions H0.
+    cbn.
+    autotyper1.
+  - inversions H0. cbn in *.
+    congruence.
+    Unshelve.
+    fs.
+Qed.
 
 Ltac destruct_clauses :=
   repeat match goal with
