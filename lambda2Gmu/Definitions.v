@@ -26,7 +26,6 @@ It is also highly inspired by formalization of SystemFSub by Charguéraud: https
 
 *)
 
-
 Set Implicit Arguments.
 Require Import TLC.LibLN.
 Require Import TLC.LibTactics.
@@ -809,7 +808,7 @@ Fixpoint subst_tt' (T : typ) (Θ : substitution) :=
 Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
 | tc_empty : subst_matches_typctx Σ [] []
 | tc_add_var : forall Θ Δ A T,
-    wft Σ Δ T ->
+    wft Σ Δ T -> (* TODO this most likely should be emptyΔ *)
     subst_matches_typctx Σ Δ Θ ->
     subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
 | tc_add_eq : forall Θ Δ T1 T2,
@@ -954,6 +953,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
     (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, Δ, E} ⊢ trm_let e1 e2 ∈ T2
 (* typing case merges rules ty-case and pat-cons from the original paper *)
+(* TODO add an example, for example using Expr showing how this applies *)
 | typing_case : forall L Σ Δ E e ms Ts T Name Tc Tarity Defs,
     {Σ, Δ, E} ⊢ e ∈ T ->
     T = (typ_gadt Ts Name) ->
@@ -966,7 +966,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
     (forall def clause, In (def, clause) (zip Defs ms) ->
                forall Alphas x,
                  length Alphas = Carity def ->
-                 DistinctList Alphas -> (* not sure if this is necessary, but may be helpful*)
+                 DistinctList Alphas ->
                  (forall A, In A Alphas -> A \notin L) ->
                  x \notin L ->
                  x \notin from_list Alphas -> (* Alphas are distinct but also x is not part of them *)
@@ -975,6 +975,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
                   *)
                  { Σ,
                    (Δ |,| tc_vars Alphas),
+                   (* Ts === Crettypes def; |,| List.zipWith tc_eq Ts (Crettypes def) *)
                    E
                    & x ~: (open_tt_many_var Alphas (Cargtype def))
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
