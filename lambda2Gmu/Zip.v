@@ -55,7 +55,7 @@ Ltac listin :=
     cbn; solve [right* | left*]
   end.
 
-Hint Extern 4 (List.In _ (_ :: _)) => (cbn; solve [left* | right*]) : listin.
+#[export] Hint Extern 4 (List.In _ (_ :: _)) => (cbn; solve [left* | right*]) : listin.
 
 Lemma forall2_from_snd : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) (Bs : list T2) (B : T2),
     List.Forall2 P As Bs ->

@@ -1,5 +1,7 @@
 *.glob
 *.vo
+*.vos
+*.vok
 *.aux
 .coqdeps.d
 .#*

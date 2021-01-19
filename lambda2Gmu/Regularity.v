@@ -521,7 +521,6 @@ Proof.
       let usedvars := gather_vars in
       lets* EAlphas: exist_alphas (usedvars) (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
-      rewrite length_equality in A1.
       lets* HH: H10 Alphas CiC.
       apply (@wft_open_many Δ Σ Alphas Ts); eauto;
         intros A; lets* FA: A3 A.
@@ -613,7 +612,6 @@ Proof.
 
         (* May want a tactic 'pick_fresh Alphas' *)
         lets* [Alphas [A1 [A2 A3]]]: exist_alphas (Carity Def).
-        rewrite length_equality in A1.
         instantiate (1:=L \u fv_typ Tc) in A3.
         pick_fresh x.
 

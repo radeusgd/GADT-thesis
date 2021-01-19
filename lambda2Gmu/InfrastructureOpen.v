@@ -86,10 +86,6 @@ Lemma opening_adds_one : forall T X k n,
   - cbn in Hc.
     crush_compare; cbn in *; econstructor; try lia.
     inversions Hc. lia.
-  - econstructor.
-    cbn in *.
-    inversions Hc.
-    lets* IH: IHT X (S k) (S n).
   - constructor*.
     inversions Hc.
     rewrite List.Forall_forall in *.
@@ -221,7 +217,6 @@ Lemma te_opening_te_adds_one : forall e X k n,
     apply* H2.
     unfold open_typlist_rec.
     apply* List.in_map.
-  - econstructor. apply* IHe.
   - constructor*.
     introv clin.
     rewrite List.Forall_forall in *.
@@ -299,7 +294,6 @@ Lemma term_te_closed : forall e,
     cbn.
     lets* fresh_alphas: exist_alphas L (clauseArity cl).
     inversion fresh_alphas as [Alphas [Hlen [Hdist Hnotin]]].
-    rewrite length_equality in Hlen.
     pick_fresh x.
     assert (xfresh: x \notin L); eauto.
     assert (xfreshA: x \notin from_list Alphas); eauto.
@@ -425,7 +419,6 @@ Proof.
 
     lets* fresh_alphas: exist_alphas L clA.
     inversion fresh_alphas as [Alphas [Hlen [Hdist Hnotin]]].
-    rewrite length_equality in Hlen.
     pick_fresh x.
     assert (xfresh: x \notin L); eauto.
 

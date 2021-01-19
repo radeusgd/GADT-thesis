@@ -722,7 +722,6 @@ Theorem preservation_thm : preservation.
     (* prepare fresh vars *)
     let fresh := gather_vars in
     lets* [Alphas [Hlen [Adist Afresh]]]: exist_alphas fresh (length Ts0).
-    rewrite length_equality in Hlen.
     pick_fresh x.
 
     match goal with

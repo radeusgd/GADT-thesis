@@ -9,15 +9,11 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.EqNat.
 Require Import List.
-
-(* WIP *)
-
-Require Import List.
 Export List.ListNotations.
 
-Hint Constructors type term wft typing red value.
+#[export] Hint Constructors type term wft typing red value.
 
-Hint Resolve typing_var typing_app typing_tapp.
+#[export] Hint Resolve typing_var typing_app typing_tapp.
 
 Lemma value_is_term : forall e, value e -> term e.
   induction e; intro Hv; inversion Hv; eauto.
@@ -209,7 +205,7 @@ Ltac crush_open :=
   (try unfold open_tt); (try unfold open_tt_rec); crush_compare.
 
 
-Hint Immediate subset_refl subset_empty_l subset_union_weak_l subset_union_weak_r subset_union_2 union_comm union_assoc union_same.
+#[export] Hint Immediate subset_refl subset_empty_l subset_union_weak_l subset_union_weak_r subset_union_2 union_comm union_assoc union_same.
 
 Lemma union_distribute : forall T (A B C : fset T),
     (A \u B) \u C = (A \u C) \u (B \u C).
@@ -321,7 +317,7 @@ Qed.
 
 Lemma exist_alphas : forall L len,
     exists (Alphas : list var),
-      length Alphas = len /\ DistinctList Alphas /\ forall A, List.In A Alphas -> A \notin L.
+      List.length Alphas = len /\ DistinctList Alphas /\ forall A, List.In A Alphas -> A \notin L.
   induction len.
   - exists (@List.nil var). splits*.
     + econstructor.
@@ -330,7 +326,8 @@ Lemma exist_alphas : forall L len,
     pick_fresh A.
     exists (List.cons A Alphas').
     splits*.
-    + cbn. eauto.
+    + cbn.
+      eauto.
     + constructor*.
       intro.
       assert (Hnot2: A \notin from_list Alphas'); eauto.
@@ -340,15 +337,23 @@ Lemma exist_alphas : forall L len,
       inversions AiA; eauto.
 Qed.
 
+Global Transparent fold_right.
+
 Lemma length_equality : forall A (a : list A),
-    length a = Datatypes.length a.
+    LibList.length a = Datatypes.length a.
   induction a; cbn; eauto.
+  rewrite <- IHa.
+  rewrite length_cons.
+  lia.
 Qed.
 
 (* stdlib lemma but in TLC version *)
 Lemma map_map : forall (A B C:Type)(f:A->B)(g:B->C) l,
     map g (map f l) = map (fun x => g (f x)) l.
-  induction l; cbn; f_equal; eauto.
+  induction l; cbn; auto.
+  repeat rewrite map_cons.
+  f_equal.
+  auto.
 Qed.
 
 Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
@@ -467,11 +472,11 @@ Ltac clean_empty_Δ :=
          end.
 
 Lemma LibList_app_def : forall A (La Lb : list A),
-    LibList.app La Lb = La ++ Lb.
+    List.app La Lb = La ++ Lb.
   induction La; intros; cbn.
   - clean_empty_Δ. trivial.
-  - fold (LibList.app La Lb).
-    f_equal.
+  - rewrite IHLa.
+    auto.
 Qed.
 
 Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
@@ -504,7 +509,8 @@ Qed.
 Lemma LibList_map : forall T U (l : list T) (f : T -> U),
     List.map f l = LibList.map f l.
   induction l; intros; cbn in *; auto.
-  rewrite IHl. fold (LibList.map f l). auto.
+  rewrite IHl.
+  rewrite LibList.map_cons. auto.
 Qed.
 
 Lemma LibList_mem : forall A (x : A) L,
