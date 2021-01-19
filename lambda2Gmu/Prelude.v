@@ -533,3 +533,12 @@ Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
   cbn.
   f_equal.
 Qed.
+
+Ltac fresh_intros :=
+    let envvars := gather_vars in
+    intros;
+    repeat match goal with
+           (* TODO find only uninstantiated *)
+      | [ H: ?x \notin ?L |- _ ] =>
+        instantiate (1:=envvars) in H
+           end.

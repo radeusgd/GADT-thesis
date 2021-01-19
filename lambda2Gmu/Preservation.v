@@ -101,15 +101,6 @@ Lemma okt_weakening_delta : forall Σ D1 D2 E X,
   rewrite dom_concat in FE. rewrite dom_single in FE. auto.
 Qed.
 
-Ltac fresh_intros :=
-    let envvars := gather_vars in
-    intros;
-    repeat match goal with
-           (* TODO find only uninstantiated *)
-      | [ H: ?x \notin ?L |- _ ] =>
-        instantiate (1:=envvars) in H
-           end.
-
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var),
     {Σ, D1 |,| D2, E} ⊢ u ∈ U ->

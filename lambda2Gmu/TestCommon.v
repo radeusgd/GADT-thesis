@@ -22,6 +22,8 @@ Ltac destruct_const_len_list :=
 
 Ltac binds_inv :=
   match goal with
+  | H: binds ?x ?a empty |- _ =>
+    apply binds_empty_inv in H; contradiction
   | H: binds ?x ?a ?E |- _ =>
     binds_cases H;
     try match goal with
@@ -29,8 +31,6 @@ Ltac binds_inv :=
           apply binds_empty_inv in H; contradiction
         end;
     subst
-  | H: binds ?x ?a empty |- _ =>
-    apply binds_empty_inv in H; contradiction
   | |- ?x \notin \{ ?y } =>
     apply* notin_inverse
   end.
@@ -70,3 +70,33 @@ Export Infrastructure. (* TODO only the gathering parts, should be split out *)
 Inductive evals : trm -> trm -> Prop :=
 | eval_step : forall a b c, a --> b -> evals b c -> evals a c
 | eval_finish : forall a, evals a a.
+
+Ltac autotyper1 :=
+  repeat progress (
+           cbn;
+           match goal with
+           | [ H: False |- _ ] => false*
+           | [ |- ok ?A ] => econstructor
+           | [ |- okt ?A ?B ?C ] => econstructor
+           | [ |- binds ?A ?B ?C ] => solve_bind
+           | [ |- ?A \notin ?B ] => simpl_dom; notin_solve; try (apply notin_singleton)
+           | [ |- typing ?A ?B ?C ?D ?E ] => econstructor
+           | [ |- forall x, x \notin ?L -> ?P ] =>
+             let free := gather_vars in
+             let x' := fresh "x" in
+             let xiL := fresh "xiL" in
+             intros x' xiL; intros;
+             try instantiate (1 := free) in xiL
+           | [ |- okGadt empty ] => econstructor
+           | [ |- wft ?A ?B ?C ] => econstructor
+           | [ |- value ?A ] => econstructor
+           | [ |- term ?A ] => econstructor
+           | [ |- type ?A ] => econstructor
+           | [ H: binds ?A ?B ?C |- _ ] => binds_inv
+           | [ |- ?A /\ ?B ] => split
+           | [ H: {| Tarity := ?A; Tconstructors := ?B |} = ?C |- _ ] =>
+             inversions H
+           | [ H: ?A \/ ?B |- _ ] => destruct H
+           | _ => intros; auto
+           end;
+           cbn; subst).
