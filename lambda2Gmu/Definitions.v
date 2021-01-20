@@ -1,8 +1,15 @@
 (***************************************************************************
-* Adapted from Locally Nameless tutorials
+* Lambda_{2G\mu} calculus formalisation
+* Based on the paper Guarded Recursive Datatype Constructors by Xi et al.
 ***************************************************************************)
 
 (**
+
+Author: Radosław Waśko
+
+The approach is inspired by Locally Nameless Representation
+and it has been created by adapting and extending LN tutorials an a SystemFSub formalization from
+https://www.chargueraud.org/viewcoq.php?sFile=softs%2Fln%2Fsrc%2FFsub_Definitions.v
 
 Original tutorial was made by authors of:
   Engineering Formal LibLN
@@ -15,14 +22,11 @@ and its follow-up journal version:
    Arthur Charguéraud
    Journal of Automated Reasoning (JAR), 2011.
 
-It also reused material prepared for the POPL'08 tutorial:
+which also reused material prepared for the POPL'08 tutorial:
 
   "How to write your next POPL paper in Coq"
   organized by B. Aydemir, A. Bohannon, B. Pierce, J. Vaughan,
   D. Vytiniotis, S. Weirich, S. Zdancewic
-
-It is also highly inspired by formalization of SystemFSub by Charguéraud: https://www.chargueraud.org/viewcoq.php?sFile=softs%2Fln%2Fsrc%2FFsub_Definitions.v
-
 
 *)
 
@@ -34,43 +38,46 @@ Require Import Coq.Init.Nat.
 Import List.ListNotations.
 Require Import Zip.
 
-
 Inductive DistinctList : list var -> Prop :=
 | distinctive_empty : DistinctList []
 | distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (h :: t).
 
-(** * Types *)
-
+(* GADTName is a separate syntactic category for identyfing GADT type names in opposition to variables and type variables. *)
 Definition GADTName : Set := var.
-(* I think it's ok to use the same name set for GADT types,
-they are always in a distinct syntactic form, so we can distinguish the two uses and softswe don't even have to care if a varaible and GADT type names overlap because they are syntactically distinguished *)
 
 (* See definition below.
 We define a GADT in the env as a type with a list of constructors
-Each constructor is thus identified by its base typename and its index on that list
+Each constructor is thus identified by its base typename and its index on that list, instead of a regular name.
 *)
 Definition GADTConstructor : Set := (GADTName * nat).
 
 (* We will maintain a separate set of DeBruijn indices - one for type variables and one for term variables
 So a term Λa. λx: ∀α. Unit. x[a] will be translated to
-Λ#. λ#: ∀#. Unit. #0[#0] where #0 at term-level refers to λ and #0 at typelevel refers to Λ
+Λ@. λ#: ∀@. Unit. #0[@0] where #0 at term-level refers to λ and @0 at typelevel refers to Λ
 *)
 
 (* pre-type-terms *)
 Inductive typ : Set :=
+(* bound type variables, identified by De Bruijn indices *)
 | typ_bvar   : nat -> typ
+(* free type variables (should be bound in an enclosing environment), identified by name - var *)
 | typ_fvar   : var -> typ
+(* unit type - 1*)
 | typ_unit   : typ
+(* tuple type - T ** U *)
 | typ_tuple  : typ -> typ -> typ
+(* function type - T ==> U *)
 | typ_arrow  : typ -> typ -> typ
+(* type abstraction - ∀. T *)
 | typ_all  : typ -> typ
+(* a GADT - [T1, ..., Tn] GT - T1 to Tn are its type arguments and GT is the GADTName *)
 | typ_gadt  : (list typ) -> GADTName -> typ
 .
 
 Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49, right associativity).
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49).
-(* Notation "∀( T )" := (typ_all T) (at level 49). *)
 
+(* An induction principle for pre-types that allows to correctly handle induction over type lists in GADTs *)
 Section typ_ind'.
   Variable P : typ -> Prop.
   Hypothesis typ_bvar_case : forall (n : nat), P (typ_bvar n).
@@ -103,13 +110,27 @@ Section typ_ind'.
     | typ_all t1 => typ_all_case (typ_ind' t1)
     | typ_gadt tparams name => typ_gadt_case name (list_typ_ind tparams)
     end.
-
 End typ_ind'.
 
-(** * Terms *)
+(*
+To make examples more concrete we will be using the following GADT definition as an example:
+enum Expr[A] {
+   case LitInt(x: Int) extends Expr[Int]
+   case LitStr(x: String) extends Expr[String]
+   case Plus(p: (Expr[Int], Expr[Int])) extends Expr[Int]
+   case Pair[X,Y](p: (Expr[X], Expr[Y])) extends Expr[(X, Y)]
+}
 
+or in Haskell:
+data Expr a =
+| LitInt : Int -> Expr Int
+| LitStr : String -> Expr String
+| Plus : Expr Int -> Expr Int -> Expr Int
+| Pair : Expr x -> Expr y -> Expr (x * y)
+*)
 
-(* I propose a simple rewrite of original syntax:
+(*
+I propose a simple rewrite of original syntax (it is described in more detail in documentation):
 since we assume all matches are exhaustive, instead of specifying the GADT name in each branch and specifying which constructor we refer to,
 we specify inside of the *match* which GADT we plan to match and then
 each case corresponds to consecutive constructors:
@@ -145,39 +166,116 @@ TODO: or is type translation order in reverse?
 
 (* pre-terms *)
 Inductive trm : Set :=
+(* bound variables, identified by De Bruijn indices *)
 | trm_bvar : nat -> trm
+(* free variables (should be bound in an enclosing environment), identified by name - var *)
 | trm_fvar : var -> trm
+(* GADT constructor application
+   it creates an instance of the GADT type by applying a list of types and a term to the constructor
+   C [T1, ..., Tn] e
+   where
+   C is the name of the constructor, in our case a tuple of (GADTName, constructor id)
+   (but in the examples we will use names of constructors instead of these numeric identifiers, for readability)
+   T1, ..., Tn are the types applied to the constructor
+
+   the types T1, ..., Tn will determine the types of the resulting GADT type but are not necessarily equal to it
+   for example, we can create a pair of int and string literals as follows:
+   Pair[Int, String]((LitInt(42), LitString("foo"))) : Expr[(Int, String)]
+   or in our language
+   let p1 : [Int] Expr = LitInt[] 42 in -- here LitInt has an empty list of constructor type parameters and that uniquely identifies that the resulting GADT has exactly one type parameter equal to Int
+   let p2 : [String] Expr = LitStr[] "foo" in
+   let p : [Int] Expr ** [String] Expr = <p1, p2> in
+   Pair[Int, String] p : [Int ** String] Expr
+   -- and here we apply two type parameters to the constructor - Int and String and the proper value and as a result we get an instance of Expr GADT with a single type parameter that is a tuple Int ** String
+*)
 | trm_constructor : (list typ) -> GADTConstructor -> trm -> trm
+(* the only value of type unit - <> *)
 | trm_unit : trm
+(* creates a tuple - <t1, t2> *)
 | trm_tuple : trm -> trm -> trm
+(* gets the first element from the tuple - fst <t1, t2> = t1 *)
 | trm_fst : trm -> trm
+(* gets the second element from the tuple - snd <t1, t2> = t2 *)
 | trm_snd : trm -> trm
+(* lambda abstraction - λ#: T. e * where in e the first De Bruijn index #0 is bound to the variable of type T introduced by this lambda *)
 | trm_abs  : typ -> trm -> trm
+(* function application *)
 | trm_app  : trm -> trm -> trm
+(* type abstraction - Λ@. e where in e the first type-level De Bruij index @0 is bound to a type variable introduced by this abstraction *)
 | trm_tabs : trm -> trm
+(* type application, (Λ@. e) [T] will yield e in which the index @0 has been replaced by T *)
 | trm_tapp : trm -> typ -> trm
+(* the fixpoint operator - fix #: T. e
+can be used for recursion, for example
+fix #: 1 ==> 1. λ#: 1. @1 @0
+which is equivalent to
+fix f: 1 ==> 1. λx: 1. f x which creates a function that once applied to an unit will loop
+ *)
 | trm_fix : typ -> trm -> trm
 (* | trm_matchunit *)
-(* | trm_matchtuple ( these two add nothing interesting, they may be kept for completeness) *)
+(* | trm_matchtuple ( these two add nothing interesting, so they were removed) *)
+(* pattern matching over a GADT
+   the syntactic changes have been explained above, so now I will just include an example:
+   let's write an eval function:
+   def eval[A](e: Expr[A]): A = e match {
+       case LitInt(i) => i
+       case LitStr(s) => s
+       case Plus(p) => eval[Int](p._1) + eval[Int](p._2)
+       case Pair[X,Y](p) =>
+            val x = eval[X](p._1)
+            val y = eval[Y](p._2)
+            (x, y)
+   }
+
+   which in our language will be:
+   eval e = match e of type Expr with
+   | LitInt[](i) => i
+   | LitStr[](s) => s
+   | Plus[](p) => eval[Int](fst p) + eval[Int](snd p)
+   | Pair[X, Y](p) => <eval[X](fst p), eval[Y](snd p)>
+
+which will become the following when we replace names with order of clauses:
+   eval e = match e of type Expr with
+   | [0] => #0
+   | [0] => #0
+   | [0] => eval[Int](fst #0) + eval[Int](snd #0)
+   | [2] => <eval[@1](fst #0), eval[@0](snd #0)> -- TODO: ORDER OF TYVARS
+as we can see in the new formulation each clause consists of just two things -
+  the expression on the right and the number indicating how many type variables are bound in that expression
+the name of the constructor is inferred from its position in the match (so first constructor is the first ctor from definition, LitInt etc.)
+the names of type parameters are consecutive type-level DeBruijn indices @0, @1, ... up to the arity indicated in the clause
+the name of the variable is just #0
+
+Actually, the arity of the constructor could theoretically be skipped because it can be inferred unambigously form Σ, but we want simple syntactic operations like type opening to work without knowing the actual environment, thus we wanted to preserve this information.
+
+Another note is that this changed syntax **does not add** anything new:
+as soon as we assume exhaustivity, that is equivalent to the original syntax
+- the constructor arities are determined by the amount of type variables bound in the original syntax
+- the name/identifier of the GADT that is matched is also unambiguous, because a well-formed match will contain constructors only belonging to a single GADT (otherwise it would fail to typecheck) and so we can just check which GADT the first constructor name belongs to.
+The only difference is that the new syntax is a bit more 'strict' - it will reject some ill-typed programs that the old syntax would accept (but it is equivalent on well-typed programs). That seems to be a very minor change, especially as the check of pattern match constructor homogenity is very simple.
+*)
 | trm_matchgadt : trm -> GADTName -> (list Clause) -> trm
+(* let # = e1 in e2 makes e1 bound to #0 in e2, equivalent of let x = e1 in e2 *)
 | trm_let : trm -> trm -> trm
 with
-(* Clause : Set := *)
-(* | clause (c: GADTConstructor) (e: trm) *)
-Clause : Set :=
+  Clause : Set :=
+  (* pattern match clause, see above *)
 | clause (clArity : nat) (e : trm)
 .
 
+(* A helper function to extract arity of a clause - i.e. the amount of type variables that are bound in its term. *)
 Definition clauseArity (c : Clause) : nat :=
   match c with
   | clause n _ => n
   end.
 
+(* A helper function to extract the clause's term. *)
 Definition clauseTerm (c : Clause) : trm :=
   match c with
   | clause _ t => t
   end.
 
+(* An induction principle for terms that allows correctly handle induction over the list of clauses *)
 Section trm_ind'.
   Variable P : trm -> Prop.
   Hypothesis trm_bvar_case : forall (n : nat), P (trm_bvar n).
@@ -235,8 +333,6 @@ Section trm_ind'.
   | trm_let e1 e2 => trm_let_case (trm_ind' e1) (trm_ind' e2)
     end.
 End trm_ind'.
-
-(** * Sizes *)
 
 Fixpoint sum (ls : list nat) : nat :=
   match ls with
