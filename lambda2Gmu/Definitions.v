@@ -538,6 +538,17 @@ Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ
 Definition open_te_many_var (args : list var) (e : trm) := open_te_many (map typ_fvar args) e.
 
 (** * Free Variables *)
+(* Free variables are the fvars which should be bound in some enclosing environments.
+   As De Bruijn indices are used only for bound variables and a correct type/term must have all De Bruijn indices bound, only the fvars can contribute to free variables *)
+(*
+When computing free variables we mix-up term and type variables.
+This may seem erroneous at first, but it is not a problem.
+First we could imagine that the used variables come from different universes and can always be distinguished.
+But an even easier explanation is:
+we use the free variables solely for the purpose of instantiating new fresh variables that do not conflict with anything else
+if we instantiate a fresh type variable, if it is fresh from some value-variables, it is not a problem.
+Yes, it could never collide with them anyway, but if it is even 'more fresh' that does not introduce any issues.
+*)
 
 Fixpoint fv_typ (T : typ) {struct T} : vars :=
   match T with
@@ -555,8 +566,6 @@ Fixpoint fv_typs (Ts : list typ) : fset var :=
   | nil => \{}
   | cons Th Tts => fv_typ Th \u fv_typs Tts
   end.
-
-(* TODO shall we differentiate free type and term variables? *)
 
 Lemma fv_typs_migration : forall Ts Z,
     fv_typs Ts \u Z =
@@ -592,6 +601,8 @@ Fixpoint fv_trm (e : trm) {struct e} : vars :=
 
 
 (** * Closed types and terms; and values *)
+
+(* A type or term is closed if all its De Bruijn indices are bound. It may still contain free variables in terms of fvars. *)
 
 Inductive type : typ -> Prop :=
   | type_var : forall X,
@@ -734,15 +745,14 @@ Some raw ideas:
 
 (** * Context *)
 
-(* TODO: move bind_typ to separate env Δ *)
-
+(* TODO we can abandon this left-over middleware type and just use typ in env directly *)
 Inductive bind : Set :=
 | bind_var : typ -> bind.
 
-(* Notation "'withtyp' X" := (X ~ bind_typ) (at level 31, left associativity). *)
 Notation "x ~: T" := (x ~ bind_var T) (at level 27, left associativity).
 
 Unset Implicit Arguments.
+(* The context Γ mapping variables to their types *)
 Definition ctx := env bind.
 
 (** * Substitution *)
@@ -821,7 +831,6 @@ Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
   end.
 
 
-(** * Well-formed types *)
 (* (TODO clarify) In pDOT there is no such notion as a type is well formed if it is used in a typing judgement.
 But this language requires it, because like in System F we have type-abstractions and type-applications.
 In type-application we need a way to ensure that the type is well-formed.
@@ -840,6 +849,8 @@ Inductive typctx_elem : Set :=
 | tc_var (A : var)
 | tc_eq (eq : type_equation).
 
+(* Type conte Δ
+   it contains available type variables and type equations that should hold *)
 (* we keep the elements in reverse order, i.e. the head is the last added element *)
 Definition typctx := list typctx_elem.
 Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
@@ -857,6 +868,15 @@ Fixpoint domΔ (Δ : typctx) : fset var :=
 Definition fv_env (E : ctx) : fset var :=
   List.fold_right (fun p acc => match snd p with bind_var T => fv_typ T \u acc end) \{} E.
 
+(** * Well-formed types *)
+(* A type is well formed if:
+- it is closed
+- all its type variables are present in the environment Δ
+- if it is a GADT type, its name is present in the environment Σ and its amount of type parameters is the same as arity of that GADT
+
+In the paper that is noted as Δ ⊢ T : *
+(Σ is always implicit in the paper)
+*)
 Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
 | wft_unit : forall Σ Δ,
     wft Σ Δ typ_unit
@@ -882,7 +902,8 @@ Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
     wft Σ Δ (typ_gadt Tparams Name)
 .
 
-Definition alpha_equivalent (T U : typ) : Prop := T = U. (*Thanks to usage of de Bruijn indices, alpha equivalence reduces to plain equivalence *)
+(*Thanks to usage of de Bruijn indices, alpha equivalence reduces to plain equivalence *)
+Definition alpha_equivalent (T U : typ) : Prop := T = U.
 
 Fixpoint subst_tt' (T : typ) (Θ : substitution) :=
   match Θ with
@@ -901,10 +922,17 @@ Fixpoint subst_tt' (T : typ) (Θ : substitution) :=
 (*   | typ_all T1 => typ_all (subst_tt Z U T1) *)
 (*   | typ_gadt Ts Name => typ_gadt (map (subst_tt Z U) Ts) Name *)
 (*   end. *)
+
+(*
+Substitution matching a type context, noted in the paper as ⊢ Θ : Δ.
+It roughly means that the domain of the substitution is the same as free variables in Δ
+and that the codomain is types without free variables
+and that for each type equation, both sides are alpha equivalent after applying that substitution.
+*)
 Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
 | tc_empty : subst_matches_typctx Σ [] []
 | tc_add_var : forall Θ Δ A T,
-    wft Σ Δ T -> (* TODO this most likely should be emptyΔ *)
+    wft Σ emptyΔ T ->
     subst_matches_typctx Σ Δ Θ ->
     subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
 | tc_add_eq : forall Θ Δ T1 T2,
@@ -912,6 +940,9 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
     alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ) ->
     subst_matches_typctx Σ (tc_eq (T1 ≡ T2) :: Δ) Θ.
 
+(* Semantic entailment of a set of equations, noted in the paper as Δ ⊨ T1 ≡ T2.
+   It is defined such that an equation is entailed by Δ if for each substitution matching delta, both sides of that equation are alpha equivalent after applying that substitution.
+ *)
 Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
   match eq with
   | T1 ≡ T2 =>
@@ -921,11 +952,6 @@ Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
 
 (** * Well-formedness of the GADT definitions and the envionment *)
 
-(* Fixpoint add_types (Δ : typctx) (args : list var) := *)
-(*   match args with *)
-(*   | [] => Δ *)
-(*   | Th :: Tts => add_types (Δ |,| [tc_var Th]) Tts *)
-(*   end. *)
 Definition tc_vars (Xs : list var) : typctx :=
   List.map tc_var Xs.
 
