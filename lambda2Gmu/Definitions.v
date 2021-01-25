@@ -950,35 +950,66 @@ Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
          alpha_equivalent (subst_tt' T1 Θ) (subst_tt' T2 Θ)
   end.
 
-(** * Well-formedness of the GADT definitions and the envionment *)
-
+(* a shorthand allowing to define a list of free vars in Δ *)
 Definition tc_vars (Xs : list var) : typctx :=
   List.map tc_var Xs.
 
+(** * Well-formedness of the GADT definitions and the envionment *)
+
+(* Well-formedness of a single GADT constructor, see also okGadt.
+
+We check the well-formedness of a single constructor in the context of the whole Σ.
+In this way the definition is recursive - the constructor itself can refer to other constructors or itself, because it has the whole Σ available.
+
+To better illustrate the conditions, let's see how the following constructor behaves:
+case Pair[B,C](x: (B, C)) extends Expr[(B,C)]
+or in Haskell: Pair (B * C) -> Expr (B * C)
+or in the notation from the paper: ∀[B,C]. (B*C) -> [B*C] Expr
+The constructor itself has two type parameters (existential types) and it creates a GADT that has a single type parameter.
+If we match an [A]Expr with Pair[B,C] we will get a type equation A =:= B*C.
+ *)
 Inductive okConstructorDef : GADTEnv ->  nat -> GADTConstructorDef -> Prop :=
 (* TODO are these conditions enough? *)
 | ok_constr_def : forall Tarity Carity argT Σ retTs,
-    (* TODO the L may need to be moved inside the Alphas-props *)
+    (* First we need to ensure that the length of the parameter list of the returned GADT is equal to that GADT's arity - if Expr has arity 1, we need exactly one type parameter in the result, in our case the [B*C]. *)
     length retTs = Tarity ->
-    (forall Alphas L Δ,
-        DistinctList Alphas ->
-        length Alphas = Carity ->
-        (forall alpha, In alpha Alphas -> alpha \notin L) ->
-        wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas argT)
+
+    (* now, we ensure that the argument type is well formed: *)
+    (forall Alphas L Δ, (* we instantiate fresh (from ctx L) type variables for the type parameters, in our case these are: B, C (but we get fresh names) *)
+        DistinctList Alphas -> (* We instantiate a set of fresh variables for all the type parameters of our constructors - the existential variables.
+                                 They are existential, because when constructing the GADT they can be selected arbitrarily (however their choice impacts the type of constructed GADT) and once we are matching against a GADT we only know that these type names are *some* types and that they satisfy the type equations we got, we know only that there are some types that satisfy these equations and we do not know anything more about them.
+                               *)
+        length Alphas = Carity -> (* of course the amount of these fresh type names for type parameters we instantiate must be equal to the arity of the constructor *)
+        (forall alpha, In alpha Alphas -> alpha \notin L) -> (* the freshness requirement as usual *)
+        wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas argT) (* finally we specify that the constructor, once opened with these fresh type variables, must be a well formed type in every context delta (??? *** ???), since Δ can be empty, this constructor cannot have any more free variables other than its type parameters; that is to ensure that the GADT constructors are well formed in every possible environment *)
+            (* in our example, we have two type parameters: B, C and the typ argument is @0 ** @1 which after opening resolves to B ** C;
+               it is of course well formed in a Δ-env that has B and C as type variables and has no other free variables *)
+
+            (* *** NOTE: actually I think this Δ can just be empty and we can then use typing weakening, TODO try fixing that *)
     ) ->
-    (forall Alphas L Δ,
+    (forall Alphas L Δ, (* we do completely analogusly for the type parameters of the returned GADT *)
         DistinctList Alphas ->
         length Alphas = Carity ->
         (forall alpha, In alpha Alphas -> alpha \notin L) ->
         (forall retT,
             In retT retTs ->
+            (* each returned type must be well formed, i.e. it must be a good type only referring to the type parameters *)
             wft Σ (Δ |,| tc_vars Alphas) (open_tt_many_var Alphas retT))
+          (* in our case we have one returned type parameter which takes two type variables (B, C as always) as arguments; the returned type is @0 ** @1 or after opening, B ** C *)
     ) ->
-    fv_typ argT = \{} ->
-    (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* the types have no free variables, but can of course reference other GADTs since these are not counted as free vars *)
-    (* this is a peculiar situation because normally the de bruijn type vars would be bound to a forall, but here we can't do that directly, we don't want to use free variables either, maybe a separate well formed with N free type vars judgement will help? *)
+    (* Since the type parameters are handled as DeBruijn indices, the raw types of the argument and returned parameters should have no free variables - the only free variables they do have are the type parameters.
+       This is the only place where we use DeBruijn indices not inside some explicit binder - these types are not closed in De Bruijn (`type` predicate) sense. But they are implicitly closed, because knowing the constructor definition, they can only be used after they are oppened with the right amount of free type variables, as defined abowe with wft.
+       The types have no free variables, but they can refer to other GADTs - that is because GADT names are handled separately and we check the wft in context of the environment Σ - that ensures that only GADTs defined in that environment and no other are allowed.
+     *)
+    fv_typ argT = \{} -> (* fv_typ (@0 ** @1) = empty *)
+    (forall rT, List.In rT retTs -> fv_typ rT = \{}) -> (* same as above *)
     okConstructorDef Σ Tarity (mkGADTconstructor Carity argT retTs).
 
+(* okGadt defines that the whole Σ env is well formed, it checks that the defined GADTs have unique names and each of their constructors is well formed.
+
+One unusual requirement is that the GADT should actually have at least one constructor, that was because if there are no GADT constructors it is impossible to correctly typecheck the pattern match.
+The original paper did not explicitly state this requirement; technically it could be revised, because we could try proving that we can never actually create a value of a GADT with no constructors (it is an empty type, like bottom or False). This however is not the main scope of this whole work (as we want to be translating GADTs into Scala which simply has a builtin bottom type), so for now it is ignored and we assume that the GADTs must have some constructors.
+ *)
 Definition okGadt (Σ : GADTEnv) : Prop :=
   ok Σ /\
   forall Name Arity Defs,
@@ -988,21 +1019,13 @@ Definition okGadt (Σ : GADTEnv) : Prop :=
         In Def Defs ->
         okConstructorDef Σ Arity Def).
 
-(* Inductive okGadt : GADTEnv -> Prop := *)
-(* | okg_empty : okGadt empty *)
-(* | okg_push : forall Σ Defs Name arity, *)
-(*     okGadt Σ -> *)
-(*     Name # Σ -> *)
-(*     (forall Def, *)
-(*         In Def Defs -> *)
-(*         okConstructorDef (Σ & Name ~ (GADT arity Defs)) arity Def) -> *)
-(*     okGadt (Σ & Name ~ GADT arity Defs) *)
-(* . *)
-
 (* This seems to not be enforced in the paper, at least explicitly, and indeed maybe it is not necessary - in practice we will only add wft types, but for the equations that does not seem to matter *)
 (* Definition oktypctx (Σ : GADTEnv) (Δ : typctx) : Prop := *)
 (*   (forall T1 T2, (T1 ≡ T2) \in (Δeqs Δ) -> wft Σ Δ T1 /\ wft Σ Δ T2). *)
 
+(* well formedness of the typing environment
+   Currently we check that the bindings of variables to their types is unique and that the bound types are well formed in their earlier environment
+ *)
 Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
 | okt_empty : forall Σ Δ,
     okGadt Σ ->
@@ -1027,16 +1050,17 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
 | typing_var : forall Σ E Δ x T,
     binds x (bind_var T) E ->
     okt Σ Δ E ->
-    {Σ, Δ, E} ⊢ (trm_fvar x) ∈ T
+    {Σ, Δ, E} ⊢ (trm_fvar x) ∈ T (* x: T ⊢ x: T *)
 | typing_cons : forall Σ E Δ Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
-    {Σ, Δ, E} ⊢ e1 ∈ Targ ->
-    binds Name (mkGADT Tarity Ctors) Σ ->
-    nth_error Ctors Ctor = Some (mkGADTconstructor Carity CargType CretTypes) ->
-    length Ts = Carity ->
-    Targ = open_tt_many Ts CargType ->
-    (forall T, In T Ts -> wft Σ Δ T) ->
+    (* to typecheck the constructor: *)
+    {Σ, Δ, E} ⊢ e1 ∈ Targ -> (* we need to typecheck its only data parameter - its typ must match the argument type (see below) *)
+    binds Name (mkGADT Tarity Ctors) Σ -> (* the GADT called `Name` that we are building must be bound in the Σ env and we check its constructors and arity *)
+    nth_error Ctors Ctor = Some (mkGADTconstructor Carity CargType CretTypes) -> (* we specify that we construct the constructor with id Ctor, so we need to check that such constructor really exists and get its definition from the Ctors list *)
+    length Ts = Carity -> (* the amount of concrete type parameters that we are instantiating the constructor with must be equal to the constructor's arity *)
+    Targ = open_tt_many Ts CargType -> (* the argument type must be equal to the argument type as defined in the constructor, opened with the concrete types we use in this instance *)
+    (forall T, In T Ts -> wft Σ Δ T) -> (* the concrete type parameters that we are instantiating the constructor with must be well formed in the current environment *)
     (* alternatively: Tret = open_tt_many (typ_gadt (List.map (fun T => open_tt_many T Ts) CretTypes) Name) Ts -> *)
-    Tret = open_tt_many Ts (typ_gadt CretTypes Name) ->
+    Tret = open_tt_many Ts (typ_gadt CretTypes Name) -> (* as with the argument, the types that will be in the type of the returned GADT must also be opened with the type parameters *)
     {Σ, Δ, E} ⊢ trm_constructor Ts (Name, Ctor) e1 ∈ Tret
 | typing_abs : forall L Σ Δ E V e1 T1,
     (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢ e1 open_ee_var x ∈ T1) ->
@@ -1053,7 +1077,7 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
     {Σ, Δ, E} ⊢ (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ Δ E e1 T1 T T',
     {Σ, Δ, E} ⊢ e1 ∈ typ_all T1 ->
-    wft Σ Δ T ->
+    wft Σ Δ T -> (* corresponds to the check `Δ; Γ ⊢ τ1 : *` *)
     T' = open_tt T1 T ->
     {Σ, Δ, E} ⊢ trm_tapp e1 T ∈ T'
 | typing_tuple : forall Σ Δ E T1 T2 e1 e2,
@@ -1075,31 +1099,43 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
     (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢ e2 open_ee_var x ∈ T2) ->
     {Σ, Δ, E} ⊢ trm_let e1 e2 ∈ T2
 (* typing case merges rules ty-case and pat-cons from the original paper *)
-(* TODO add an example, for example using Expr showing how this applies *)
+(* for example, let's see we are typing the match as in the eval function defined above; since there are many branches, we will look at the Pair branch in particular *)
 | typing_case : forall L Σ Δ E e ms Ts T Name Tc Tarity Defs,
-    {Σ, Δ, E} ⊢ e ∈ T ->
-    T = (typ_gadt Ts Name) ->
-    binds Name (mkGADT Tarity Defs) Σ ->
-    length Defs = length ms -> (* implicit exhaustivity check *)
-    (* we use zip instead of Forall2 to get better induction for free, but can rephrase it as needed using equivalence thm  *)
+    {Σ, Δ, E} ⊢ e ∈ T -> (* first we need to typecheck the expression that we will be matching, in our eval example it is the argument that we are matching *)
+    T = (typ_gadt Ts Name) -> (* for the match to work, that expression must be a GADT and its name must match the one that is provided in the syntax, in our example `Expr` *)
+    binds Name (mkGADT Tarity Defs) Σ -> (* that GADT must be bound in our Σ environment *)
+    length Defs = length ms -> (* implicit exhaustivity check: our pattern match must have as many branches as the GADT we are matching has constructors since we have a 1-1 correspondence between branches and constructors; in our case there are 4 branches *)
+
+    (* we use zip instead of Forall2 to get better induction for free, but can rephrase it as needed using equivalence theorems *)
     (forall def clause, In (def, clause) (zip Defs ms) ->
-                   (* this is because in pat-cons alphas of same length is in c[...] (clauseArity) and forall ... (def Carity) *)
+                   (* we need to make sure that the arity defined in the syntax actually matches the arity of the respective constructor,
+                      in our example we check that the match brings two type variables [X,Y] and the arity of the Pair constructor is 2 *)
                    clauseArity clause = Carity def) ->
-    (forall def clause, In (def, clause) (zip Defs ms) ->
+    (forall def clause, In (def, clause) (zip Defs ms) -> (* now, for each pair of: constructor definition + a clause matching that constructor, we check the actual important properties: *)
                forall Alphas x,
-                 length Alphas = Carity def ->
+                 length Alphas = Carity def -> (* since we instantiate the type variables, we need to ensure that the added type variables amount is equalt to the arity *)
+                 (* below follow multiple freshness conditions that boil down to: Alphas and x are fresh and mutually distinct *)
                  DistinctList Alphas ->
                  (forall A, In A Alphas -> A \notin L) ->
                  x \notin L ->
-                 x \notin from_list Alphas -> (* Alphas are distinct but also x is not part of them *)
+                 x \notin from_list Alphas ->
                  (* TODO for now we do not have add the type equalities, without them the existential tpes are mostly useless; will be added in next iteration
                     TODO add to judgement type equality of (open_tt_many_var Alphas Crettypes) == Ts
                   *)
+                 (* finally we check if the term of the clause/branch, opened with the added existential type variables and opened with the one variable whose type is aligned with the type that the respective constructor accepts, is well typed and typechecks to some type Tc; that type Tc is important because it is the same for all branches - the return type must be the same for every branch *)
+                 (*
+                   in our example, we check that the expression
+                   <eval[@0](fst #0), eval[@1](snd #0)> typechecks to A
+                   opening the term with fresh type variables [X, Y] and variable e whose type is: [X]Expr ** [Y]Expr yields
+                   <eval[X](fst e), eval[Y](snd e)> and we want it to typecheck to A
+                   fst e is [X]Expr, so eval typechecks and returns X, analogously for the second one, so our branch typechecks to X ** Y
+                   but we also have the equality X**Y =:= A so we will be able to replace that X**Y with A using ty_eq
+                  *)
                  { Σ,
-                   (Δ |,| tc_vars Alphas),
-                   (* Ts === Crettypes def; |,| List.zipWith tc_eq Ts (Crettypes def) *)
+                   (Δ |,| tc_vars Alphas), (* in our example: Alphas = [X,Y] *)
+                   (* Ts === Crettypes def; |,| List.zipWith tc_eq Ts (Crettypes def) *) (* in our example that equation is X ** Y =:= A *)
                    E
-                   & x ~: (open_tt_many_var Alphas (Cargtype def))
+                   & x ~: (open_tt_many_var Alphas (Cargtype def)) (* e: [X]Expr ** [Y]Expr *)
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
             ) ->
     { Σ, Δ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
@@ -1135,10 +1171,16 @@ Inductive red : trm -> trm -> Prop :=
     e' = open_ee v (trm_fix T v) ->
     trm_fix T v --> e'
 | red_match : forall e1 G cid Ts ms Carity Ce e',
-    value (trm_constructor Ts (G, cid) e1) ->
-    nth_error ms cid = Some (clause Carity Ce) ->
-    length Ts = Carity -> (* do we need this additional assumption? seems to be derivable from typing, but maybe better keep it for sanity *)
-    e' = open_ee (open_te_many Ts Ce) e1 ->
+    (* we can proceed with a pattern match of a constructor: *)
+    value (trm_constructor Ts (G, cid) e1) -> (* it must be a computed value *)
+    nth_error ms cid = Some (clause Carity Ce) -> (* we get the branch corresponding to the constructor id encoded inside of the value *)
+    length Ts = Carity -> (* this check will be derivable from typing and since we always execute well typed terms, we could technically skip it *)
+    e' = open_ee (open_te_many Ts Ce) e1 -> (* we open the term of the selected branch with the types and value from the constructor,
+this is still much weaker requirement than original calculus which explicitly checked if v matches the pattern;
+as we got rid of separate matching rules we check that, only partially, implicitly:
+- we check that the GADT name of the matched value and the one in the match are the same
+- we select the branch corresponding to the correct constructor
+- we check that the arity of that branch matches that of the constructor *)
     trm_matchgadt (trm_constructor Ts (G, cid) e1) G ms --> e'
 | ered_app_1 : forall e1 e1' e2,
     e1 --> e1' ->
