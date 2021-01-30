@@ -555,6 +555,7 @@ Proof.
                    | ? ? ? ? ? ? IHval ? IH
                    | ? ? ? ? ? ? ? ? ? ? ? IH
                    |
+                   |
                    ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
@@ -683,7 +684,8 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-Qed.
+  - admit.
+Admitted.
 
 (** The value relation is restricted to well-formed objects. *)
 

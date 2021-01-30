@@ -762,3 +762,22 @@ Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
     destruct B; destruct b; cbn in HA'. fold (fv_env E) in HA'.
     auto.
 Qed.
+
+Lemma subst_ttΘ_fresh : forall Θ T,
+  substitution_sources Θ \n fv_typ T = \{} ->
+  subst_tt' T Θ = T.
+  induction Θ as [| [A U] Θ].
+  - cbn. auto.
+  - introv Fr.
+    cbn in Fr.
+    fold (from_list (List.map fst Θ)) in Fr.
+    fold (substitution_sources Θ) in Fr.
+    rewrite union_distributes in Fr.
+    lets [FrA FrT]: union_empty Fr.
+    cbn.
+    rewrite subst_tt_fresh.
+    + apply~ IHΘ.
+    + eapply empty_inter_implies_notin.
+      * apply FrA.
+      * apply in_singleton_self.
+Qed.

@@ -536,3 +536,46 @@ Ltac fresh_intros :=
       | [ H: ?x \notin ?L |- _ ] =>
         instantiate (1:=envvars) in H
            end.
+
+Lemma union_distributes : forall T (A B C : fset T),
+    (A \u B) \n C = (A \n C) \u (B \n C).
+  intros.
+  apply fset_extens; intros x H.
+  - rewrite in_union.
+    rewrite in_inter in H.
+    destruct H as [HAB HC].
+    rewrite in_union in HAB.
+    destruct HAB.
+    + left.
+      rewrite~ in_inter.
+    + right.
+      rewrite~ in_inter.
+  - rewrite in_union in H.
+    destruct H as [H | H]; rewrite in_inter in H; destruct H;
+      rewrite in_inter;
+      split~; rewrite~ in_union.
+Qed.
+
+Lemma union_empty : forall T (A B : fset T),
+    A \u B = \{} ->
+    A = \{} /\ B = \{}.
+  intros.
+  split;
+    apply fset_extens; intros x Hin;
+      solve [
+          assert (xAB: x \in A \/ x \in B); auto;
+          rewrite <- in_union in xAB;
+          rewrite H in xAB; auto
+        | false* in_empty_inv].
+Qed.
+
+Lemma empty_inter_implies_notin : forall T (x : T) A B,
+    A \n B = \{} ->
+    x \in A -> x \notin B.
+  intros.
+  intro HF.
+  asserts~ AB: (x \in A /\ x \in B).
+  rewrite <- in_inter in AB.
+  rewrite H in AB.
+  apply* in_empty_inv.
+Qed.

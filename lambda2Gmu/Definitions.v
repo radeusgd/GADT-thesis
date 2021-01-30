@@ -954,6 +954,9 @@ Definition entails_semantic Σ (Δ : typctx) (eq : type_equation) :=
 Definition tc_vars (Xs : list var) : typctx :=
   List.map tc_var Xs.
 
+Definition contradictory_bounds Σ Δ :=
+  forall T1 T2, entails_semantic Σ Δ (T1 ≡ T2).
+
 (** * Well-formedness of the GADT definitions and the envionment *)
 
 (* Well-formedness of a single GADT constructor, see also okGadt.
@@ -1147,6 +1150,10 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
             ) ->
     { Σ, Δ, E } ⊢ trm_matchgadt e Name ms ∈ Tc
+| typing_eq : forall Σ Δ E T1 T2 e,
+    { Σ, Δ, E } ⊢ e ∈ T1 ->
+    entails_semantic Σ Δ (T1 ≡ T2) ->
+    { Σ, Δ, E } ⊢ e ∈ T2
 where "{ Σ , Δ , E } ⊢ t ∈ T" := (typing Σ Δ E t T).
 
 (** * Reduction rules (Small-step operational semantics) *)

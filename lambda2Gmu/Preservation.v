@@ -159,7 +159,8 @@ Proof.
     + eauto.
     + repeat rewrite List.app_assoc in *.
       apply IH; auto.
-Qed.
+  - admit.
+Admitted.
 
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var),
@@ -206,7 +207,8 @@ Proof.
         eauto.
       * rewrite equations_have_no_dom; auto.
         apply* equations_from_lists_are_equations.
-Qed.
+  - admit.
+Admitted.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U,
     {Σ, Δ, E} ⊢ u ∈ U ->

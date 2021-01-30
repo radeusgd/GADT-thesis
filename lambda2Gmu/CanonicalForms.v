@@ -4,6 +4,7 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
+(* TODO add assumptions that Δ is not contradictory *)
   (* Ht : {Σ, empty}⊢ trm_constructor Tparams Name e1 ∈ T1 ** T2 *)
 Lemma CanonicalConstructorType : forall Σ Δ E Tparams Name Ctor e1 T,
     {Σ, Δ, E} ⊢ trm_constructor Tparams (Name, Ctor) e1 ∈ T ->
@@ -11,10 +12,11 @@ Lemma CanonicalConstructorType : forall Σ Δ E Tparams Name Ctor e1 T,
     exists Typs, T = typ_gadt Typs Name.
   introv Htyp.
   inversions Htyp.
-  rewrite rewrite_open_tt_many_gadt.
-  eexists.
-  f_equal.
-Qed.
+  - rewrite rewrite_open_tt_many_gadt.
+    eexists.
+    f_equal.
+  - admit.
+Admitted.
 
 Lemma CanonicalConstructorTypeGen : forall Σ Δ E Tparams Ctor e1 T,
     {Σ, Δ, E} ⊢ trm_constructor Tparams Ctor e1 ∈ T ->
@@ -44,8 +46,8 @@ Lemma CanonicalFormTuple : forall Σ Δ E e T1 T2,
     exists v1 v2, e = trm_tuple v1 v2.
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+  (* contradictory_constructor_type. *)
+Admitted.
 
 Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2,
     value e ->
@@ -53,8 +55,8 @@ Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2,
     exists v1, e = trm_abs T1 v1.
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+  (* contradictory_constructor_type. *)
+Admitted.
 
 Lemma CanonicalFormTAbs : forall Σ Δ E e T,
     value e ->
@@ -62,8 +64,8 @@ Lemma CanonicalFormTAbs : forall Σ Δ E e T,
     exists v1, e = trm_tabs v1.
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+  (* contradictory_constructor_type. *)
+Admitted.
 
 Lemma CanonicalFormUnit : forall Σ Δ E e,
     value e ->
@@ -71,8 +73,8 @@ Lemma CanonicalFormUnit : forall Σ Δ E e,
     e = trm_unit.
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+  (* contradictory_constructor_type. *)
+Admitted.
 
 Lemma CanonicalFormGadt : forall Σ Δ E e Ts N,
     value e ->
@@ -80,8 +82,8 @@ Lemma CanonicalFormGadt : forall Σ Δ E e Ts N,
     exists Ts' C v, e = trm_constructor Ts' (N, C) v. (* todo may want to relate Ts' to Ts *)
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
-  rewrite rewrite_open_tt_many_gadt in H8.
-  inversions H8.
-  inversions H12.
-  repeat eexists.
-Qed.
+  (* rewrite rewrite_open_tt_many_gadt in H8. *)
+  (* inversions H8. *)
+  (* inversions H12. *)
+  (* repeat eexists. *)
+Admitted.

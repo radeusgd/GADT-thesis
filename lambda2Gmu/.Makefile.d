@@ -7,9 +7,9 @@ DefinitionsTests.vos DefinitionsTests.vok DefinitionsTests.required_vos: Definit
 Definitions.vo Definitions.glob Definitions.v.beautified Definitions.required_vo: Definitions.v Zip.vo
 Definitions.vio: Definitions.v Zip.vio
 Definitions.vos Definitions.vok Definitions.required_vos: Definitions.v Zip.vos
-Equations.vo Equations.glob Equations.v.beautified Equations.required_vo: Equations.v Definitions.vo
-Equations.vio: Equations.v Definitions.vio
-Equations.vos Equations.vok Equations.required_vos: Equations.v Definitions.vos
+Equations.vo Equations.glob Equations.v.beautified Equations.required_vo: Equations.v Prelude.vo Infrastructure.vo
+Equations.vio: Equations.v Prelude.vio Infrastructure.vio
+Equations.vos Equations.vok Equations.required_vos: Equations.v Prelude.vos Infrastructure.vos
 InfrastructureFV.vo InfrastructureFV.glob InfrastructureFV.v.beautified InfrastructureFV.required_vo: InfrastructureFV.v Prelude.vo
 InfrastructureFV.vio: InfrastructureFV.v Prelude.vio
 InfrastructureFV.vos InfrastructureFV.vok InfrastructureFV.required_vos: InfrastructureFV.v Prelude.vos
