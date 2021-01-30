@@ -1181,6 +1181,24 @@ as we got rid of separate matching rules we check that, only partially, implicit
 - we check that the GADT name of the matched value and the one in the match are the same
 - we select the branch corresponding to the correct constructor
 - we check that the arity of that branch matches that of the constructor *)
+    (* Example:
+       We may be evaluating the following expression:
+       match Pair[U,V](<x,y>) of type Expr with
+             ... (other cases)
+             case Pair[X,Y](p) => <eval[X](fst p), eval[Y](snd p)
+       which reduces to
+       <eval[U](fst <x,y>), eval[V](snd <x,y>)>
+       (so we have substituted X ↦ U, Y ↦ V, p ↦ <x,y>)
+
+       Of course here we skip the complexity of handling the types using De Bruijn indices, so X, Y and p are actually handled by indices; but that is just a detail and it works in the same way as everywhere else.
+       What is more important here is that if we remove some of syntactic sugar, we get:
+       match (trm_constructor [U,V] (Expr, 2) <x,y>) of type Expr with
+            case [branch 0] => ...
+            case [branch 1] => ...
+            case [branch 2, arity 2] => <eval[@0](fst #0), eval[@1](snd #0)>
+       What is important here that Pair was just an abbreviation of (Expr, 2) which means that Pair is the third constructor of type Expr.
+       And thus it matches with the branch of the same index (2).
+     *)
     trm_matchgadt (trm_constructor Ts (G, cid) e1) G ms --> e'
 | ered_app_1 : forall e1 e1' e2,
     e1 --> e1' ->

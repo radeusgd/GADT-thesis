@@ -104,12 +104,6 @@ Ltac crush_eq :=
   | |- context [(?i =? ?j)] => decide_eq i j; eauto
   end.
 
-Goal forall i j, i <> j -> (if i =? j then 1 else 0) = 0.
-  intros.
-  crush_eq.
-  intuition.
-Qed.
-
 (* maybe move strong induction to separate file? *)
 Lemma strong_induction (P : nat -> Prop): (forall m, (forall k, k < m -> P k) -> P m) -> forall n, P n.
   apply Wf_nat.induction_ltof1.

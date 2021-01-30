@@ -80,7 +80,16 @@ Inductive typ_closed_in_surroundings : nat -> typ -> Prop :=
     typ_closed_in_surroundings k (typ_gadt Ts N).
 
 Lemma opening_adds_one : forall T X k n,
+    (* for example, typ_closed_in_surroundings 0 (open_tt_rec 42 (typ_fvar X) (typ_bvar 42))
+       which evaluates to typ_fvar X, so it is open in 0
+       but
+     *)
     typ_closed_in_surroundings n (open_tt_rec k (typ_fvar X) T) ->
+    (*
+      the original term (typ_bvar 42), is not open in 1, so that's why we need k+1 too
+      - this is the case where the maximum binder disappeared in open
+      case n+1 is the case where it was some smaller binder and so the other binders get incremented
+    *)
     typ_closed_in_surroundings (max (S n) (S k)) T.
   induction T using typ_ind'; introv Hc; try solve [inversions Hc; constructor*].
   - cbn in Hc.
@@ -139,30 +148,6 @@ Proof.
   apply Hc.
   - apply* type_closed.
   - lia.
-Qed.
-
-Lemma open_te_rec_term_core : forall e j u i P ,
-  open_ee_rec j u e = open_te_rec i P (open_ee_rec j u e) ->
-  e = open_te_rec i P e.
-Proof.
-  induction e using trm_ind';
-    try solve [intros; simpl in *; inversion H; f_equal*; f_equal*].
-  introv Heq.
-  - rewrite List.Forall_forall in *.
-    cbn. cbn in Heq.
-    f_equal;
-      inversion* Heq.
-    rewrite <- (List.map_id) at 1.
-    apply* List.map_ext_in.
-    intros cl clin.
-    rewrite List.map_map in H2.
-    lets Heqcl: ext_in_map H2 clin.
-    destruct cl.
-    lets* IH: H clin (S j) u (i + clArity) P.
-    cbn in IH.
-    f_equal.
-    apply* IH.
-    inversion* Heqcl.
 Qed.
 
 (* this one describes terms being closed in relation to type-variables, not term-varaibles*)
