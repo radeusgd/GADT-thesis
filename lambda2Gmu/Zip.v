@@ -14,6 +14,19 @@ Section Zip.
   | _, _ => nil
   end.
 
+  Fixpoint zipWith {C} (f : A -> B -> C) la lb : list C :=
+    match la,lb with
+    | a::lla, b::llb => (f a b) :: zipWith f lla llb
+    | _, _ => nil
+    end.
+
+  Lemma zipWithIsMappedZip : forall C (f : A -> B -> C) la lb,
+      zipWith f la lb = map (fun p: A*B => let (a,b) := p in f a b) (zip la lb).
+    induction la; intros; cbn; auto.
+    destruct lb; auto.
+    cbn. f_equal. auto.
+  Qed.
+
   Lemma F2_iff_In_zip : forall la lb,
     Forall2 R la lb <-> (length la = length lb /\ forall a b, In (a,b) (zip la lb) -> R a b).
   Proof.

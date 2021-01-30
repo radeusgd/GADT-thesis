@@ -1040,6 +1040,11 @@ Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
 
 (** * Typing *)
 
+(* A helper function that takes two lists of types and creates a set of equations where types from the first list are equal to corresponding types from the second one.
+ Used mostly to shorten notation. *)
+Definition equations_from_lists Ts Us : typctx :=
+  zipWith (fun U V : typ => tc_eq (U ≡ V)) Ts Us.
+
 Reserved Notation "{ Σ , Δ ,  E }  ⊢ t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
 Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
@@ -1132,8 +1137,11 @@ Inductive typing : GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
                    but we also have the equality X**Y =:= A so we will be able to replace that X**Y with A using ty_eq
                   *)
                  { Σ,
-                   (Δ |,| tc_vars Alphas), (* in our example: Alphas = [X,Y] *)
-                   (* Ts === Crettypes def; |,| List.zipWith tc_eq Ts (Crettypes def) *) (* in our example that equation is X ** Y =:= A *)
+                   (Δ
+                      |,| tc_vars Alphas (* in our example: Alphas = [X,Y] *)
+                      |,| equations_from_lists Ts (Crettypes def)
+                   ),
+                   (* Ts === Crettypes def; in our example that equation is X ** Y =:= A *)
                    E
                    & x ~: (open_tt_many_var Alphas (Cargtype def)) (* e: [X]Expr ** [Y]Expr *)
                  } ⊢ (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc

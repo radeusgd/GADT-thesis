@@ -101,6 +101,66 @@ Lemma okt_weakening_delta : forall Σ D1 D2 E X,
   rewrite dom_concat in FE. rewrite dom_single in FE. auto.
 Qed.
 
+Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
+    okt Σ (D1 |,| D2) E ->
+    okt Σ (D1 |,| [tc_eq eq] |,| D2) E.
+  introv Hokt; gen_eq D': (D1 |,| D2). gen D2.
+  induction Hokt; econstructor; subst; auto using wft_weaken.
+  apply notin_domΔ_eq.
+  rewrite notin_domΔ_eq in H1. destruct H1.
+  split; auto.
+  apply notin_domΔ_eq; split; auto.
+  cbn. auto.
+Qed.
+
+Lemma equations_have_no_dom : forall Deqs,
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    domΔ Deqs = \{}.
+  induction Deqs; cbn; auto; destruct a; intros.
+  - lets HF: H (tc_var A).
+    false~ HF.
+  - apply IHDeqs.
+    intros. auto.
+Qed.
+
+Lemma equations_from_lists_are_equations : forall D Ts Us,
+    D = equations_from_lists Ts Us ->
+    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
+  induction D; cbn; introv Deq Hin; auto.
+  + false.
+  + destruct Ts; destruct Us; cbn; try solve [false].
+    cbn in Deq.
+    inversions Deq.
+    destruct Hin; subst; eauto.
+Qed.
+
+Lemma typing_weakening_delta_eq:
+  forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) eq,
+    {Σ, D1 |,| D2, E} ⊢ u ∈ U ->
+    {Σ, D1 |,| [tc_eq eq] |,| D2, E} ⊢ u ∈ U.
+Proof.
+  introv Typ; gen_eq D': (D1 |,| D2); gen D2.
+  induction Typ; introv EQ; subst;
+    try solve [
+          econstructor; fresh_intros; eauto
+        | econstructor; eauto using okt_weakening_delta_eq; eauto using wft_weaken
+        ].
+  - apply_fresh typing_tabs as Y; auto.
+    lets* IH: H1 Y (D2 |,| [tc_var Y]).
+    repeat rewrite List.app_assoc in IH.
+    apply IH.
+    auto using List.app_assoc.
+  - econstructor; eauto.
+    try let envvars := gather_vars in
+    introv Hin Hlen Hdist Afresh xfreshL xfreshA;
+    instantiate (1:=envvars) in xfreshL.
+    lets IH: H4 Hin Hlen (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)); eauto.
+    + introv Ain. lets*: Afresh Ain.
+    + eauto.
+    + repeat rewrite List.app_assoc in *.
+      apply IH; auto.
+Qed.
+
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var),
     {Σ, D1 |,| D2, E} ⊢ u ∈ U ->
@@ -129,20 +189,40 @@ Proof.
     try let envvars := gather_vars in
     introv Hin Hlen Hdist Afresh xfreshL xfreshA;
     instantiate (1:=envvars) in xfreshL.
-    lets IH: H4 Hin Hlen (D2 |,| tc_vars Alphas); eauto.
+    lets IH: H4 Hin Hlen (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)); eauto.
     + introv Ain. lets*: Afresh Ain.
     + eauto.
     + repeat rewrite List.app_assoc in *.
       apply IH; auto.
       rewrite notin_domΔ_eq; split; auto.
-      apply notin_dom_tc_vars.
-      intro HF.
-      lets HF2: from_list_spec HF.
-      lets HF3: LibList_mem HF2.
-      lets HF4: Afresh HF3.
-      eapply notin_same.
-      instantiate (1:=Y).
-      eauto.
+      * rewrite notin_domΔ_eq; split; auto.
+        apply notin_dom_tc_vars.
+        intro HF.
+        lets HF2: from_list_spec HF.
+        lets HF3: LibList_mem HF2.
+        lets HF4: Afresh HF3.
+        eapply notin_same.
+        instantiate (1:=Y).
+        eauto.
+      * rewrite equations_have_no_dom; auto.
+        apply* equations_from_lists_are_equations.
+Qed.
+
+Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U,
+    {Σ, Δ, E} ⊢ u ∈ U ->
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    {Σ, Δ |,| Deqs, E} ⊢ u ∈ U.
+  induction Deqs; introv Typ EQs.
+  - clean_empty_Δ. auto.
+  - destruct a;
+      try solve [lets HF: EQs (tc_var A); false~ HF].
+    fold_delta.
+    rewrite List.app_assoc.
+    apply typing_weakening_delta_eq.
+    apply* IHDeqs.
+    intros eq1 ?. lets Hin: EQs eq1.
+    destruct Hin; eauto.
+    cbn. auto.
 Qed.
 
 Lemma typing_weakening_delta_many : forall Σ Δ E As u U,
@@ -162,6 +242,24 @@ Lemma typing_weakening_delta_many : forall Σ Δ E As u U,
     apply from_list_spec in HF.
     apply LibList_mem in HF.
     auto.
+Qed.
+
+Lemma okt_weakening_delta_many_eq : forall Σ D1 D2 Deqs E,
+    okt Σ (D1 |,| D2) E ->
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    okt Σ (D1 |,| Deqs |,| D2) E.
+  induction Deqs; introv Hok Heq.
+  - clean_empty_Δ. auto.
+  - destruct a.
+    + lets: Heq (tc_var A); cbn in *; false* Heq; congruence.
+    + fold_delta.
+      rewrite List.app_assoc.
+      rewrite <- (List.app_assoc (D1 |,| [tc_eq eq])).
+      apply okt_weakening_delta_eq.
+      rewrite List.app_assoc.
+      apply IHDeqs; auto.
+      intros eq1 ?. lets Hin: Heq eq1.
+      apply Hin. cbn. auto.
 Qed.
 
 Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
@@ -246,16 +344,22 @@ Proof.
     + rewrite concat_assoc in IHeq3.
       apply IHeq3.
       constructor; auto.
-      * rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas)).
-        apply okt_weakening_delta_many; clean_empty_Δ;
-        try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto.
+      * rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def))).
+        apply okt_weakening_delta_many_eq.
+        -- apply okt_weakening_delta_many; clean_empty_Δ;
+             try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto.
+        -- apply* equations_from_lists_are_equations.
       * lets [Hokt [? ?]]: typing_regular IH2.
         inversions Hokt.
         -- false* empty_push_inv.
         -- lets [? [Heq ?]]: eq_push_inv H6; subst.
            inversions Heq; auto.
-      * apply notin_domΔ_eq. split; auto.
-        apply notin_dom_tc_vars. auto.
+      * apply notin_domΔ_eq.
+        split; auto.
+        -- apply notin_domΔ_eq.
+           split; auto.
+           apply notin_dom_tc_vars. auto.
+        -- rewrite equations_have_no_dom; eauto using equations_from_lists_are_equations.
 Qed.
 
 (* Hint Resolve typing_implies_term wft_strengthen okt_strengthen. *)
@@ -317,7 +421,8 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T,
       lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
       lets* IH: H4 Hzip.
 
-      assert (Htypfin: {Σ, Δ |,| tc_vars Alphas , E & F & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
+      assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def),
+                        E & F & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
                 ⊢ subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
       * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
           [ introv Ain; lets*: Afresh Ain | idtac ].
@@ -330,6 +435,8 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T,
         apply* Htmp3.
         apply JMeq_from_eq.
         eauto using concat_assoc.
+        apply typing_weakening_delta_many_eq;
+          eauto using equations_from_lists_are_equations.
         apply typing_weakening_delta_many; auto;
           try introv Ain; lets: Afresh Ain; auto.
       * assert (Horder:
@@ -341,33 +448,6 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T,
            apply* subst_commutes_with_unrelated_opens_te_ee.
         -- rewrite* <- Horder.
 Qed.
-
-(* Lemma okt_strengthen_2 : forall Σ E Z P F, *)
-(*     wft Σ E P -> *)
-(*     okt Σ (E & (withtyp Z) & F) -> *)
-(*     okt Σ (E & (EnvOps.map (subst_tb Z P) F)). *)
-(*   introv WP O. induction F using env_ind. *)
-(*   - rewrite concat_empty_r in *. lets*: (okt_push_typ_inv O). *)
-(*     rewrite map_empty. *)
-(*     rew_env_concat. eauto. *)
-(*   - rewrite concat_assoc in *. *)
-(*     lets Hinv: okt_push_inv O; inversions Hinv. *)
-(*     + lets (?&?): (okt_push_typ_inv O). *)
-(*       rewrite map_concat. *)
-(*       rewrite map_single. *)
-(*       rewrite concat_assoc. *)
-(*       applys~ okt_sub. *)
-(*     + match goal with *)
-(*       | H: exists T, v = bind_var T |- _ => *)
-(*         rename H into Hexists_bindvar end. *)
-(*       inversions Hexists_bindvar. *)
-(*       lets (?&?&?): (okt_push_var_inv O). *)
-(*       rewrite map_concat. *)
-(*       rewrite map_single. *)
-(*       rewrite concat_assoc. *)
-(*       applys~ okt_typ. *)
-(*       applys* wft_subst_tb. *)
-(* Qed. *)
 
 Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
     okt Σ (Δ |,| [tc_var Z]) E ->
@@ -507,7 +587,8 @@ Proof.
       inversions Hclsubst.
       lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
       lets*: H2 Hzip.
-    + introv inzip.
+    + fold (subst_tt).
+      introv inzip.
       intros Alphas xClause Alen Adist Afresh xfresh xfreshA.
 
       lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
@@ -519,7 +600,7 @@ Proof.
       lets* IH: H4 Hzip.
       cbn in IH.
 
-      assert (Htypfin: {Σ, Δ1 |,| Δ2 |,| tc_vars Alphas,
+      assert (Htypfin: {Σ, Δ1 |,| Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def),
                         map (subst_tb Z P) E &
                            xClause ~ bind_var (subst_tt Z P (open_tt_many_var Alphas (Cargtype def)))}
                          ⊢ subst_te Z P (open_te_many_var Alphas clT' open_ee_var xClause)
@@ -529,10 +610,11 @@ Proof.
         assert (xfreshL: xClause \notin L); eauto.
         lets Htmp: IH Alphas xClause Alen Adist AfreshL.
         lets Htmp2: Htmp xfreshL xfreshA.
-        lets Htmp3: Htmp2 (Δ2 |,| tc_vars Alphas).
+        lets Htmp3: Htmp2 (Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)).
         autorewrite with rew_env_map in Htmp3.
         cbn in Htmp3.
-        rewrite <- List.app_assoc.
+        repeat rewrite <- List.app_assoc in Htmp3.
+        repeat rewrite <- List.app_assoc.
         apply Htmp3; try rewrite List.app_assoc; auto.
         apply* wft_weaken_simple.
       * rewrite (@subst_tt_fresh _ _ (open_tt_many_var Alphas (Cargtype def))) in Htypfin.
@@ -572,7 +654,8 @@ Proof.
             apply HF. apply in_singleton_self.
         }
         rewrite* Horder.
-Qed.
+        admit. (* apply Htypfin. *)
+Admitted.
 
 Ltac IHR e :=
   match goal with
@@ -792,6 +875,7 @@ Theorem preservation_thm : preservation.
       [ idtac | introv Ain; lets*: Afresh Ain ].
 
     apply typing_through_subst_te_many; trivial.
+    + admit.
     + inversions Htyp.
       intros; auto with listin.
     + intros A Ain.
@@ -808,5 +892,5 @@ Theorem preservation_thm : preservation.
       lets: Afresh Ain.
       auto with listin.
     + introv Ain; lets*: Afresh Ain.
-Qed.
+Admitted.
 

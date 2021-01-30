@@ -14,12 +14,22 @@ Ltac fold_delta :=
     | [] => fail 1
     | _ => fold ([tc_var X] ++ As) in H
     end
+  | [ H: context [ (tc_eq ?eq) :: ?As] |- _ ] =>
+    match As with
+    | [] => fail 1
+    | _ => fold ([tc_eq eq] ++ As) in H
+    end
   | [ |- context [List.map tc_var ?As] ] =>
     fold (tc_vars As)
   | [ |- context [ (tc_var ?X) :: ?As] ] =>
     match As with
     | [] => fail 1
     | _ => fold ([tc_var X] ++ As)
+    end
+  | [ |- context [ (tc_eq ?eq) :: ?As] ] =>
+    match As with
+    | [] => fail 1
+    | _ => fold ([tc_eq eq] ++ As)
     end
   end.
 
@@ -127,7 +137,7 @@ Lemma wft_strengthen_typ : forall Σ D1 D2 U T,
     wft Σ (D1 |,| [tc_var U] |,| D2) T -> wft Σ (D1 |,| D2) T.
 Proof.
   introv Ufresh Hwft. gen_eq G: (D1 |,| [tc_var U] |,| D2). gen D2.
-  induction Hwft; intros F EQ; cbn in Ufresh; subst; auto.
+  induction Hwft; intros D2 EQ; cbn in Ufresh; subst; auto.
   - apply* wft_var.
     repeat destruct_in_app;
       unfold is_var_defined; eauto using List.in_or_app.
@@ -137,12 +147,53 @@ Proof.
     | H: forall X, X \notin L -> ?P3 -> forall F0, ?P1 -> ?P2 |- _ =>
       rename H into H_ctxEq_implies_wft end.
     apply_fresh* wft_all as Y.
-    lets* IH: H_ctxEq_implies_wft Y (F |,| [tc_var Y]).
+    lets* IH: H_ctxEq_implies_wft Y (D2 |,| [tc_var Y]).
     + lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0;
         cbn in Hfv; unfold open_tt; rewrite Hfv; eauto.
     + rewrite <- List.app_assoc.
       apply IH. eauto using List.app_assoc.
   - econstructor; eauto.
+Qed.
+
+Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
+    wft Σ (D1 |,| [tc_eq ϵ] |,| D2) T ->
+    wft Σ (D1 |,| D2) T.
+  introv Hwft. gen_eq G: (D1 |,| [tc_eq ϵ] |,| D2). gen D2.
+  induction Hwft; intros D2 EQ; subst; auto.
+  - apply* wft_var.
+    unfold is_var_defined in *.
+    lets [Hin | Hin]: List.in_app_or H.
+    + lets [? | ?]: List.in_app_or Hin.
+      * apply List.in_or_app; left~.
+      * inversion H0; false*.
+    + apply List.in_or_app; right~.
+  - apply_fresh wft_all as X.
+    lets IH: H0 X (D2 |,| [tc_var X]); auto.
+    rewrite <- List.app_assoc. apply IH.
+    auto using List.app_assoc.
+  - econstructor; eauto.
+Qed.
+
+Lemma wft_strengthen_equations : forall Σ D1 Deqs D2 T,
+    wft Σ (D1 |,| Deqs |,| D2) T ->
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    wft Σ (D1 |,| D2) T.
+  induction Deqs; introv Hwft Heqs.
+  - clean_empty_Δ. auto.
+  - destruct a.
+    + lets [? ?]: Heqs (tc_var A); auto with listin.
+      false~.
+    + fold_delta.
+      apply IHDeqs.
+      * rewrite <- List.app_assoc.
+        repeat rewrite List.app_assoc in Hwft.
+        apply* wft_strengthen_equation.
+        repeat rewrite List.app_assoc.
+        eauto.
+      * intros eq1 Hin.
+        lets Hl: Heqs eq1.
+        apply Hl.
+        cbn. right~.
 Qed.
 
 Lemma wft_strengthen_typ_many : forall Σ As Δ T,
@@ -621,6 +672,16 @@ Proof.
 
         lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh.
         apply wft_strengthen_typ_many with Alphas; auto.
+        -- rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas)).
+           eapply wft_strengthen_equations.
+           ++ clean_empty_Δ.
+              apply Hwft2.
+           ++ introv Hin.
+              unfold equations_from_lists in Hin.
+              rewrite zipWithIsMappedZip in Hin.
+              apply List.in_map_iff in Hin.
+              destruct Hin as [[U V] [Heq Hin]]. subst.
+              eauto.
         -- introv Ain. lets*: A3 Ain.
 Qed.
 
