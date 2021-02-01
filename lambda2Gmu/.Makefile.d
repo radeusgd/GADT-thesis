@@ -1,6 +1,6 @@
-CanonicalForms.vo CanonicalForms.glob CanonicalForms.v.beautified CanonicalForms.required_vo: CanonicalForms.v Definitions.vo Infrastructure.vo
-CanonicalForms.vio: CanonicalForms.v Definitions.vio Infrastructure.vio
-CanonicalForms.vos CanonicalForms.vok CanonicalForms.required_vos: CanonicalForms.v Definitions.vos Infrastructure.vos
+CanonicalForms.vo CanonicalForms.glob CanonicalForms.v.beautified CanonicalForms.required_vo: CanonicalForms.v Definitions.vo Infrastructure.vo Equations.vo
+CanonicalForms.vio: CanonicalForms.v Definitions.vio Infrastructure.vio Equations.vio
+CanonicalForms.vos CanonicalForms.vok CanonicalForms.required_vos: CanonicalForms.v Definitions.vos Infrastructure.vos Equations.vos
 DefinitionsTests.vo DefinitionsTests.glob DefinitionsTests.v.beautified DefinitionsTests.required_vo: DefinitionsTests.v Definitions.vo
 DefinitionsTests.vio: DefinitionsTests.v Definitions.vio
 DefinitionsTests.vos DefinitionsTests.vok DefinitionsTests.required_vos: DefinitionsTests.v Definitions.vos

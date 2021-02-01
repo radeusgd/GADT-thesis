@@ -934,6 +934,8 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
 | tc_add_var : forall Θ Δ A T,
     wft Σ emptyΔ T ->
     subst_matches_typctx Σ Δ Θ ->
+    A \notin substitution_sources Θ -> (* we want variables to be fresh as it helps with proofs *)
+    A \notin domΔ Δ ->
     subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
 | tc_add_eq : forall Θ Δ T1 T2,
     subst_matches_typctx Σ Δ Θ ->
