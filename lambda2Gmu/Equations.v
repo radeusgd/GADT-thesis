@@ -11,7 +11,6 @@ Section SimpleEquationProperties.
       entails_semantic Σ Δ (T ≡ T).
     cbn.
     intros.
-    unfold alpha_equivalent.
     auto.
   Qed.
 
@@ -19,7 +18,6 @@ Section SimpleEquationProperties.
       entails_semantic Σ Δ (T ≡ U) ->
       entails_semantic Σ Δ (U ≡ T).
     cbn. intros.
-    unfold alpha_equivalent in *.
     symmetry.
     auto.
   Qed.
@@ -29,7 +27,6 @@ Section SimpleEquationProperties.
       entails_semantic Σ Δ (U ≡ V) ->
       entails_semantic Σ Δ (T ≡ V).
     cbn. intros.
-    unfold alpha_equivalent in *.
     transitivity (subst_tt' U Θ); auto.
   Qed.
 
@@ -38,12 +35,15 @@ Section SimpleEquationProperties.
       subst_tt' (subst_tt A P T) Θ
       =
       subst_tt A (subst_tt' P Θ) (subst_tt' T Θ).
+    induction Θ as [| [X U] Θ]; introv Afresh; cbn; trivial.
+    rewrite IHΘ.
+
   Admitted.
 
   Lemma teq_axiom : forall Δ T U,
       List.In (tc_eq (T ≡ U)) Δ ->
       entails_semantic Σ Δ (T ≡ U).
-    unfold entails_semantic. unfold alpha_equivalent.
+    unfold entails_semantic.
     induction Δ; introv Hin Hmatch.
     - contradiction.
     - cbn in Hin.
@@ -52,11 +52,10 @@ Section SimpleEquationProperties.
         inversions Hmatch; easy.
       + inversions Hmatch; auto.
         cbn.
-        assert (A \notin substitution_sources Θ0); [admit|idtac].
         repeat rewrite subst_tt_inside; auto.
         f_equal.
         apply IHΔ; auto.
-  Admitted.
+  Qed.
 
 End SimpleEquationProperties.
 
@@ -121,6 +120,53 @@ Lemma only_vars_is_tc_vars : forall Δ,
     false~ Hin. congruence.
 Qed.
 
+Lemma contradictory_env_test_0 : forall Σ Δ,
+    entails_semantic Σ Δ (typ_unit ≡ (typ_unit ** typ_unit)) ->
+    contradictory_bounds Σ Δ.
+  introv Heq.
+  unfold contradictory_bounds.
+  intros.
+  unfold entails_semantic in *.
+  introv Hmatch.
+  exfalso.
+  lets HF: Heq Hmatch.
+  rewrite subst_ttΘ_fresh in HF.
+  - rewrite subst_ttΘ_fresh in HF.
+    + false.
+    + cbn. rewrite union_empty_r.
+      rewrite~ inter_empty_r.
+  - cbn.
+    rewrite~ inter_empty_r.
+Qed.
+
+Lemma subst_ttΘ_into_abs : forall Θ A B,
+    subst_tt' (A ==> B) Θ
+    =
+    (subst_tt' A Θ) ==> (subst_tt' B Θ).
+  induction Θ as [| [X T] Θ]; cbn in *; trivial.
+Qed.
+Lemma subst_ttΘ_into_tuple : forall Θ A B,
+    subst_tt' (A ** B) Θ
+    =
+    (subst_tt' A Θ) ** (subst_tt' B Θ).
+  induction Θ as [| [X T] Θ]; cbn in *; trivial.
+Qed.
+
+Lemma contradictory_env_test : forall Σ Δ A B C D,
+    entails_semantic Σ Δ ((A ==> B) ≡ (C ** D)) ->
+    contradictory_bounds Σ Δ.
+  introv Heq.
+  unfold contradictory_bounds.
+  intros.
+  unfold entails_semantic in *.
+  introv Hmatch.
+  exfalso.
+  lets HF: Heq Hmatch.
+  rewrite subst_ttΘ_into_abs in HF.
+  rewrite subst_ttΘ_into_tuple in HF.
+  congruence.
+Qed.
+
 (* Lemma only_vars_is_never_contradictory : forall Σ Δ, *)
 (*     (forall tc, List.In tc Δ -> exists A, tc = tc_var A) -> *)
 (*     ~ (contradictory_bounds Σ Δ). *)
@@ -170,22 +216,31 @@ Lemma empty_is_not_contradictory : forall Σ,
   asserts M: (subst_matches_typctx Σ emptyΔ (@nil (var*typ)));
     try econstructor.
   lets F: HF typ_unit (typ_unit ** typ_unit) (@nil (var * typ)) M.
-  unfold alpha_equivalent in F.
   cbn in F.
   false.
 Qed.
 
-Lemma typing_exfalso : forall Σ Δ E e T1 T2,
-    {Σ, Δ, E} ⊢ e ∈ T1 ->
+Lemma typing_exfalso : forall Σ Δ E e T1 T2 TT,
+    {Σ, Δ, E} ⊢(TT) e ∈ T1 ->
     contradictory_bounds Σ Δ ->
-    {Σ, Δ, E} ⊢ e ∈ T2.
+    {Σ, Δ, E} ⊢(Teq) e ∈ T2.
   introv Typ Bounds.
-  apply typing_eq with T1; auto.
+  eapply typing_eq; eauto.
 Qed.
 
-(* Lemma generalized_inversion : forall Σ Δ E e T, *)
-(*     {Σ, Δ, E} ⊢ e ∈ T -> *)
-(*     ~ (contradictory_bounds Σ Δ) -> *)
-(*     (exists T', okt Σ Δ E /\ T = typ_unit) \/ True. (* TODO other cases: probably instead I want to add some syntactic separation of equations instead of writing a huge inversion here *) *)
-(*   introv Typ Bounds. *)
-(* Admitted. *)
+Lemma inversion_typing_eq : forall Σ Δ E e T TT,
+    {Σ, Δ, E} ⊢(TT) e ∈ T ->
+    exists T',
+      {Σ, Δ, E} ⊢(Treg) e ∈ T' /\ entails_semantic Σ Δ (T ≡ T').
+  introv Htyp.
+  lets Htyp2: Htyp.
+  induction Htyp;
+    try match goal with
+        | [ H: {Σ, Δ, E} ⊢(Treg) ?e ∈ ?T |- _ ] =>
+          exists T; split~; auto using teq_reflexivity
+        end.
+  lets [T' [IHTyp IHeq]]: IHHtyp Htyp.
+  exists T'.
+  split~.
+  eauto using teq_symmetry, teq_transitivity.
+Qed.
