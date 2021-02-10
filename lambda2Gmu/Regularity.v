@@ -543,20 +543,20 @@ Proof.
     + apply* in_empty_inv.
 Qed.
 
-Lemma typing_regular : forall Σ Δ E e T,
-   {Σ, Δ, E} ⊢ e ∈ T -> okt Σ Δ E /\ term e /\ wft Σ Δ T.
+Lemma typing_regular : forall Σ Δ E e T TT,
+   {Σ, Δ, E} ⊢(TT) e ∈ T -> okt Σ Δ E /\ term e /\ wft Σ Δ T.
 Proof.
   induction 1 as [ |
                    |
-                   | ? ? ? ? ? ? ? ? IH
+                   | ? ? ? ? ? ? ? ? ? IH
                    |
-                   | ? ? ? ? ? ? ? ? IH
+                   | ? ? ? ? ? ? ? ? ? IH
                    | | | |
-                   | ? ? ? ? ? ? IHval ? IH
-                   | ? ? ? ? ? ? ? ? ? ? ? IH
+                   | ? ? ? ? ? ? ? IHval ? IH
+                   | ? ? ? ? ? ? ? ? ? ? ? ? IH
                    |
                    |
-                   ];
+                   ] using typing_ind_ext;
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
   - subst. destruct IHtyping as [Hokt [Hterm Hwft]].
@@ -574,10 +574,11 @@ Proof.
       lets* EAlphas: exist_alphas (usedvars) (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
       lets* HH: H10 Alphas CiC.
-      apply (@wft_open_many Δ Σ Alphas Ts); eauto;
-        intros A; lets* FA: A3 A.
-      introv Ain Tin.
-      apply* fv_typs_notin.
+      apply (@wft_open_many Δ Σ Alphas Ts); auto.
+      * introv Ain; lets~ FA: A3 Ain.
+      * introv Ain Tin; lets~ FA: A3 Ain.
+        eauto using fv_typs_notin.
+      * eauto.
     + rewrite List.map_length. trivial.
   - pick_fresh y.
     copyTo IH IH1.
@@ -597,7 +598,7 @@ Proof.
     destruct IHtyping2 as [? [? Hwft]]. inversion* Hwft.
   - copyTo IH IH1.
     pick_fresh_gen (L \u fv_env E \u dom E) y.
-    add_notin y L. lets HF: IH1 Fr0. destructs~ HF.
+    add_notin y L. lets HF: IH Fr0. destructs~ HF.
     splits*.
     + rewrite <- (List.app_nil_r Δ).
       apply okt_strengthen_delta_var with y; eauto.
@@ -629,28 +630,29 @@ Proof.
       intros. apply* IHval.
   - destructs IHtyping.
     pick_fresh y.
-    copyTo IH IH1.
-    specializes IH y. destructs~ IH.
-    (* forwards* Hctx: okt_push_inv. *)
-    (* destruct Hctx as [? | Hctx]; try congruence. *)
-    (* destruct Hctx as [U HU]. inversions HU. *)
+    assert (yFr: y \notin L); eauto.
+    lets IH1: H0 yFr.
+    destructs IH1.
     splits*.
-    + econstructor. auto.
-      introv HxiL. lets HF: IH1 x HxiL. destruct* HF.
+    econstructor; auto.
+    introv HxiL. lets HF: H0 x HxiL. destructs~ HF.
   - destruct IHtyping as [Hokt [Hterme HwftT]].
     splits*.
     + econstructor; eauto.
-      intros cl clin Alphas x Hlen Hdist Afresh xfresh.
+      intros cl clin Alphas x Hlen Hdist Afresh xfresh xAlphas.
       destruct cl as [clA clT].
       cbn.
-      apply F2_from_zip in H5; eauto.
+      Print typing_ind.
+      apply F2_from_zip in H4; eauto.
       lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd clin.
       cbn in HDef.
+      destruct HDef as [DTT HDef].
       cbn in Hlen.
       lets Hlen2: H3 DefIn2.
       cbn in Hlen2.
       assert (Hlen3: length Alphas = Carity Def); try lia.
-      lets* HF: HDef Alphas x Hlen3 Hdist Afresh.
+      lets~ HF: HDef Alphas x Hlen3 Hdist Afresh.
+      lets*: HF xfresh xAlphas.
     + assert (ms <> []).
       * lets gadtOk: okt_implies_okgadt Hokt.
         inversion gadtOk as [? okDefs].
@@ -658,8 +660,8 @@ Proof.
         intro.
         destruct Defs; subst; eauto. cbn in H2. lia.
       * destruct ms as [ | cl1 rest]; [ contradiction | idtac ].
-        apply F2_from_zip in H5; eauto.
-        lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd cl1 H5;
+        apply F2_from_zip in H4; eauto.
+        lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H4;
           eauto with listin.
 
         (* May want a tactic 'pick_fresh Alphas' *)
@@ -711,10 +713,9 @@ Qed.
 (* Qed. *)
 
 
-Lemma typing_implies_term : forall Σ Δ E e T,
-    {Σ, Δ, E} ⊢ e ∈ T ->
+Lemma typing_implies_term : forall Σ Δ E e T TT,
+    {Σ, Δ, E} ⊢(TT) e ∈ T ->
     term e.
-  intros.
-  lets TR: typing_regular Σ E e T.
-  destruct* TR.
+  introv Typ.
+  lets* TR: typing_regular Typ.
 Qed.

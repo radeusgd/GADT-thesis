@@ -1,5 +1,6 @@
 Require Export Zip.
 Require Export Definitions.
+Require Export TypInduction.
 Require Export TLC.LibTactics.
 Require Export TLC.LibFset.
 Require Export TLC.LibEnv.

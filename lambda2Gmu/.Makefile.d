@@ -22,9 +22,9 @@ InfrastructureSubst.vos InfrastructureSubst.vok InfrastructureSubst.required_vos
 Infrastructure.vo Infrastructure.glob Infrastructure.v.beautified Infrastructure.required_vo: Infrastructure.v InfrastructureFV.vo InfrastructureOpen.vo InfrastructureSubst.vo
 Infrastructure.vio: Infrastructure.v InfrastructureFV.vio InfrastructureOpen.vio InfrastructureSubst.vio
 Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructure.v InfrastructureFV.vos InfrastructureOpen.vos InfrastructureSubst.vos
-Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo
-Prelude.vio: Prelude.v Zip.vio Definitions.vio
-Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos
+Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo TypInduction.vo
+Prelude.vio: Prelude.v Zip.vio Definitions.vio TypInduction.vio
+Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos TypInduction.vos
 Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo
 Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio
 Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos
@@ -49,6 +49,9 @@ Tests.vos Tests.vok Tests.required_vos: Tests.v TestCommon.vos Regularity.vos
 TestVector.vo TestVector.glob TestVector.v.beautified TestVector.required_vo: TestVector.v TestCommon.vo
 TestVector.vio: TestVector.v TestCommon.vio
 TestVector.vos TestVector.vok TestVector.required_vos: TestVector.v TestCommon.vos
+TypInduction.vo TypInduction.glob TypInduction.v.beautified TypInduction.required_vo: TypInduction.v Definitions.vo Zip.vo
+TypInduction.vio: TypInduction.v Definitions.vio Zip.vio
+TypInduction.vos TypInduction.vok TypInduction.required_vos: TypInduction.v Definitions.vos Zip.vos
 Zip.vo Zip.glob Zip.v.beautified Zip.required_vo: Zip.v 
 Zip.vio: Zip.v 
 Zip.vos Zip.vok Zip.required_vos: Zip.v 
