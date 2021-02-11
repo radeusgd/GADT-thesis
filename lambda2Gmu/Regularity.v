@@ -544,9 +544,13 @@ Proof.
 Qed.
 
 Lemma typing_regular : forall Σ Δ E e T TT,
-   {Σ, Δ, E} ⊢(TT) e ∈ T -> okt Σ Δ E /\ term e /\ wft Σ Δ T.
+    {Σ, Δ, E} ⊢(TT) e ∈ T ->
+    okt Σ Δ E /\ term e /\ wft Σ Δ T.
 Proof.
-  induction 1 as [ |
+  intro Hbounds.
+  introv Typ.
+  lets Typ2: Typ.
+  induction Typ as [ |
                    |
                    | ? ? ? ? ? ? ? ? ? IH
                    |
@@ -559,8 +563,7 @@ Proof.
                    ] using typing_ind_ext;
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
-  - subst. destruct IHtyping as [Hokt [Hterm Hwft]].
-    subst.
+  - subst. destruct IHTyp as [Hokt [Hterm Hwft]]; auto.
     splits*.
     lets* HG: okt_implies_okgadt Hokt.
     lets* GADTC: gadt_constructor_ok HG.
@@ -573,7 +576,7 @@ Proof.
       let usedvars := gather_vars in
       lets* EAlphas: exist_alphas (usedvars) (length Ts).
       inversion EAlphas as [Alphas [A1 [A2 A3]]].
-      lets* HH: H10 Alphas CiC.
+      lets* HH: H9 Alphas CiC.
       apply (@wft_open_many Δ Σ Alphas Ts); auto.
       * introv Ain; lets~ FA: A3 Ain.
       * introv Ain Tin; lets~ FA: A3 Ain.
@@ -583,7 +586,7 @@ Proof.
   - pick_fresh y.
     copyTo IH IH1.
     assert (yL: y \notin L); eauto.
-    lets [? [? ?]]: IH yL.
+    lets~ [? [? ?]]: IH yL.
     (* forwards* Hctx: okt_push_inv. *)
     (* destruct Hctx as [? | Hctx]; try congruence. *)
     (* destruct Hctx as [U HU]. inversions HU. *)
@@ -595,18 +598,18 @@ Proof.
     + econstructor; eauto.
       apply* okt_is_wft.
   - splits*.
-    destruct IHtyping2 as [? [? Hwft]]. inversion* Hwft.
+    destruct~ IHTyp2 as [? [? Hwft]]. inversion* Hwft.
   - copyTo IH IH1.
     pick_fresh_gen (L \u fv_env E \u dom E) y.
-    add_notin y L. lets HF: IH Fr0. destructs~ HF.
+    add_notin y L. lets~ HF: IH Fr0. destructs~ HF.
     splits*.
-    + rewrite <- (List.app_nil_r Δ).
+    * rewrite <- (List.app_nil_r Δ).
       apply okt_strengthen_delta_var with y; eauto.
       clean_empty_Δ. auto.
-    + apply* term_tabs. intros. apply* IH1.
-    + apply_fresh* wft_all as Y.
-      add_notin Y L. lets HF: IH1 Y Fr1. destruct* HF.
-  - subst. splits*. destruct IHtyping as [? [? Hwft]].
+    * apply* term_tabs. intros. apply* IH1.
+    * apply_fresh* wft_all as Y.
+      add_notin Y L. lets~ HF: IH1 Y Fr1. destruct* HF.
+  - subst. splits*. destruct~ IHTyp as [? [? Hwft]].
     copyTo Hwft Hwft2.
     inversions Hwft.
     match goal with
@@ -615,9 +618,9 @@ Proof.
     end.
     apply* wft_open.
   - splits*.
-    destruct IHtyping as [? [? Hwft]]. inversion* Hwft.
+    destruct~ IHTyp as [? [? Hwft]]. inversion* Hwft.
   - splits*.
-    destruct IHtyping as [? [? Hwft]]. inversion* Hwft.
+    destruct~ IHTyp as [? [? Hwft]]. inversion* Hwft.
   - pick_fresh y.
     copyTo IH IH1.
     specializes IH1 y. destructs~ IH1.
@@ -628,40 +631,39 @@ Proof.
     + econstructor. apply* okt_is_type.
       intros. apply* IH.
       intros. apply* IHval.
-  - destructs IHtyping.
+  - destructs~ IHTyp.
     pick_fresh y.
     assert (yFr: y \notin L); eauto.
-    lets IH1: H0 yFr.
-    destructs IH1.
+    lets IH1: H yFr.
+    destructs~ IH1.
     splits*.
     econstructor; auto.
-    introv HxiL. lets HF: H0 x HxiL. destructs~ HF.
-  - destruct IHtyping as [Hokt [Hterme HwftT]].
+    introv HxiL. lets HF: H x HxiL. destructs~ HF.
+  - destruct~ IHTyp as [Hokt [Hterme HwftT]].
     splits*.
     + econstructor; eauto.
       intros cl clin Alphas x Hlen Hdist Afresh xfresh xAlphas.
       destruct cl as [clA clT].
       cbn.
-      Print typing_ind.
-      apply F2_from_zip in H4; eauto.
+      apply F2_from_zip in H3; eauto.
       lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd clin.
       cbn in HDef.
       destruct HDef as [DTT HDef].
       cbn in Hlen.
-      lets Hlen2: H3 DefIn2.
+      lets Hlen2: H2 DefIn2.
       cbn in Hlen2.
       assert (Hlen3: length Alphas = Carity Def); try lia.
       lets~ HF: HDef Alphas x Hlen3 Hdist Afresh.
-      lets*: HF xfresh xAlphas.
+      lets* [? IH]: HF xfresh xAlphas.
     + assert (ms <> []).
       * lets gadtOk: okt_implies_okgadt Hokt.
         inversion gadtOk as [? okDefs].
-        lets [defNEmpty okDef]: okDefs H1.
+        lets [defNEmpty okDef]: okDefs H0.
         intro.
-        destruct Defs; subst; eauto. cbn in H2. lia.
+        destruct Defs; subst; eauto. cbn in H1. lia.
       * destruct ms as [ | cl1 rest]; [ contradiction | idtac ].
-        apply F2_from_zip in H4; eauto.
-        lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H4;
+        apply F2_from_zip in H3; eauto.
+        lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H3;
           eauto with listin.
 
         (* May want a tactic 'pick_fresh Alphas' *)
@@ -686,8 +688,10 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-  - admit.
-Admitted.
+  - destructs~ IHTyp.
+    splits~.
+    inversion~ Typ2.
+Qed.
 
 (** The value relation is restricted to well-formed objects. *)
 

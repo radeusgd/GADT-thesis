@@ -121,6 +121,10 @@ I argue that this does not reduce language's expressivity. It does disallow some
 
 > TODO this argument should be more carefully written and analysed, because of its importance on the rest of the work
 
+### Well-formedness requirement for derivations using type equalities
+
+> TODO explain why we add this assumption to `typing_eq` and why it is safe to do so.
+
 ## Considered differences
 
 These are differences that are (or were) considered but a decision hasn't been made yet if they should be implemented.

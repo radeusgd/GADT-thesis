@@ -223,6 +223,7 @@ Qed.
 Lemma typing_exfalso : forall Σ Δ E e T1 T2 TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T1 ->
     contradictory_bounds Σ Δ ->
+    wft Σ Δ T2 ->
     {Σ, Δ, E} ⊢(Teq) e ∈ T2.
   introv Typ Bounds.
   eapply typing_eq; eauto.

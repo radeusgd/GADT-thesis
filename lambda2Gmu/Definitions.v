@@ -1161,6 +1161,7 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
 | typing_eq : forall Σ Δ E T1 T2 e TT,
     { Σ, Δ, E } ⊢(TT) e ∈ T1 ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
+    wft Σ Δ T2 -> (* NOTE: This is not part of the original calculus; but without this assumption, we can get good typing judgements featuring ill-formed types, which complicates stuff for some proofs; theoretically it may be possible to do without it, but I decided to add it because it does not restrict the language in a meaningful way - yes, we are no longer allowed to type ill-formed types with contradictory bounds, but we still can derive all well-formed equalities from a contradiction and that is enough; it will actually be easier to translate to pDOT if we know that all types are wft; ill-formed types are never useful in our use cases. *)
     { Σ, Δ, E } ⊢(Teq) e ∈ T2
 where "{ Σ , Δ , E } ⊢( R ) t ∈ T" := (typing R Σ Δ E t T).
 
