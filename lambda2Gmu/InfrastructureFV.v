@@ -291,6 +291,23 @@ Lemma notin_domΔ_eq : forall D1 D2 X,
         intuition.
 Qed.
 
+Lemma in_domΔ_eq : forall D1 D2 X,
+    X \in domΔ (D1 |,| D2) <->
+    X \in domΔ D1 \/ X \in domΔ D2.
+  induction D1; intros; constructor;
+    intro H;
+    try solve [
+          cbn in *; intuition
+        | destruct a; cbn in *;
+          repeat rewrite in_union in *;
+          destruct (IHD1 D2 X) as [IH1 IH2];
+          intuition
+        ].
+  destruct H.
+  + cbn in H. false* in_empty_inv.
+  + cbn. auto.
+Qed.
+
 Lemma fold_empty : forall Ts,
     (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
     List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) Ts \{} = \{}.
@@ -369,4 +386,75 @@ Proof.
   - false* binds_empty_inv.
   - lets [[? ?] | [? ?]]: binds_push_inv Hbind; subst;
       try destruct v; lets* [? ?]: notin_env_inv FE.
+Qed.
+
+Lemma domDelta_in:
+  forall (Δ : typctx) (X : var), List.In (tc_var X) Δ -> \{ X} \c domΔ Δ.
+Proof.
+  induction Δ; introv Hin.
+  - inversion Hin.
+  - cbn in Hin.
+    destruct Hin as [Hin | Hin].
+    + subst. cbn. eauto.
+    + cbn. destruct a.
+      * assert (\{ X } \c domΔ Δ).
+        -- apply~ IHΔ.
+        -- introv HX.
+           rewrite in_union.
+           right~.
+      * apply~ IHΔ.
+Qed.
+
+Lemma subset_fold : forall T U P Xs E C,
+    (forall x : T, List.In x Xs -> P x \c C) ->
+    E \c C ->
+    List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) Xs E \c C.
+  induction Xs; introv HXs HE;
+    cbn; auto.
+  apply IHXs.
+  - auto with listin.
+  - rewrite <- union_same.
+    lets Hsu: subset_union_2 E (P a) C C.
+    apply~ Hsu.
+    auto with listin.
+Qed.
+
+Lemma wft_gives_fv : forall Σ Δ T,
+    wft Σ Δ T ->
+    fv_typ T \c domΔ Δ.
+  induction 1; cbn; eauto;
+    try solve [
+          rewrite <- union_same;
+          lets Hsu: subset_union_2 (fv_typ T1) (fv_typ T2) (domΔ Δ) (domΔ Δ);
+          apply ~Hsu
+        ].
+  - unfold is_var_defined in H.
+    apply~ domDelta_in.
+  - introv Hx.
+    pick_fresh X.
+    assert (Fr2: X \notin L); auto.
+    assert (x <> X); auto.
+    lets IH: H0 Fr2.
+    lets Hopen: fv_open T2 (typ_fvar X) 0.
+    fold (T2 open_tt_var X) in Hopen.
+    destruct Hopen as [Ho | Ho].
+    + rewrite Ho in IH.
+      assert (Hu: x \in fv_typ T2 \u fv_typ (typ_fvar X)).
+      * rewrite~ in_union.
+      * lets Hd: IH Hu.
+        apply in_domΔ_eq in Hd.
+        destruct~ Hd as [? | Hd].
+        cbn in Hd.
+        rewrite union_empty_r in Hd.
+        rewrite in_singleton in Hd.
+        false.
+    + rewrite Ho in IH.
+      lets Hd: IH Hx.
+      apply in_domΔ_eq in Hd.
+      destruct Hd as [| Hd]; auto.
+      cbn in Hd.
+      rewrite union_empty_r in Hd.
+      rewrite in_singleton in Hd.
+      false.
+  - apply~ subset_fold.
 Qed.

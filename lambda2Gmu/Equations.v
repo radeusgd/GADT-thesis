@@ -2,7 +2,6 @@ Require Import Prelude.
 Require Import Infrastructure.
 
 (* Proofs regarding proposition 2.1 from the paper *)
-
 Section SimpleEquationProperties.
 
   Variable Σ : GADTEnv.
@@ -30,12 +29,28 @@ Section SimpleEquationProperties.
     transitivity (subst_tt' U Θ); auto.
   Qed.
 
+  Lemma subst_has_no_fv : forall Σ Δ Θ,
+      subst_matches_typctx Σ Δ Θ ->
+      (forall X U, List.In (X, U) Θ -> fv_typ U = \{}).
+    induction 1; introv Hin.
+    - false.
+    - cbn in Hin.
+      destruct Hin as [Hin | Hin].
+      + inversions Hin.
+        lets Hfv: wft_gives_fv H.
+        cbn in Hfv.
+        apply~ fset_extens.
+      + apply* IHsubst_matches_typctx.
+    - apply* IHsubst_matches_typctx.
+  Qed.
+
   Lemma subst_tt_inside : forall Θ A P T,
       A \notin substitution_sources Θ ->
+      (forall X U, List.In (X, U) Θ -> A \notin fv_typ U) ->
       subst_tt' (subst_tt A P T) Θ
       =
       subst_tt A (subst_tt' P Θ) (subst_tt' T Θ).
-    induction Θ as [| [X U] Θ]; introv Afresh; cbn; trivial.
+    induction Θ as [| [X U] Θ]; introv ThetaFr UFr; cbn; trivial.
     rewrite IHΘ.
 
   Admitted.
@@ -53,8 +68,16 @@ Section SimpleEquationProperties.
       + inversions Hmatch; auto.
         cbn.
         repeat rewrite subst_tt_inside; auto.
-        f_equal.
-        apply IHΔ; auto.
+        * f_equal.
+          apply IHΔ; auto.
+        * introv Uin.
+          lets Fr: subst_has_no_fv Uin.
+          -- eauto.
+          -- rewrite Fr. apply notin_empty.
+        * introv Uin.
+          lets Fr: subst_has_no_fv Uin.
+          -- eauto.
+          -- rewrite Fr. apply notin_empty.
   Qed.
 
 End SimpleEquationProperties.
@@ -224,7 +247,7 @@ Lemma typing_exfalso : forall Σ Δ E e T1 T2 TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T1 ->
     contradictory_bounds Σ Δ ->
     wft Σ Δ T2 ->
-    {Σ, Δ, E} ⊢(Teq) e ∈ T2.
+    {Σ, Δ, E} ⊢(Tgen) e ∈ T2.
   introv Typ Bounds.
   eapply typing_eq; eauto.
 Qed.

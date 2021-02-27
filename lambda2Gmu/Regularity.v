@@ -1,6 +1,7 @@
 Set Implicit Arguments.
 Require Import Prelude.
 Require Import Infrastructure.
+Require Import Equations.
 Require Import TLC.LibLN.
 Require Import TLC.LibEnv.
 
@@ -722,4 +723,13 @@ Lemma typing_implies_term : forall Σ Δ E e T TT,
     term e.
   introv Typ.
   lets* TR: typing_regular Typ.
+Qed.
+
+Lemma Tgen_from_any : forall Σ Δ E TT e T,
+    {Σ, Δ, E} ⊢(TT) e ∈ T ->
+    {Σ, Δ, E} ⊢(Tgen) e ∈ T.
+  introv Typ.
+  applys~ typing_eq T TT.
+  - apply teq_reflexivity.
+  - lets* : typing_regular Typ.
 Qed.

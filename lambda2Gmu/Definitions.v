@@ -1053,8 +1053,9 @@ Definition equations_from_lists Ts Us : typctx :=
 Reserved Notation "{ Σ , Δ ,  E }  ⊢( L ) t ∈ T" (at level 0, Σ at level 99, T at level 69).
 
 Inductive typing_taint : Set :=
-| Treg
-| Teq.
+| Treg (* this taint identifies the regular derivations, that is such which do not use equation as the last part (but they still can contain equations deeper inside) *)
+| Tgen (* this taint identifies a general derivation, which may also use an equation *)
+.
 
 Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Prop :=
   (* TODO typing_eq *)
@@ -1162,7 +1163,7 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
     { Σ, Δ, E } ⊢(TT) e ∈ T1 ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
     wft Σ Δ T2 -> (* NOTE: This is not part of the original calculus; but without this assumption, we can get good typing judgements featuring ill-formed types, which complicates stuff for some proofs; theoretically it may be possible to do without it, but I decided to add it because it does not restrict the language in a meaningful way - yes, we are no longer allowed to type ill-formed types with contradictory bounds, but we still can derive all well-formed equalities from a contradiction and that is enough; it will actually be easier to translate to pDOT if we know that all types are wft; ill-formed types are never useful in our use cases. *)
-    { Σ, Δ, E } ⊢(Teq) e ∈ T2
+    { Σ, Δ, E } ⊢(Tgen) e ∈ T2
 where "{ Σ , Δ , E } ⊢( R ) t ∈ T" := (typing R Σ Δ E t T).
 
 (** * Reduction rules (Small-step operational semantics) *)
@@ -1265,7 +1266,7 @@ Definition progress := forall TT Σ e T,
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     (value e) \/ (exists e', e --> e').
 
-Definition preservation := forall TT1 TT2 Σ e T e',
-    {Σ, emptyΔ, empty} ⊢(TT1) e ∈ T ->
+Definition preservation := forall TT Σ e T e',
+    {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     e --> e' ->
-    {Σ, emptyΔ, empty} ⊢(TT2) e' ∈ T.
+    {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.

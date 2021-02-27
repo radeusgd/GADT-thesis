@@ -111,7 +111,7 @@ Lemma typing_ind_ext
        (forall (Σ : GADTEnv) (Δ : typctx) (E : ctx) (T1 T2 : typ) 
           (e : trm) (TT : typing_taint),
         {Σ, Δ, E} ⊢( TT) e ∈ T1 ->
-        P TT Σ Δ E e T1 -> entails_semantic Σ Δ (T1 ≡ T2) -> P Teq Σ Δ E e T2) ->
+        P TT Σ Δ E e T1 -> entails_semantic Σ Δ (T1 ≡ T2) -> P Tgen Σ Δ E e T2) ->
        forall (t : typing_taint) (g : GADTEnv) (t0 : typctx) 
          (c : ctx) (t1 : trm) (t2 : typ), {g, t0, c} ⊢( t) t1 ∈ t2 -> P t g t0 c t1 t2.
   intros P Iunit Ifvar Ictor

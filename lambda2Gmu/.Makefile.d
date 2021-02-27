@@ -31,9 +31,9 @@ Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prel
 Progress.vo Progress.glob Progress.v.beautified Progress.required_vo: Progress.v Prelude.vo Infrastructure.vo Regularity.vo CanonicalForms.vo
 Progress.vio: Progress.v Prelude.vio Infrastructure.vio Regularity.vio CanonicalForms.vio
 Progress.vos Progress.vok Progress.required_vos: Progress.v Prelude.vos Infrastructure.vos Regularity.vos CanonicalForms.vos
-Regularity.vo Regularity.glob Regularity.v.beautified Regularity.required_vo: Regularity.v Prelude.vo Infrastructure.vo
-Regularity.vio: Regularity.v Prelude.vio Infrastructure.vio
-Regularity.vos Regularity.vok Regularity.required_vos: Regularity.v Prelude.vos Infrastructure.vos
+Regularity.vo Regularity.glob Regularity.v.beautified Regularity.required_vo: Regularity.v Prelude.vo Infrastructure.vo Equations.vo
+Regularity.vio: Regularity.v Prelude.vio Infrastructure.vio Equations.vio
+Regularity.vos Regularity.vok Regularity.required_vos: Regularity.v Prelude.vos Infrastructure.vos Equations.vos
 TestCommon.vo TestCommon.glob TestCommon.v.beautified TestCommon.required_vo: TestCommon.v Prelude.vo Infrastructure.vo
 TestCommon.vio: TestCommon.v Prelude.vio Infrastructure.vio
 TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos Infrastructure.vos
