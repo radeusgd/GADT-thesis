@@ -134,14 +134,23 @@ Lemma equations_from_lists_are_equations : forall D Ts Us,
     destruct Hin; subst; eauto.
 Qed.
 
+Lemma subst_sources_from_match : forall Σ D Θ,
+    subst_matches_typctx Σ D Θ ->
+    substitution_sources Θ = domΔ D.
+  induction 1; cbn; auto.
+  fold (from_list (List.map fst Θ)).
+  fold (substitution_sources Θ).
+  rewrite~ IHsubst_matches_typctx.
+Qed.
+
 Lemma equation_weaken_eq:
-  forall (D1 : list typctx_elem) (Y : var) (Σ : GADTEnv) (T1 T2 U1 U2 : typ)
-    (D2 : list typctx_elem),
+  forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 U1 U2 : typ),
     entails_semantic Σ (D1 |,| D2) (T1 ≡ T2) ->
-    Y \notin domΔ D2 -> entails_semantic Σ ((D1 |,| [tc_eq (U1 ≡ U2)]) |,| D2) (T1 ≡ T2).
+    Y \notin domΔ D2 ->
+    entails_semantic Σ ((D1 |,| [tc_eq (U1 ≡ U2)]) |,| D2) (T1 ≡ T2).
 Proof.
-  introv Sem YFr.
-  induction D1 as [| [? | ?]].
+  induction D1 as [| [? | ?]];
+    introv Sem YFr.
   - rewrite List.app_nil_l in *.
     unfold entails_semantic in *.
     introv Match.
@@ -151,6 +160,28 @@ Proof.
     introv Match.
     inversions Match.
     cbn.
+    lets IHtmp: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2) U1.
+    lets IH: IHtmp U2.
+    apply~ IH.
+    introv Match.
+    lets HS: Sem ((A, T) :: Θ).
+    cbn in HS.
+    apply~ HS.
+    assert (A \notin domΔ (D1 |,| D2)).
+    + repeat rewrite notin_domΔ_eq in *.
+      lets [[? ?] ?]: H5.
+      split~.
+    + econstructor; auto.
+      rewrite~ (subst_sources_from_match Match).
+  - unfold entails_semantic in *.
+    introv Match.
+    lets IH: IHD1 D2 Y T1 T2.
+    inversions Match.
+    apply* IH.
+    introv Match.
+    apply Sem.
+    rewrite <- List.app_comm_cons.
+    constructor; eauto.
 Admitted.
 
 Lemma equation_weaken_var:
