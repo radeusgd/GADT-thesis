@@ -561,7 +561,7 @@ Proof.
                    | ? ? ? ? ? ? ? ? ? ? ? ? IH
                    |
                    |
-                   ] using typing_ind_ext;
+                   ];
     try solve [splits*].
   - splits*. apply* wft_from_env_has_typ.
   - subst. destruct IHTyp as [Hokt [Hterm Hwft]]; auto.
@@ -646,16 +646,18 @@ Proof.
       intros cl clin Alphas x Hlen Hdist Afresh xfresh xAlphas.
       destruct cl as [clA clT].
       cbn.
-      apply F2_from_zip in H3; eauto.
+      apply F2_from_zip in H4; eauto.
       lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd clin.
       cbn in HDef.
-      destruct HDef as [DTT HDef].
+      (* destruct HDef as [DTT HDef]. *)
       cbn in Hlen.
       lets Hlen2: H2 DefIn2.
       cbn in Hlen2.
       assert (Hlen3: length Alphas = Carity Def); try lia.
       lets~ HF: HDef Alphas x Hlen3 Hdist Afresh.
-      lets* [? IH]: HF xfresh xAlphas.
+      (* lets* [? IH]: HF xfresh xAlphas. *)
+      lets~ [? [? ?]]: HF xfresh xAlphas.
+      lets~ HT: H3 Def (clause clA clT) Alphas x.
     + assert (ms <> []).
       * lets gadtOk: okt_implies_okgadt Hokt.
         inversion gadtOk as [? okDefs].
@@ -664,7 +666,8 @@ Proof.
         destruct Defs; subst; eauto. cbn in H1. lia.
       * destruct ms as [ | cl1 rest]; [ contradiction | idtac ].
         apply F2_from_zip in H3; eauto.
-        lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H3;
+        (* lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H3; *)
+        lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd cl1 H3;
           eauto with listin.
 
         (* May want a tactic 'pick_fresh Alphas' *)
@@ -676,7 +679,11 @@ Proof.
           [ introv Ain; lets*: A3 Ain | idtac ].
         assert (xfresh: x \notin L); eauto.
 
-        lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh.
+        assert (xfreshA: x \notin from_list Alphas); eauto.
+
+        lets* HTyp: HDef A1 A2 Afresh xfresh xfreshA.
+        lets~ [? [? Hwft2]]: H4 HTyp.
+        (* lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh. *)
         apply wft_strengthen_typ_many with Alphas; auto.
         -- rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas)).
            eapply wft_strengthen_equations.
@@ -689,9 +696,9 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-  - destructs~ IHTyp.
-    splits~.
-    inversion~ Typ2.
+  (* - destructs~ IHTyp. *)
+  (*   splits~. *)
+  (*   inversion~ Typ2. *)
 Qed.
 
 (** The value relation is restricted to well-formed objects. *)

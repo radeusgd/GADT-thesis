@@ -781,3 +781,45 @@ Lemma subst_ttΘ_fresh : forall Θ T,
       * apply FrA.
       * apply in_singleton_self.
 Qed.
+
+Lemma subst_commute:
+  forall (X : var) (U : typ) (A : var) (P T : typ),
+    X <> A ->
+    A \notin fv_typ U ->
+    subst_tt X U (subst_tt A P T) = subst_tt A (subst_tt X U P) (subst_tt X U T).
+Proof.
+  induction T using typ_ind'; introv Neq Fr; cbn; auto;
+    try solve [
+          rewrite~ IHT1; rewrite~ IHT2
+        ].
+  - repeat case_if; subst; cbn; repeat case_if; eauto.
+    rewrite~ subst_tt_fresh.
+  - rewrite~ IHT.
+  - rewrite List.Forall_forall in *.
+    f_equal.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros T Tin.
+    apply~ H.
+Qed.
+
+Lemma subst_tt_inside : forall Θ A P T,
+    A \notin substitution_sources Θ ->
+    (forall X U, List.In (X, U) Θ -> A \notin fv_typ U) ->
+    subst_tt' (subst_tt A P T) Θ
+    =
+    subst_tt A (subst_tt' P Θ) (subst_tt' T Θ).
+  induction Θ as [| [X U] Θ]; introv ThetaFr UFr; cbn; trivial.
+  rewrite <- IHΘ.
+  - f_equal.
+    rewrite~ subst_commute.
+    + cbn in ThetaFr.
+      rewrite notin_union in ThetaFr.
+      destruct~ ThetaFr.
+    + eauto with listin.
+  - cbn in ThetaFr.
+    fold (from_list (List.map fst Θ)) in ThetaFr.
+    fold (substitution_sources Θ) in ThetaFr.
+    auto.
+  - eauto with listin.
+Qed.

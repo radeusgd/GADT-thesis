@@ -1127,7 +1127,6 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
                       in our example we check that the match brings two type variables [X,Y] and the arity of the Pair constructor is 2 *)
                    clauseArity clause = Carity def) ->
     (forall def clause, In (def, clause) (zip Defs ms) ->
-                   exists TTc, (* each inner clause can have a different taint so we account for that *)
                    (* now, for each pair of: constructor definition + a clause matching that constructor, we check the actual important properties: *)
                forall Alphas x,
                  length Alphas = Carity def -> (* since we instantiate the type variables, we need to ensure that the added type variables amount is equalt to the arity *)
@@ -1156,7 +1155,7 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
                    (* Ts === Crettypes def; in our example that equation is X ** Y =:= A *)
                    E
                    & x ~: (open_tt_many_var Alphas (Cargtype def)) (* e: [X]Expr ** [Y]Expr *)
-                 } ⊢(TTc) (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
+                 } ⊢(Tgen) (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
             ) ->
     { Σ, Δ, E } ⊢(Treg) trm_matchgadt e Name ms ∈ Tc
 | typing_eq : forall Σ Δ E T1 T2 e TT,

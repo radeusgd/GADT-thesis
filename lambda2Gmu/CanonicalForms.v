@@ -5,7 +5,6 @@ Require Import TLC.LibTactics.
 Require Import TLC.LibEnv.
 Require Import TLC.LibLN.
 
-(* TODO add assumptions that Δ is not contradictory *)
   (* Ht : {Σ, empty}⊢ trm_constructor Tparams Name e1 ∈ T1 ** T2 *)
 Lemma CanonicalConstructorType : forall Σ Δ E Tparams Name Ctor e1 T,
     {Σ, Δ, E} ⊢(Treg) trm_constructor Tparams (Name, Ctor) e1 ∈ T ->

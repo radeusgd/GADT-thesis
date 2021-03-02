@@ -44,17 +44,6 @@ Section SimpleEquationProperties.
     - apply* IHsubst_matches_typctx.
   Qed.
 
-  Lemma subst_tt_inside : forall Θ A P T,
-      A \notin substitution_sources Θ ->
-      (forall X U, List.In (X, U) Θ -> A \notin fv_typ U) ->
-      subst_tt' (subst_tt A P T) Θ
-      =
-      subst_tt A (subst_tt' P Θ) (subst_tt' T Θ).
-    induction Θ as [| [X U] Θ]; introv ThetaFr UFr; cbn; trivial.
-    rewrite IHΘ.
-
-  Admitted.
-
   Lemma teq_axiom : forall Δ T U,
       List.In (tc_eq (T ≡ U)) Δ ->
       entails_semantic Σ Δ (T ≡ U).
