@@ -2,6 +2,7 @@ Set Implicit Arguments.
 Require Import Prelude.
 Require Import Infrastructure.
 Require Import Regularity.
+Require Import Equations.
 Require Import TLC.LibLN.
 
 Lemma term_through_subst : forall e x u,
@@ -143,62 +144,113 @@ Lemma subst_sources_from_match : forall Σ D Θ,
   rewrite~ IHsubst_matches_typctx.
 Qed.
 
+Lemma subst_match_weaken : forall Σ Θ D1 D2 T1 T2,
+    subst_matches_typctx Σ (D1 |,| [tc_eq (T1 ≡ T2)] |,| D2) Θ ->
+    subst_matches_typctx Σ (D1 |,| D2) Θ.
+  introv Match.
+  gen_eq D3: (D1 |,| [tc_eq (T1 ≡ T2)] |,| D2). gen D1 D2.
+  induction Match; introv EQ; subst; eauto.
+  - false List.app_cons_not_nil.
+    rewrite <- List.app_assoc in EQ.
+    cbn in EQ.
+    eauto.
+  - destruct D1; inversions EQ.
+    constructor; try fold (D1 |,| D2); auto.
+    repeat rewrite notin_domΔ_eq in *.
+    destruct H1 as [[? ?] ?].
+    split~.
+  - destruct D1; inversions EQ.
+    + cbn. auto.
+    + constructor; auto.
+Qed.
+
 Lemma equation_weaken_eq:
-  forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 U1 U2 : typ),
+  forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (T1 T2 U1 U2 : typ),
     entails_semantic Σ (D1 |,| D2) (T1 ≡ T2) ->
-    Y \notin domΔ D2 ->
     entails_semantic Σ ((D1 |,| [tc_eq (U1 ≡ U2)]) |,| D2) (T1 ≡ T2).
 Proof.
-  induction D1 as [| [? | ?]];
-    introv Sem YFr.
-  - rewrite List.app_nil_l in *.
-    unfold entails_semantic in *.
-    introv Match.
-    inversions Match.
-    apply~ Sem.
-  - unfold entails_semantic in *.
-    introv Match.
-    inversions Match.
-    cbn.
-    lets IHtmp: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2) U1.
-    lets IH: IHtmp U2.
-    apply~ IH.
-    introv Match.
-    lets HS: Sem ((A, T) :: Θ).
-    cbn in HS.
-    apply~ HS.
-    assert (A \notin domΔ (D1 |,| D2)).
-    + repeat rewrite notin_domΔ_eq in *.
-      lets [[? ?] ?]: H5.
-      split~.
-    + econstructor; auto.
-      rewrite~ (subst_sources_from_match Match).
-  - unfold entails_semantic in *.
-    introv Match.
-    lets IH: IHD1 D2 Y T1 T2.
-    inversions Match.
-    apply* IH.
-    introv Match.
-    apply Sem.
-    rewrite <- List.app_comm_cons.
-    constructor; eauto.
-Admitted.
+  introv H.
+  cbn in *.
+  introv M.
+  apply H.
+  apply subst_match_weaken with U1 U2. auto.
+Qed.
+
+Ltac fold_subst_src :=
+  repeat match goal with
+  | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] |- _ ] =>
+    fold (from_list (List.map fst Th)) in H;
+    fold (substitution_sources Th) in H
+  | [ |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] ] =>
+    fold (from_list (List.map fst Th));
+    fold (substitution_sources Th)
+  end.
+
+Lemma subst_eq_strengthen : forall Θ T1 T2 Y T,
+    Y \notin substitution_sources Θ ->
+    (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U) ->
+    subst_tt' T1 Θ = subst_tt' T2 Θ ->
+    subst_tt' (subst_tt Y T T1) Θ = subst_tt' (subst_tt Y T T2) Θ.
+  induction Θ as [| [X U]]; introv FrSrc FrTrg EQ.
+  - cbn in *.
+    f_equal~.
+  - cbn in *.
+    fold_subst_src.
+    assert (Y \notin fv_typ U).
+    + eauto with listin.
+    + rewrite~ subst_commute.
+      rewrite (subst_commute U); auto.
+      apply~ IHΘ.
+      eauto with listin.
+Qed.
+
+Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
+    subst_matches_typctx Σ Δ Θ ->
+    (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U).
+  introv M Hin.
+  lets EQ: subst_has_no_fv M Hin.
+  rewrite EQ.
+  auto.
+Qed.
 
 Lemma equation_weaken_var:
-  forall (D1 : list typctx_elem) (Y : var) (Σ : GADTEnv) (T1 T2 : typ)
-    (D2 : list typctx_elem),
+  forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 : typ),
     entails_semantic Σ (D1 |,| D2) (T1 ≡ T2) ->
-    Y \notin domΔ D2 -> entails_semantic Σ ((D1 |,| [tc_var Y]) |,| D2) (T1 ≡ T2).
+    entails_semantic Σ ((D1 |,| [tc_var Y]) |,| D2) (T1 ≡ T2).
 Proof.
-  introv Sem YFr.
+  induction D1 as [| [? | [V1 V2]]];
+    introv Sem.
+  - cbn in *.
+    introv M.
+    inversions M.
+    cbn.
+    apply~ subst_eq_strengthen.
+    lets*: subst_has_no_fv2.
+  - cbn in *.
+    introv M.
+    inversions M.
+    lets IH: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2).
+    apply~ IH.
+    introv M.
+    lets EQ: Sem ((A, T) :: Θ).
+    cbn in EQ.
+    apply EQ.
 
-  (* induction D2 as [| [? | ?]]; introv Sem YFr. *)
-  (* - rewrite List.app_nil_r in *. *)
-  (*   unfold entails_semantic in *. *)
-  (*   introv Match. *)
-  (*   admit. *)
-  (* - *)
-
+    assert (A \notin domΔ (D1 |,| D2)).
+    + repeat rewrite notin_domΔ_eq in *.
+      destruct H5 as [[? ?] ?].
+      split~.
+    + constructor; auto.
+      rewrite~ (subst_sources_from_match M).
+  - cbn in *.
+    introv M.
+    inversions M.
+    lets IH: IHD1 D2 Y T1 T2.
+    apply~ IH.
+    introv M.
+    apply Sem.
+    constructor; auto.
+    (* TODO continue from here *)
 Admitted.
 
 Lemma typing_weakening_delta_eq:
