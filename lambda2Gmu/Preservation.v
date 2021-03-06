@@ -213,17 +213,37 @@ Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
   auto.
 Qed.
 
+Lemma subst_extend_var_preserves_eq : forall Σ D1 D2 Th1 Th2 T1 T2 Y U,
+    subst_matches_typctx Σ D1 Th1 ->
+    subst_matches_typctx Σ (D1 |,| D2) (Th1 |,| Th2) ->
+    subst_tt' T1 (Th1 |,| Th2) = subst_tt' T2 (Th1 |,| Th2) ->
+    subst_tt' T1 (Th1 |,| [(Y, U)] |,| Th2) = subst_tt' T2 (Th1 |,| [(Y, U)] |,| Th2).
+  intros.
+
+Admitted.
+
+Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
+    subst_matches_typctx Σ ((D1 |,| [tc_var Y]) |,| D2) Θ ->
+    exists Θ1 Θ2 U, Θ = Θ1 |,| [(Y, U)] |,| Θ2 /\ subst_matches_typctx Σ D1 Θ1.
+Admitted.
+
 Lemma equation_weaken_var:
   forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 : typ),
     entails_semantic Σ (D1 |,| D2) (T1 ≡ T2) ->
     entails_semantic Σ ((D1 |,| [tc_var Y]) |,| D2) (T1 ≡ T2).
 Proof.
+  introv Sem.
+  cbn in *.
+  introv M.
+  lets [Θ1 [Θ2 [U [EQ M1]]]]: subst_match_decompose_var M; subst.
+  apply* subst_extend_var_preserves_eq.
   induction D1 as [| [? | [V1 V2]]];
     introv Sem.
   - cbn in *.
     introv M.
     inversions M.
     cbn.
+    search.
     apply~ subst_eq_strengthen.
     lets*: subst_has_no_fv2.
   - cbn in *.
@@ -335,12 +355,10 @@ Proof.
       * rewrite equations_have_no_dom; auto.
         apply* equations_from_lists_are_equations.
   - apply typing_eq with T1 TT; auto.
-    + admit.
-        
-
+    + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Admitted.
+Qed.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->

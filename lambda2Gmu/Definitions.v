@@ -936,6 +936,7 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
     subst_matches_typctx Σ Δ Θ ->
     A \notin substitution_sources Θ -> (* we want variables to be fresh as it helps with proofs *)
     A \notin domΔ Δ ->
+    (* TODO zmienić na przecinki, dopisywać po prawej *)
     subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
 | tc_add_eq : forall Θ Δ T1 T2,
     subst_matches_typctx Σ Δ Θ ->
@@ -1259,7 +1260,7 @@ as we got rid of separate matching rules we check that, only partially, implicit
     trm_matchgadt e1 G ms --> trm_matchgadt e1' G ms
 where "e1 --> e2" := (red e1 e2).
 
-(** * Statemenf of desired safety properties *)
+(** * Statement of desired safety properties *)
 
 Definition progress := forall TT Σ e T,
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
@@ -1269,3 +1270,8 @@ Definition preservation := forall TT Σ e T e',
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     e --> e' ->
     {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.
+(*
+TODO:
+try proving uniqueness of reduction
++ try proving prog+pres at once
+*)

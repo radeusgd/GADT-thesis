@@ -25,9 +25,9 @@ Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructur
 Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo TypInduction.vo
 Prelude.vio: Prelude.v Zip.vio Definitions.vio TypInduction.vio
 Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos TypInduction.vos
-Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo
-Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio
-Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos
+Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo Equations.vo
+Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio Equations.vio
+Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos Equations.vos
 Progress.vo Progress.glob Progress.v.beautified Progress.required_vo: Progress.v Prelude.vo Infrastructure.vo Regularity.vo CanonicalForms.vo
 Progress.vio: Progress.v Prelude.vio Infrastructure.vio Regularity.vio CanonicalForms.vio
 Progress.vos Progress.vok Progress.required_vos: Progress.v Prelude.vos Infrastructure.vos Regularity.vos CanonicalForms.vos
