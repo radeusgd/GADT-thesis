@@ -288,6 +288,109 @@ Ltac add_notin x L :=
   let Fr := fresh "Fr" in
   assert (Fr: x \notin L); auto.
 
+Lemma in_right_inv : forall A (x a : A) l,
+    List.In x (l |,| [a]) ->
+    x = a \/ List.In x l.
+  introv Hin.
+  lets Hin2: List.in_app_or Hin.
+  destruct Hin2 as [Hin2 | Hin2]; auto.
+  left.
+  inversion~ Hin2.
+  contradiction.
+Qed.
+
+Lemma app_singleton_inv : forall A l1 l2 (a b : A),
+    l1 |,| [a] = l2 |,| [b] ->
+    l1 = l2 /\ a = b.
+  induction l1; introv EQ.
+  - cbn in *.
+    destruct l2.
+    + cbn in *. inversion~ EQ.
+    + cbn in *.
+      inversion~ EQ.
+      false* List.app_cons_not_nil.
+  - destruct l2.
+    + inversion ~ EQ.
+      false* List.app_cons_not_nil.
+    + inversions EQ.
+      lets [? ?]: IHl1 H1; subst.
+      auto.
+Qed.
+
+Lemma subst_match_inv_var : forall Σ Δ A Θ,
+    subst_matches_typctx Σ (Δ |,| [tc_var A]) Θ ->
+    exists T Θ', Θ = (A, T) :: Θ' /\
+            wft Σ emptyΔ T /\
+            subst_matches_typctx Σ Δ Θ' /\
+            A \notin substitution_sources Θ' /\
+            A \notin domΔ Δ.
+  introv M.
+  inversions M.
+  - false* List.app_cons_not_nil.
+  - lets [? EQvar]: app_singleton_inv H; subst.
+    inversions EQvar.
+    exists T Θ0. splits~.
+  - lets [? EQvar]: app_singleton_inv H; subst.
+    inversion EQvar.
+Qed.
+
+Lemma subst_match_inv_eq : forall Σ Δ T1 T2 Θ,
+    subst_matches_typctx Σ (Δ |,| [tc_eq (T1 ≡ T2)]) Θ ->
+    subst_matches_typctx Σ Δ Θ /\
+    (subst_tt' T1 Θ) = (subst_tt' T2 Θ).
+  introv M.
+  inversions M.
+  - false* List.app_cons_not_nil.
+  - lets [? EQ]: app_singleton_inv H; subst.
+    inversions EQ.
+  - lets [? EQ]: app_singleton_inv H; subst.
+    inversions EQ.
+    split~.
+Qed.
+
+Lemma subst_match_inv_empty : forall Σ Θ,
+    subst_matches_typctx Σ [] Θ ->
+    Θ = [].
+  introv H.
+  inversion~ H;
+    false* List.app_cons_not_nil.
+Qed.
+
+Ltac invert_subst_match_simple :=
+  match goal with
+  | [ H: subst_matches_typctx ?Σ [] ?Θ  |- _ ] =>
+    lets: subst_match_inv_empty H; subst
+  | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_var ?A]) ?Θ  |- _ ] =>
+    let Hwft := fresh "SMwft" in
+    let Hmatch := fresh "SMmatch" in
+    let Asrc := fresh "SMAsrc" in
+    let Adom := fresh "SMAdom" in
+    let Th := fresh "Θ" in
+    let U := fresh "U" in
+    lets [U [Th [? [Hwft [Hmatch [Asrc Adom]]]]]]: subst_match_inv_var H;
+    subst
+  | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_eq (?T1 ≡ ?T2)]) ?Θ  |- _ ] =>
+    let Hmatch := fresh "SMmatch" in
+    let Heq := fresh "SMeq" in
+    lets [Hmatch Heq]: subst_match_inv_eq H;
+    subst
+  end.
+
+Ltac invert_subst_match :=
+  match goal with
+  | [ H: subst_matches_typctx ?Σ [] ?Θ  |- _ ] =>
+    invert_subst_match_simple
+  | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_var ?A]) ?Θ  |- _ ] =>
+    invert_subst_match_simple
+  | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_eq (?T1 ≡ ?T2)]) ?Θ  |- _ ] =>
+    invert_subst_match_simple
+  | [ H: subst_matches_typctx ?Σ (?Δ |,| [?x]) ?Θ |- _ ] =>
+    let A := fresh "A" in
+    let V1 := fresh "V1" in
+    let V2 := fresh "V2" in
+    destruct x as [A | [V1 V2]]; invert_subst_match_simple
+  end.
+
 Require Import TLC.LibFset TLC.LibList.
 (* different Fset impl? taken from repo: *)
 Lemma from_list_spec : forall A (x : A) L,

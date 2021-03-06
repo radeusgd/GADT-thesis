@@ -48,13 +48,14 @@ Section SimpleEquationProperties.
       List.In (tc_eq (T ≡ U)) Δ ->
       entails_semantic Σ Δ (T ≡ U).
     unfold entails_semantic.
-    induction Δ; introv Hin Hmatch.
+    induction Δ using List.rev_ind; introv Hin Hmatch.
     - contradiction.
-    - cbn in Hin.
+    - apply in_right_inv in Hin.
       destruct Hin as [Hin | Hin].
       + subst.
-        inversions Hmatch; easy.
-      + inversions Hmatch; auto.
+        invert_subst_match.
+        easy.
+      + invert_subst_match; auto.
         cbn.
         repeat rewrite subst_tt_inside; auto.
         * f_equal.
@@ -92,7 +93,7 @@ Qed.
 Lemma spawn_unit_subst : forall Σ As,
     DistinctList As ->
     exists Θ, length Θ = length As /\ subst_matches_typctx Σ (tc_vars As) Θ /\ substitution_sources Θ = from_list As.
-  induction As as [| Ah Ats]; introv ADist.
+  induction As as [| Ah Ats] using List.rev_ind; introv ADist.
   - cbn.
     exists (@nil (var * typ)).
     splits~.
@@ -102,7 +103,7 @@ Lemma spawn_unit_subst : forall Σ As,
     exists ((Ah, typ_unit) :: LT).
     splits.
     + cbn. auto.
-    + constructor;
+    + constructor. constructor;
         fold (List.map tc_var Ats);
         fold (tc_vars Ats);
         auto.

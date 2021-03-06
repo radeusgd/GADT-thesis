@@ -936,12 +936,12 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
     subst_matches_typctx Σ Δ Θ ->
     A \notin substitution_sources Θ -> (* we want variables to be fresh as it helps with proofs *)
     A \notin domΔ Δ ->
-    (* TODO zmienić na przecinki, dopisywać po prawej *)
-    subst_matches_typctx Σ (tc_var A :: Δ) ((A, T) :: Θ)
+    (* I'm adding to the env on the right to be consistent, but to subst to the left because the order does not matter - A's are different and T's have no free vars so reordering the substitution does not change anything. *)
+    subst_matches_typctx Σ (Δ |,| [tc_var A]) ((A, T) :: Θ)
 | tc_add_eq : forall Θ Δ T1 T2,
     subst_matches_typctx Σ Δ Θ ->
     (subst_tt' T1 Θ) = (subst_tt' T2 Θ) ->
-    subst_matches_typctx Σ (tc_eq (T1 ≡ T2) :: Δ) Θ.
+    subst_matches_typctx Σ (Δ |,| [tc_eq (T1 ≡ T2)]) Θ.
 
 (* Semantic entailment of a set of equations, noted in the paper as Δ ⊨ T1 ≡ T2.
    It is defined such that an equation is entailed by Δ if for each substitution matching delta, both sides of that equation are alpha equivalent after applying that substitution.
