@@ -151,8 +151,6 @@ Proof.
     lets* IH: H_ctxEq_implies_wft Y (D2 |,| [tc_var Y]).
     + lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0;
         cbn in Hfv; unfold open_tt; rewrite Hfv; eauto.
-    + rewrite <- List.app_assoc.
-      apply IH. eauto using List.app_assoc.
   - econstructor; eauto.
 Qed.
 
@@ -164,14 +162,12 @@ Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
   - apply* wft_var.
     unfold is_var_defined in *.
     lets [Hin | Hin]: List.in_app_or H.
+    + apply List.in_or_app; left~.
     + lets [? | ?]: List.in_app_or Hin.
-      * apply List.in_or_app; left~.
       * inversion H0; false*.
-    + apply List.in_or_app; right~.
+      * apply List.in_or_app; right~.
   - apply_fresh wft_all as X.
     lets IH: H0 X (D2 |,| [tc_var X]); auto.
-    rewrite <- List.app_assoc. apply IH.
-    auto using List.app_assoc.
   - econstructor; eauto.
 Qed.
 
@@ -186,11 +182,8 @@ Lemma wft_strengthen_equations : forall Σ D1 Deqs D2 T,
       false~.
     + fold_delta.
       apply IHDeqs.
-      * rewrite <- List.app_assoc.
-        repeat rewrite List.app_assoc in Hwft.
-        apply* wft_strengthen_equation.
-        repeat rewrite List.app_assoc.
-        eauto.
+      * apply* wft_strengthen_equation.
+        repeat rewrite List.app_assoc in *; eauto.
       * intros eq1 Hin.
         lets Hl: Heqs eq1.
         apply Hl.
@@ -206,8 +199,9 @@ Lemma wft_strengthen_typ_many : forall Σ As Δ T,
     trivial.
   - cbn in *. fold_delta. fold_delta.
     apply* IHAts.
-    apply* wft_strengthen_typ.
-    rewrite* <- List.app_assoc.
+    lets W: wft_strengthen_typ Σ (Δ |,| tc_vars Ats) emptyΔ.
+    clean_empty_Δ.
+    apply~ W.
 Qed.
 (* Lemma wft_strengthen : forall Σ Δ E F x U T, *)
 (*  wft Σ Δ (E & (x ~: U) & F) T -> wft Σ (E & F) T. *)
@@ -370,8 +364,6 @@ Proof.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
     lets* IH: H0 Y (D2 |,| [tc_var Y]).
-    rewrite <- List.app_assoc.
-    apply IH. auto using List.app_assoc.
   - apply* wft_gadt.
     + introv Tin.
       apply List.in_map_iff in Tin.
@@ -456,31 +448,17 @@ Qed.
 (* Most likely not needed anymore as wft_weaken already supports arbitrary middle *)
 (* Lemma wft_weaken_many : forall Σ As D1 D2 T, *)
 (*     wft Σ (D1 |,| D2) T -> *)
-(*     (forall A, List.In A As -> A \notin domΔ D1) -> *)
-(*     (forall A, List.In A As -> A \notin domΔ D2) -> *)
+(*     (* (forall A, List.In A As -> A \notin domΔ D1) -> *) *)
+(*     (* (forall A, List.In A As -> A \notin domΔ D2) -> *) *)
 (*     DistinctList As -> *)
 (*     wft Σ (D1 |,| tc_vars As |,| D2) T. *)
-(*   induction As as [| Ah Ats]; introv Hwft FD1 FD2 Hdist. *)
+(*   induction As as [| Ah Ats]; introv Hwft Hdist. *)
 (*   - cbn. clean_empty_Δ. auto. *)
 (*   - cbn. fold (tc_vars Ats). *)
 (*     fold_delta. *)
 (*     apply wft_weaken. *)
-(*     rewrite <- concat_assoc. *)
-(*     apply* IHAs; try eauto with listin. *)
-(*     + rewrite concat_assoc. *)
-(*       eapply adding_free_is_ok; eauto with listin. *)
-(*     + rewrite concat_assoc. *)
-(*       apply* wft_weaken. *)
-(*       eapply adding_free_is_ok; eauto with listin. *)
-(*     + introv Hin. *)
-(*       simpl_dom. *)
-(*       rewrite notin_union. *)
-(*       split. *)
-(*       * apply* notin_singleton. *)
-(*         inversions HAs. *)
-(*         intro; subst. contradiction. *)
-(*       * eauto with listin. *)
-(*     + inversion* HAs. *)
+(*     inversion Hdist. *)
+(*     apply~ IHAts; eauto with listin. *)
 (* Qed. *)
 
 Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ),
@@ -499,9 +477,12 @@ Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ)
   - cbn in *. inversions HD.
     apply IHAts; eauto with listin.
     fold (tc_vars Ats) in HwftT.
-    fold ([tc_var Ah] ++ tc_vars Ats) in HwftT.
-    apply* wft_subst_tb.
-    rewrite* List.app_assoc in HwftT.
+    fold ((Δ |,| tc_vars Ats) |,| [tc_var Ah]) in HwftT.
+    lets W: wft_subst_tb Σ (Δ |,| tc_vars Ats) emptyΔ.
+    clean_empty_Δ.
+    apply~ W.
+    rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)).
+    apply~ wft_weaken.
 Qed.
 
 Lemma wft_open_many : forall Δ Σ Alphas Ts U,
@@ -530,12 +511,12 @@ Proof.
   - rewrite notin_singleton. intro. subst. contradiction.
   - notin_simpl; auto. pick_fresh Y. apply* (@notin_fv_tt_open Y).
     apply* H0.
+    cbn.
     intro HF.
-    destruct_in_app.
+    destruct HF as [HF | HF].
+    + inversions HF.
+      assert (X \notin \{ X}); eauto using in_singleton_self.
     + contradiction.
-    + cbn in H1. destruct H1; try contradiction.
-      apply Fr0. inversions H1.
-      autorewrite with fsets. eauto using in_singleton_self.
   - intro Hin.
     lets* Hex: in_fold_exists Hin.
     destruct Hex as [Hex | Hex].
@@ -604,9 +585,8 @@ Proof.
     pick_fresh_gen (L \u fv_env E \u dom E) y.
     add_notin y L. lets~ HF: IH Fr0. destructs~ HF.
     splits*.
-    * rewrite <- (List.app_nil_r Δ).
+    * rewrite <- (List.app_nil_l Δ).
       apply okt_strengthen_delta_var with y; eauto.
-      clean_empty_Δ. auto.
     * apply* term_tabs. intros. apply* IH1.
     * apply_fresh* wft_all as Y.
       add_notin Y L. lets~ HF: IH1 Y Fr1. destruct* HF.
@@ -685,7 +665,7 @@ Proof.
         lets~ [? [? Hwft2]]: H4 HTyp.
         (* lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh. *)
         apply wft_strengthen_typ_many with Alphas; auto.
-        -- rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas)).
+        -- rewrite <- (List.app_nil_l (Δ |,| tc_vars Alphas)).
            eapply wft_strengthen_equations.
            ++ clean_empty_Δ.
               apply Hwft2.

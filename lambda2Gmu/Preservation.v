@@ -79,7 +79,7 @@ Lemma wft_weaken_simple : forall Σ D1 D2 E,
     wft Σ D1 E ->
     wft Σ (D1 |,| D2) E.
   intros.
-  rewrite <- (List.app_nil_r (D1 |,| D2)).
+  rewrite <- (List.app_nil_l (D1 |,| D2)).
   apply wft_weaken.
   clean_empty_Δ. auto.
 Qed.
@@ -110,8 +110,6 @@ Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
   apply notin_domΔ_eq.
   rewrite notin_domΔ_eq in H1. destruct H1.
   split; auto.
-  apply notin_domΔ_eq; split; auto.
-  cbn. auto.
 Qed.
 
 Lemma equations_have_no_dom : forall Deqs,
@@ -151,15 +149,15 @@ Lemma subst_match_weaken : forall Σ Θ D1 D2 T1 T2,
   gen_eq D3: (D1 |,| [tc_eq (T1 ≡ T2)] |,| D2). gen D1 D2.
   induction Match; introv EQ; subst; eauto.
   - false List.app_cons_not_nil.
-    rewrite <- List.app_assoc in EQ.
     cbn in EQ.
     eauto.
-  - destruct D1; inversions EQ.
+  - destruct D2; inversions EQ.
     constructor; try fold (D1 |,| D2); auto.
+    fold_delta.
     repeat rewrite notin_domΔ_eq in *.
     destruct H1 as [[? ?] ?].
     split~.
-  - destruct D1; inversions EQ.
+  - destruct D2; inversions EQ.
     + cbn. auto.
     + constructor; auto.
 Qed.
@@ -236,41 +234,41 @@ Proof.
   cbn in *.
   introv M.
   lets [Θ1 [Θ2 [U [EQ M1]]]]: subst_match_decompose_var M; subst.
-  apply* subst_extend_var_preserves_eq.
-  induction D1 as [| [? | [V1 V2]]];
-    introv Sem.
-  - cbn in *.
-    introv M.
-    inversions M.
-    cbn.
-    search.
-    apply~ subst_eq_strengthen.
-    lets*: subst_has_no_fv2.
-  - cbn in *.
-    introv M.
-    inversions M.
-    lets IH: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2).
-    apply~ IH.
-    introv M.
-    lets EQ: Sem ((A, T) :: Θ).
-    cbn in EQ.
-    apply EQ.
+  (* apply* subst_extend_var_preserves_eq. *)
+  (* induction D1 as [| [? | [V1 V2]]]; *)
+  (*   introv Sem. *)
+  (* - cbn in *. *)
+  (*   introv M. *)
+  (*   inversions M. *)
+  (*   cbn. *)
+  (*   search. *)
+  (*   apply~ subst_eq_strengthen. *)
+  (*   lets*: subst_has_no_fv2. *)
+  (* - cbn in *. *)
+  (*   introv M. *)
+  (*   inversions M. *)
+  (*   lets IH: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2). *)
+  (*   apply~ IH. *)
+  (*   introv M. *)
+  (*   lets EQ: Sem ((A, T) :: Θ). *)
+  (*   cbn in EQ. *)
+  (*   apply EQ. *)
 
-    assert (A \notin domΔ (D1 |,| D2)).
-    + repeat rewrite notin_domΔ_eq in *.
-      destruct H5 as [[? ?] ?].
-      split~.
-    + constructor; auto.
-      rewrite~ (subst_sources_from_match M).
-  - cbn in *.
-    introv M.
-    inversions M.
-    lets IH: IHD1 D2 Y T1 T2.
-    apply~ IH.
-    introv M.
-    apply Sem.
-    constructor; auto.
-    (* TODO continue from here *)
+  (*   assert (A \notin domΔ (D1 |,| D2)). *)
+  (*   + repeat rewrite notin_domΔ_eq in *. *)
+  (*     destruct H5 as [[? ?] ?]. *)
+  (*     split~. *)
+  (*   + constructor; auto. *)
+  (*     rewrite~ (subst_sources_from_match M). *)
+  (* - cbn in *. *)
+  (*   introv M. *)
+  (*   inversions M. *)
+  (*   lets IH: IHD1 D2 Y T1 T2. *)
+  (*   apply~ IH. *)
+  (*   introv M. *)
+  (*   apply Sem. *)
+  (*   constructor; auto. *)
+  (*   (* TODO continue from here *) *)
 Admitted.
 
 Lemma typing_weakening_delta_eq:
@@ -286,9 +284,6 @@ Proof.
         ].
   - apply_fresh typing_tabs as Y; auto.
     lets* IH: H1 Y (D2 |,| [tc_var Y]).
-    repeat rewrite List.app_assoc in IH.
-    apply IH.
-    auto using List.app_assoc.
   - econstructor; eauto.
   (*   introv Hin. *)
   (*   lets [TT2 IH]: H3 Hin. *)
@@ -303,7 +298,6 @@ Proof.
   (*     apply IH2; auto. *)
   (* - admit. *)
 Admitted.
-
 
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var) TT,
@@ -344,17 +338,18 @@ Proof.
       apply IH; auto.
       rewrite notin_domΔ_eq; split; auto.
       * rewrite notin_domΔ_eq; split; auto.
-        apply notin_dom_tc_vars.
-        intro HF.
-        lets HF2: from_list_spec HF.
-        lets HF3: LibList_mem HF2.
-        lets HF4: Afresh HF3.
-        eapply notin_same.
-        instantiate (1:=Y).
-        eauto.
-      * rewrite equations_have_no_dom; auto.
-        apply* equations_from_lists_are_equations.
-  - apply typing_eq with T1 TT; auto.
+        -- apply notin_dom_tc_vars.
+           intro HF.
+           lets HF2: from_list_spec HF.
+           lets HF3: LibList_mem HF2.
+           lets HF4: Afresh HF3.
+           eapply notin_same.
+           instantiate (1:=Y).
+           eauto.
+        -- rewrite equations_have_no_dom; auto.
+           apply* equations_from_lists_are_equations.
+  - econstructor.
+    + apply~ IHTyp.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
@@ -369,9 +364,12 @@ Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
   - destruct a;
       try solve [lets HF: EQs (tc_var A); false~ HF].
     fold_delta.
-    rewrite List.app_assoc.
-    apply typing_weakening_delta_eq.
-    apply* IHDeqs.
+    rewrite <- List.app_assoc.
+    lets W: typing_weakening_delta_eq Σ (Δ |,| Deqs) emptyΔ.
+    clean_empty_Δ.
+    rewrite <- (List.app_nil_l ((Δ |,| Deqs) |,| [tc_eq eq])).
+    apply~ W.
+    apply~ IHDeqs.
     intros eq1 ?. lets Hin: EQs eq1.
     destruct Hin; eauto.
     cbn. auto.
@@ -387,13 +385,15 @@ Lemma typing_weakening_delta_many : forall Σ Δ E As u U TT,
   - cbn. clean_empty_Δ. auto.
   - cbn. fold_delta.
     inversions Adist.
-    rewrite List.app_assoc.
-    apply typing_weakening_delta; auto with listin.
-    apply notin_dom_tc_vars.
-    intro HF.
-    apply from_list_spec in HF.
-    apply LibList_mem in HF.
-    auto.
+    rewrite <- (List.app_nil_l ((Δ |,| tc_vars Ats) |,| [tc_var Ah])).
+    apply typing_weakening_delta; cbn; auto with listin.
+    rewrite notin_domΔ_eq. split.
+    + auto with listin.
+    + apply notin_dom_tc_vars.
+      intro HF.
+      apply from_list_spec in HF.
+      apply LibList_mem in HF.
+      auto.
 Qed.
 
 Lemma okt_weakening_delta_many_eq : forall Σ D1 D2 Deqs E,
@@ -405,10 +405,8 @@ Lemma okt_weakening_delta_many_eq : forall Σ D1 D2 Deqs E,
   - destruct a.
     + lets: Heq (tc_var A); cbn in *; false* Heq; congruence.
     + fold_delta.
-      rewrite List.app_assoc.
-      rewrite <- (List.app_assoc (D1 |,| [tc_eq eq])).
+      rewrite <- List.app_assoc.
       apply okt_weakening_delta_eq.
-      rewrite List.app_assoc.
       apply IHDeqs; auto.
       intros eq1 ?. lets Hin: Heq eq1.
       apply Hin. cbn. auto.
@@ -425,17 +423,13 @@ Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
   - cbn. clean_empty_Δ. auto.
   - cbn. fold_delta.
     inversions Adist.
-    rewrite List.app_assoc.
-    rewrite <- (List.app_assoc (D1 |,| [tc_var Ah]) (tc_vars Ats)).
     apply okt_weakening_delta; auto with listin.
-    + rewrite List.app_assoc.
-      apply IHAts; auto with listin.
-    + apply notin_domΔ_eq. split; auto with listin.
-      apply notin_dom_tc_vars.
-      intro HF.
-      apply from_list_spec in HF.
-      apply LibList_mem in HF.
-      auto.
+    apply notin_domΔ_eq. split; auto with listin.
+    apply notin_dom_tc_vars.
+    intro HF.
+    apply from_list_spec in HF.
+    apply LibList_mem in HF.
+    auto.
 Qed.
 
 Lemma typing_weakening : forall Σ Δ E F G e T TT,
@@ -464,7 +458,7 @@ Proof.
     lets IH: H1 X G F; auto.
     apply IH.
     + auto using JMeq_from_eq.
-    + rewrite <- (List.app_nil_r (Δ |,| [tc_var X])).
+    + rewrite <- (List.app_nil_l (Δ |,| [tc_var X])).
       apply okt_weakening_delta; clean_empty_Δ; cbn; auto.
   - apply_fresh* typing_fix as x.
     lets IH: H1 x (G & x ~: T) F; auto.
@@ -546,7 +540,7 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
     | [ H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ ] =>
       apply* H
     end.
-    rewrite <- (List.app_nil_r (Δ |,| [tc_var Y])).
+    rewrite <- (List.app_nil_l (Δ |,| [tc_var Y])).
     apply typing_weakening_delta; clean_empty_Δ; cbn; auto.
   - apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
     apply_ih.
@@ -608,9 +602,8 @@ Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
     Z \notin fv_env E ->
     okt Σ Δ E.
   intros.
-  rewrite <- (List.app_nil_r Δ).
+  rewrite <- (List.app_nil_l Δ).
   eapply okt_strengthen_delta_var with Z; auto.
-  clean_empty_Δ. auto.
 Qed.
 
 (* TODO move and merge with _1 *)
@@ -632,9 +625,9 @@ Proof.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
     lets* IH: H0 Y (D2 |,| [tc_var Y]).
+    rewrite List.app_assoc in *.
+    apply~ IH.
     rewrite <- List.app_assoc.
-    apply IH; auto using List.app_assoc.
-    rewrite List.app_assoc.
     apply* wft_weaken_simple.
   - apply* wft_gadt.
     + introv Tin.
@@ -715,11 +708,12 @@ Proof.
     apply_fresh* typing_tabs as X.
     + rewrite* subst_te_open_te_var.
     + lets IH: H1 X (Δ2 |,| [tc_var X]); auto.
-      rewrite <- List.app_assoc.
+      rewrite List.app_assoc in *.
       rewrite* subst_tt_open_tt_var.
       rewrite* subst_te_open_te_var.
-      apply IH; try rewrite List.app_assoc; trivial.
-      * apply* wft_weaken_simple.
+      apply~ IH.
+      rewrite <- List.app_assoc.
+      apply* wft_weaken_simple.
   - apply Tgen_from_any with Treg.
     rewrite* subst_tt_open_tt. apply* typing_tapp.
     apply* wft_subst_tb_2.
@@ -877,16 +871,18 @@ Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps TT,
     rewrite <- (@subst_tb_id_on_fresh E Ah Ph).
     rewrite subst_tb_many_split.
     eapply IH; auto with listin.
-    + lets: typing_through_subst_te Σ Δ (tc_vars Ats) Ah.
+    + lets HT: typing_through_subst_te Σ (Δ |,| (tc_vars Ats)) emptyΔ Ah.
       rewrite <- map_concat.
-      eapply H; auto with listin.
-      * rewrite <- List.app_assoc.
-        cbn.
+      apply~ HT; clean_empty_Δ; auto with listin.
+      * rewrite List.app_assoc.
         unfold tc_vars.
+
+        assert (EQ: (List.map tc_var Ats |,| [tc_var Ah]) = (tc_var Ah :: List.map tc_var Ats)); try solve [cbn; auto].
+        rewrite EQ.
         rewrite <- List.map_cons.
         fold (tc_vars (Ah :: Ats)).
         eauto.
-      * rewrite <- (List.app_nil_r (Δ ++ tc_vars Ats)).
+      * rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)).
         apply wft_weaken.
         clean_empty_Δ. auto with listin.
     + lets: fv_env_subst.

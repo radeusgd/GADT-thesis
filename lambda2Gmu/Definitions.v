@@ -857,7 +857,9 @@ Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
-Notation "A |,| B" := (A ++ B) (at level 32).
+Notation "A |,| B" := (B ++ A) (at level 32) .
+Notation "A |, b" := (b :: A) (only parsing, at level 32).
+
 Fixpoint domΔ (Δ : typctx) : fset var :=
   match Δ with
   | [] => \{}

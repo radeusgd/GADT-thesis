@@ -283,29 +283,29 @@ Qed.
 Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ (D1 |,| D2) <->
     X \notin domΔ D1 /\ X \notin domΔ D2.
-  induction D1; intros; constructor;
+  induction D2; intros; constructor;
     try solve [cbn in *; intuition]; intro H;
       destruct a; cbn in *;
         repeat rewrite notin_union in *;
-        destruct (IHD1 D2 X) as [IH1 IH2];
+        destruct (IHD2 X) as [IH1 IH2];
         intuition.
 Qed.
 
 Lemma in_domΔ_eq : forall D1 D2 X,
     X \in domΔ (D1 |,| D2) <->
     X \in domΔ D1 \/ X \in domΔ D2.
-  induction D1; intros; constructor;
+  induction D2; intros; constructor;
     intro H;
     try solve [
           cbn in *; intuition
         | destruct a; cbn in *;
           repeat rewrite in_union in *;
-          destruct (IHD1 D2 X) as [IH1 IH2];
+          destruct (IHD2 X) as [IH1 IH2];
           intuition
         ].
   destruct H.
-  + cbn in H. false* in_empty_inv.
   + cbn. auto.
+  + cbn in H. false* in_empty_inv.
 Qed.
 
 Lemma fold_empty : forall Ts,
