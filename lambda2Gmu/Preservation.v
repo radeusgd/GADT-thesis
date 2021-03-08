@@ -107,9 +107,9 @@ Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
     okt Σ (D1 |,| [tc_eq eq] |,| D2) E.
   introv Hokt; gen_eq D': (D1 |,| D2). gen D2.
   induction Hokt; econstructor; subst; auto using wft_weaken.
-  apply notin_domΔ_eq.
-  rewrite notin_domΔ_eq in H1. destruct H1.
-  split; auto.
+  repeat rewrite notin_domΔ_eq in *. destruct H1.
+  destruct eq; cbn.
+  split~.
 Qed.
 
 Lemma equations_have_no_dom : forall Deqs,
@@ -142,7 +142,7 @@ Lemma subst_sources_from_match : forall Σ D Θ,
   rewrite~ IHsubst_matches_typctx.
 Qed.
 
-Lemma subst_match_weaken : forall Σ Θ D1 D2 T1 T2,
+Lemma subst_match_remove_eq : forall Σ Θ D1 D2 T1 T2,
     subst_matches_typctx Σ (D1 |,| [tc_eq (T1 ≡ T2)] |,| D2) Θ ->
     subst_matches_typctx Σ (D1 |,| D2) Θ.
   introv Match.
@@ -171,7 +171,7 @@ Proof.
   cbn in *.
   introv M.
   apply H.
-  apply subst_match_weaken with U1 U2. auto.
+  apply subst_match_remove_eq with U1 U2. auto.
 Qed.
 
 Ltac fold_subst_src :=
@@ -211,65 +211,244 @@ Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
   auto.
 Qed.
 
-Lemma subst_extend_var_preserves_eq : forall Σ D1 D2 Th1 Th2 T1 T2 Y U,
-    subst_matches_typctx Σ D1 Th1 ->
-    subst_matches_typctx Σ (D1 |,| D2) (Th1 |,| Th2) ->
-    subst_tt' T1 (Th1 |,| Th2) = subst_tt' T2 (Th1 |,| Th2) ->
-    subst_tt' T1 (Th1 |,| [(Y, U)] |,| Th2) = subst_tt' T2 (Th1 |,| [(Y, U)] |,| Th2).
-  intros.
+(* Lemma subst_extend_var_preserves_eq : forall Σ D1 D2 Th1 Th2 T1 T2 Y U, *)
+(*     subst_matches_typctx Σ D1 Th1 -> *)
+(*     subst_matches_typctx Σ (D1 |,| D2) (Th1 |,| Th2) -> *)
+(*     subst_tt' T1 (Th1 |,| Th2) = subst_tt' T2 (Th1 |,| Th2) -> *)
+(*     subst_tt' T1 (Th1 |,| [(Y, U)] |,| Th2) = subst_tt' T2 (Th1 |,| [(Y, U)] |,| Th2). *)
+(*   intros. *)
 
-Admitted.
+(* Admitted. *)
 
 Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
     subst_matches_typctx Σ ((D1 |,| [tc_var Y]) |,| D2) Θ ->
-    exists Θ1 Θ2 U, Θ = Θ1 |,| [(Y, U)] |,| Θ2 /\ subst_matches_typctx Σ D1 Θ1.
+    exists Θ1 Θ2 U,
+      Θ = Θ1 |,| [(Y, U)] |,| Θ2 /\
+      subst_matches_typctx Σ D1 Θ1 /\
+      substitution_sources Θ1 = domΔ D1 /\
+      substitution_sources Θ2 = domΔ D2 /\
+      Y \notin domΔ D1.
+  induction D2; introv M; cbn in *.
+  - inversions M.
+    exists Θ0 (@List.nil (var * typ)) T.
+    repeat split~.
+    apply* subst_sources_from_match.
+  - inversions M.
+    + lets [O1 [O2 [U [EQ [M2 [S1 [S2 D]]]]]]]: IHD2 H2. subst.
+      exists O1 ((A, T) :: O2) U.
+      repeat split~.
+      cbn. fold_subst_src.
+      rewrite~ S2.
+    + lets [O1 [O2 [U [EQ [M2 [S1 [S2 D]]]]]]]: IHD2 H1. subst.
+      exists O1 O2 U.
+      split~.
+Qed.
+
+(* Lemma subst_match_decompose_var2 : forall Σ D1 D2 Θ1 Θ2 X U, *)
+(*     subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) (Θ1 |,| [(X, U)] |,| Θ2) -> *)
+(*     subst_matches_typctx Σ D1 Θ1 /\ *)
+(*     substitution_sources Θ1 = domΔ D1 /\ *)
+(*     substitution_sources Θ2 = domΔ D2 /\ *)
+(*     X \notin domΔ D1. *)
+(*   introv Match. *)
+(*   gen_eq D3: (D1 |,| [tc_var X] |,| D2). gen D1 D2. *)
+(*   gen_eq Θ3: (Θ1 |,| [(X, U)] |,| Θ2). gen Θ1 Θ2. *)
+(*   induction Match; introv EQ1 EQ2. *)
+(*   - admit. *)
+(*   - destruct Θ2; inversions EQ1. *)
+(*     +  *)
+(*     destruct Θ2; destruct D2; inversions EQ1; inversions EQ2. *)
+(*     +  *)
+(*   induction Θ2; introv M. *)
+(*   - inversions M. *)
+(*     + induction D2. *)
+(*       * cbn in *. inversions H. splits~. admit. *)
+(*       * destruct a as [Y | [V1 V2]]. *)
+(*         -- inversions H. *)
+(*            fold_delta. *)
+(*            repeat rewrite notin_domΔ_eq in *. *)
+(*            destruct H6 as [[? HF] ?]. *)
+(*            cbn in HF. *)
+(*            rewrite notin_union in HF. *)
+(*            destruct HF as [HF ?]. *)
+(*            false* notin_same. *)
+(*         -- inversions H. *)
+(*     + cbn in *. *)
+(*       gen D2. *)
+(*       induction D2. *)
+(*       * admit. *)
+(*       * introv EQ. *)
+(*         inversions EQ. *)
+(*       * cbn in H. *)
+(*         inversion H. *)
+(*       * cbn in H. inversions H. *)
+(*         cbn in *. *)
+(*         splits~. *)
+
+Lemma subst_match_notin_srcs : forall Σ D O1 X U,
+    subst_matches_typctx Σ D (O1 |, (X, U)) ->
+    X \notin substitution_sources O1.
+  introv M.
+  gen_eq O0: (O1 |, (X, U)). gen O1.
+  induction M; introv EQ; subst; auto.
+  - inversion EQ.
+  - inversions EQ. auto.
+Qed.
+
+Lemma subst_match_notin_srcs2 : forall O X U,
+    List.In (X, U) O ->
+    X \in substitution_sources O.
+  induction O; introv Hin.
+  - inversion Hin.
+  - cbn in Hin.
+    destruct Hin.
+    + subst. cbn. rewrite in_union. left. apply in_singleton_self.
+    + cbn.
+      rewrite in_union. right. fold_subst_src.
+      apply* IHO.
+Qed.
+
+Lemma subst_match_remove_right_var : forall Σ D1 X D2 O1 U O2 Y V,
+    subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) ((O1 |,| [(X, U)]) |,| (O2 |, (Y, V))) ->
+    exists D3 D4,
+      D2 = D3 |,| D4 /\
+      subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D3) ((O1 |,| [(X, U)]) |,| O2).
+  induction D2 as [| [Z | [V1 V2]]]; introv M.
+  - cbn in *.
+    inversions M.
+    false.
+    apply H6.
+    apply~ subst_match_notin_srcs2.
+    apply List.in_or_app. cbn. eauto.
+  - inversions M.
+    exists D2 [tc_var Y].
+    cbn.
+    splits~.
+  - inversions M.
+    lets [D3 [D4 [EQ M2]]]: IHD2 H3.
+    subst.
+    exists D3 (D4 |, tc_eq (V1 ≡ V2)).
+    cbn.
+    splits~.
+Qed.
+Lemma subst_match_remove_right_var2 : forall Σ D1 X D2 O1 U,
+    subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) (O1 |, (X, U)) ->
+    subst_matches_typctx Σ D1 O1.
+  induction D2 as [| [Z | [V1 V2]]]; introv M.
+  - cbn in *.
+    inversions M.
+    auto.
+  - inversions M.
+    fold_delta.
+    repeat rewrite notin_domΔ_eq in *.
+    destruct H7 as [[? HF]].
+    cbn in HF.
+    rewrite notin_union in HF.
+    destruct HF as [HF ?].
+    false* notin_same.
+  - inversions M.
+    lets~ IH: IHD2 H3.
+Qed.
+
+Lemma subst_eq_strengthen_gen : forall Θ1 Θ2 X U Σ D1 D2 T1 T2,
+    subst_tt' T1 (Θ1 |,| Θ2) = subst_tt' T2 (Θ1 |,| Θ2) ->
+    subst_matches_typctx Σ (D1 |,| [tc_var X] |,| D2) ((Θ1 |,| [(X, U)]) |,| Θ2) ->
+    subst_tt' T1 ((Θ1 |,| [(X, U)]) |,| Θ2) = subst_tt' T2 ((Θ1 |,| [(X, U)]) |,| Θ2).
+  induction Θ2 as [| [Y V]]; introv EQ M.
+  - cbn in *.
+    apply~ subst_eq_strengthen.
+    + apply* subst_match_notin_srcs.
+    + apply* subst_has_no_fv2.
+      fold_delta.
+      lets*: subst_match_remove_right_var2 M.
+  - cbn.
+    lets [D3 [D4 [EQ2 M2]]]: subst_match_remove_right_var M.
+    apply* IHΘ2.
+Qed.
+
+Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
+    subst_tt' T1 ((Θ1 |,| [(X, U)]) |,| Θ2) = subst_tt' T2 ((Θ1 |,| [(X, U)]) |,| Θ2) ->
+    X \notin fv_typ T1 \u fv_typ T2 ->
+    (forall A U, List.In (A, U) Θ2 -> fv_typ U = \{}) ->
+    subst_tt' T1 (Θ1 |,| Θ2) = subst_tt' T2 (Θ1 |,| Θ2).
+  induction Θ2; introv EQ Fr Fr2.
+  - cbn in *.
+    repeat rewrite~ subst_tt_fresh in EQ.
+  - destruct a as [Y P]; cbn in *.
+    rewrite notin_union in *. destruct Fr.
+    assert (X \notin fv_typ P).
+    + rewrite Fr2 with Y P; auto.
+    + apply IHΘ2 with X U; auto.
+      * rewrite notin_union in *.
+        split; apply~ fv_subst_tt.
+      * introv Ain. eauto with listin.
+Qed.
+
+Lemma substitution_sources_from_in : forall O A T,
+    List.In (A, T) O ->
+    A \in substitution_sources O.
+  induction O; introv Oin; cbn in *.
+  - false.
+  - fold_subst_src.
+    rewrite in_union.
+    destruct Oin.
+    + subst. cbn.
+      left. apply in_singleton_self.
+    + right. apply* IHO.
+Qed.
+
+Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
+    subst_matches_typctx Σ (D1 |,| [tc_var X] |,| D2) (Θ1 |,| [(X, T)] |,| Θ2) ->
+    X \notin fv_delta D2 ->
+    subst_matches_typctx Σ (D1 |,| D2) (Θ1 |,| Θ2).
+  introv Match.
+  gen_eq D3: (D1 |,| [tc_var X] |,| D2). gen D1 D2.
+  gen_eq Θ3: (Θ1 |,| [(X, T)] |,| Θ2). gen Θ1 Θ2.
+  induction Match; introv EQ EQ2 Fr; subst; eauto.
+  - false List.app_cons_not_nil.
+    cbn in *.
+    eauto.
+  - destruct D2; inversions EQ;
+      cbn in *;
+      inversions EQ2.
+    + destruct Θ2; inversions H3; auto.
+      false H0.
+      apply~ substitution_sources_from_in.
+      apply List.in_or_app. cbn. auto.
+    + destruct Θ2; inversions H3.
+      * 
+      * constructor; try fold (Θ1 |,| Θ2); auto.
+        -- admit.
+        -- rewrite notin_domΔ_eq in *.
+           destruct H1. cbn in H1. rewrite notin_union in H1. destruct H1.
+           split~.
+  - destruct D2; inversions EQ2.
+    cbn in Fr.
+    constructor.
+    + fold (D1 |,| D2).
+      apply~ IHMatch.
+    + apply subst_eq_weaken with X T; auto.
+      lets FM: subst_has_no_fv Match.
+      introv Ain.
+      eapply FM.
+      apply List.in_or_app; left. apply Ain.
 Admitted.
 
 Lemma equation_weaken_var:
   forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 : typ),
     entails_semantic Σ (D1 |,| D2) (T1 ≡ T2) ->
+    Y \notin fv_delta D2 ->
     entails_semantic Σ ((D1 |,| [tc_var Y]) |,| D2) (T1 ≡ T2).
 Proof.
-  introv Sem.
+  introv Sem YFr.
   cbn in *.
   introv M.
-  lets [Θ1 [Θ2 [U [EQ M1]]]]: subst_match_decompose_var M; subst.
-  (* apply* subst_extend_var_preserves_eq. *)
-  (* induction D1 as [| [? | [V1 V2]]]; *)
-  (*   introv Sem. *)
-  (* - cbn in *. *)
-  (*   introv M. *)
-  (*   inversions M. *)
-  (*   cbn. *)
-  (*   search. *)
-  (*   apply~ subst_eq_strengthen. *)
-  (*   lets*: subst_has_no_fv2. *)
-  (* - cbn in *. *)
-  (*   introv M. *)
-  (*   inversions M. *)
-  (*   lets IH: IHD1 D2 Y (subst_tt A T T1) (subst_tt A T T2). *)
-  (*   apply~ IH. *)
-  (*   introv M. *)
-  (*   lets EQ: Sem ((A, T) :: Θ). *)
-  (*   cbn in EQ. *)
-  (*   apply EQ. *)
-
-  (*   assert (A \notin domΔ (D1 |,| D2)). *)
-  (*   + repeat rewrite notin_domΔ_eq in *. *)
-  (*     destruct H5 as [[? ?] ?]. *)
-  (*     split~. *)
-  (*   + constructor; auto. *)
-  (*     rewrite~ (subst_sources_from_match M). *)
-  (* - cbn in *. *)
-  (*   introv M. *)
-  (*   inversions M. *)
-  (*   lets IH: IHD1 D2 Y T1 T2. *)
-  (*   apply~ IH. *)
-  (*   introv M. *)
-  (*   apply Sem. *)
-  (*   constructor; auto. *)
-  (*   (* TODO continue from here *) *)
-Admitted.
+  lets [Θ1 [Θ2 [U [EQ [M1 [S1 S2]]]]]]: subst_match_decompose_var M; subst.
+  lets M2: subst_match_remove_unused_var M YFr.
+  lets EQ: Sem M2.
+  fold_delta.
+  apply* subst_eq_strengthen_gen.
+Qed.
 
 Lemma typing_weakening_delta_eq:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) eq TT,

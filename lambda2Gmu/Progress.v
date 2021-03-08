@@ -60,19 +60,18 @@ Theorem progress_thm : progress.
   - generalize_typings.
     forwards * [Hval | [? ?]]: IHe.
     admit.
-  -  Δ ⊢ t1 ≡ t2 /\ fv_typ t1 = ∅ , t2, Δ consistent -> t1 = t2
 
-    inversion Hval; 
-    right.
-  - 
-    + apply~ IHe.
+  (*   inversion Hval;  *)
+  (*   right. *)
+  (* -  *)
+  (*   + apply~ IHe. *)
 
-    IHT e.
-    destruct IHt as [ | Hred].
-    + left*.
-    + right.
-      destruct Hred as [e' Hred].
-      eexists. constructor*.
+  (*   IHT e. *)
+  (*   destruct IHt as [ | Hred]. *)
+  (*   + left*. *)
+  (*   + right. *)
+  (*     destruct Hred as [e' Hred]. *)
+  (*     eexists. constructor*. *)
   (* - left*. *)
   (* - IHT e1; IHT e2. *)
   (*   destruct IHt as [IHv1 | IHev1]. *)

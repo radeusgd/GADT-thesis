@@ -285,7 +285,7 @@ Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ D1 /\ X \notin domΔ D2.
   induction D2; intros; constructor;
     try solve [cbn in *; intuition]; intro H;
-      destruct a; cbn in *;
+      destruct a; try destruct eq; cbn in *;
         repeat rewrite notin_union in *;
         destruct (IHD2 X) as [IH1 IH2];
         intuition.
@@ -298,14 +298,14 @@ Lemma in_domΔ_eq : forall D1 D2 X,
     intro H;
     try solve [
           cbn in *; intuition
-        | destruct a; cbn in *;
+        | destruct a; try destruct eq; cbn in *;
           repeat rewrite in_union in *;
           destruct (IHD2 X) as [IH1 IH2];
           intuition
         ].
   destruct H.
-  + cbn. auto.
-  + cbn in H. false* in_empty_inv.
+  - cbn. auto.
+  - cbn in H. false* in_empty_inv.
 Qed.
 
 Lemma fold_empty : forall Ts,
@@ -402,7 +402,11 @@ Proof.
         -- introv HX.
            rewrite in_union.
            right~.
-      * apply~ IHΔ.
+      * destruct eq.
+        introv In.
+        repeat rewrite in_union.
+        repeat right.
+        apply* IHΔ.
 Qed.
 
 Lemma subset_fold : forall T U P Xs E C,
