@@ -211,15 +211,6 @@ Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
   auto.
 Qed.
 
-(* Lemma subst_extend_var_preserves_eq : forall Σ D1 D2 Th1 Th2 T1 T2 Y U, *)
-(*     subst_matches_typctx Σ D1 Th1 -> *)
-(*     subst_matches_typctx Σ (D1 |,| D2) (Th1 |,| Th2) -> *)
-(*     subst_tt' T1 (Th1 |,| Th2) = subst_tt' T2 (Th1 |,| Th2) -> *)
-(*     subst_tt' T1 (Th1 |,| [(Y, U)] |,| Th2) = subst_tt' T2 (Th1 |,| [(Y, U)] |,| Th2). *)
-(*   intros. *)
-
-(* Admitted. *)
-
 Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
     subst_matches_typctx Σ ((D1 |,| [tc_var Y]) |,| D2) Θ ->
     exists Θ1 Θ2 U,
@@ -243,47 +234,6 @@ Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
       exists O1 O2 U.
       split~.
 Qed.
-
-(* Lemma subst_match_decompose_var2 : forall Σ D1 D2 Θ1 Θ2 X U, *)
-(*     subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) (Θ1 |,| [(X, U)] |,| Θ2) -> *)
-(*     subst_matches_typctx Σ D1 Θ1 /\ *)
-(*     substitution_sources Θ1 = domΔ D1 /\ *)
-(*     substitution_sources Θ2 = domΔ D2 /\ *)
-(*     X \notin domΔ D1. *)
-(*   introv Match. *)
-(*   gen_eq D3: (D1 |,| [tc_var X] |,| D2). gen D1 D2. *)
-(*   gen_eq Θ3: (Θ1 |,| [(X, U)] |,| Θ2). gen Θ1 Θ2. *)
-(*   induction Match; introv EQ1 EQ2. *)
-(*   - admit. *)
-(*   - destruct Θ2; inversions EQ1. *)
-(*     +  *)
-(*     destruct Θ2; destruct D2; inversions EQ1; inversions EQ2. *)
-(*     +  *)
-(*   induction Θ2; introv M. *)
-(*   - inversions M. *)
-(*     + induction D2. *)
-(*       * cbn in *. inversions H. splits~. admit. *)
-(*       * destruct a as [Y | [V1 V2]]. *)
-(*         -- inversions H. *)
-(*            fold_delta. *)
-(*            repeat rewrite notin_domΔ_eq in *. *)
-(*            destruct H6 as [[? HF] ?]. *)
-(*            cbn in HF. *)
-(*            rewrite notin_union in HF. *)
-(*            destruct HF as [HF ?]. *)
-(*            false* notin_same. *)
-(*         -- inversions H. *)
-(*     + cbn in *. *)
-(*       gen D2. *)
-(*       induction D2. *)
-(*       * admit. *)
-(*       * introv EQ. *)
-(*         inversions EQ. *)
-(*       * cbn in H. *)
-(*         inversion H. *)
-(*       * cbn in H. inversions H. *)
-(*         cbn in *. *)
-(*         splits~. *)
 
 Lemma subst_match_notin_srcs : forall Σ D O1 X U,
     subst_matches_typctx Σ D (O1 |, (X, U)) ->
@@ -384,6 +334,17 @@ Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
       * introv Ain. eauto with listin.
 Qed.
 
+Lemma subst_src_app : forall O1 O2,
+    substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
+  induction O2.
+  - cbn. fold_subst_src.
+    rewrite~ union_empty_r.
+  - cbn. fold_subst_src.
+    rewrite IHO2.
+    repeat rewrite union_assoc.
+    rewrite~ (union_comm \{ fst a}).
+Qed.
+
 Lemma substitution_sources_from_in : forall O A T,
     List.In (A, T) O ->
     A \in substitution_sources O.
@@ -416,9 +377,17 @@ Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
       apply~ substitution_sources_from_in.
       apply List.in_or_app. cbn. auto.
     + destruct Θ2; inversions H3.
-      * 
+      * repeat rewrite notin_domΔ_eq in *.
+        cbn in H1.
+        rewrite notin_union in H1.
+        destruct H1 as [[HF]].
+        false HF. apply in_singleton_self.
       * constructor; try fold (Θ1 |,| Θ2); auto.
-        -- admit.
+        -- fold (Θ1 |,| [(X, T)]) in *.
+           repeat rewrite subst_src_app in *.
+           repeat rewrite notin_union in *.
+           destruct H0 as [[?]].
+           split~.
         -- rewrite notin_domΔ_eq in *.
            destruct H1. cbn in H1. rewrite notin_union in H1. destruct H1.
            split~.
@@ -432,7 +401,7 @@ Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
       introv Ain.
       eapply FM.
       apply List.in_or_app; left. apply Ain.
-Admitted.
+Qed.
 
 Lemma equation_weaken_var:
   forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 : typ),
@@ -464,18 +433,26 @@ Proof.
   - apply_fresh typing_tabs as Y; auto.
     lets* IH: H1 Y (D2 |,| [tc_var Y]).
   - econstructor; eauto.
-  (*   introv Hin. *)
-  (*   lets [TT2 IH]: H3 Hin. *)
-  (*   exists TT2. *)
-  (*   try let envvars := gather_vars in *)
-  (*   introv Hlen Hdist Afresh xfreshL xfreshA; *)
-  (*   instantiate (1:=envvars) in xfreshL. *)
-  (*   lets~ IH2: IH Hlen xfreshA. *)
-  (*   (* (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)); eauto. *) *)
-  (*   + introv Ain. lets*: Afresh Ain. *)
-  (*   + repeat rewrite List.app_assoc in *. *)
-  (*     apply IH2; auto. *)
-  (* - admit. *)
+    introv In Alen Adist Afr xfr xAfr.
+
+    lets* IH: H4 In xAfr (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)).
+    repeat rewrite List.app_assoc in *.
+    apply~ IH.
+  - econstructor; eauto.
+    + destruct eq. apply~ equation_weaken_eq.
+    + apply~ wft_weaken.
+Qed.
+
+(*
+  Y \notin
+  fv_delta (D2 |,| (tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)))
+ *)
+Lemma fv_delta_app : forall D1 D2,
+    fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
+Admitted.
+
+Lemma fv_delta_alphas : forall As,
+    fv_delta (tc_vars As) = \{}.
 Admitted.
 
 Lemma typing_weakening_delta:
@@ -484,11 +461,12 @@ Lemma typing_weakening_delta:
     Y # E ->
     Y \notin domΔ D1 ->
     Y \notin domΔ D2 ->
+    Y \notin fv_delta D2 ->
     {Σ, D1 |,| [tc_var Y] |,| D2, E} ⊢(TT) u ∈ U.
 Proof.
-  introv Typ FE FD1 FD2; gen_eq D': (D1 |,| D2); gen D2.
+  introv Typ FE FD1 FD2 FrD; gen_eq D': (D1 |,| D2); gen D2.
   lets Typ2: Typ.
-  induction Typ; introv FD2 EQ; subst;
+  induction Typ; introv FD2 FrD EQ; subst;
     try solve [
           econstructor; fresh_intros; eauto
         | econstructor; eauto using okt_weakening_delta; eauto using wft_weaken
@@ -527,12 +505,20 @@ Proof.
            eauto.
         -- rewrite equations_have_no_dom; auto.
            apply* equations_from_lists_are_equations.
+      * repeat rewrite fv_delta_app.
+        repeat rewrite notin_union.
+        splits~.
+        -- rewrite~ fv_delta_alphas.
+        -- lets [? [? WFT]]: typing_regular Typ.
+           lets FV: wft_gives_fv WFT.
+           cbn in FV.
+           admit.
   - econstructor.
     + apply~ IHTyp.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Qed.
+Admitted.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
