@@ -449,11 +449,69 @@ Qed.
  *)
 Lemma fv_delta_app : forall D1 D2,
     fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
-Admitted.
+  induction D2 as [| [X | [T1 T2]]];
+    cbn; auto using union_empty_r.
+  rewrite IHD2.
+  repeat rewrite union_assoc.
+  f_equal.
+  rewrite union_comm.
+  repeat rewrite union_assoc.
+  auto.
+Qed.
 
 Lemma fv_delta_alphas : forall As,
     fv_delta (tc_vars As) = \{}.
-Admitted.
+  induction As; cbn; auto.
+Qed.
+
+Lemma fv_delta_equations : forall A Ts Us,
+    (forall T, List.In T Ts -> A \notin fv_typ T) ->
+    (forall U, List.In U Us -> A \notin fv_typ U) ->
+    A \notin fv_delta (equations_from_lists Ts Us).
+  induction Ts as [| T Ts]; cbn; introv FrT FrU; auto.
+  destruct Us as [| U Us]; cbn; auto.
+  repeat rewrite notin_union.
+  split; auto with listin.
+Qed.
+
+Lemma subset_transitive : forall T (A B C : fset T),
+    A \c B ->
+    B \c C ->
+    A \c C.
+  introv AB BC.
+  intros x In.
+  auto.
+Qed.
+
+Lemma fold_left_subset_base : forall T U P As B,
+    B \c List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) As B.
+  induction As; introv; cbn; auto.
+  lets IH: IHAs (B \u P a).
+  apply subset_transitive with (B \u P a); auto.
+Qed.
+
+Lemma fold_left_subset : forall T A P As B,
+    List.In A As ->
+    P A \c List.fold_left (fun (fv : fset var) (x : T) => fv \u P x) As B.
+  induction As; introv In.
+  - inversion In.
+  - inversions In.
+    + cbn.
+      apply subset_transitive with (B \u P A);
+        auto using fold_left_subset_base.
+    + cbn.
+      apply~ IHAs.
+Qed.
+
+Lemma domDelta_app : forall D1 D2,
+    domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
+  induction D2 as [| [|]]; cbn; auto.
+  - rewrite~ union_empty_r.
+  - rewrite union_comm.
+    rewrite (union_comm (\{A})).
+    rewrite IHD2.
+    rewrite~ union_assoc.
+Qed.
 
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var) TT,
@@ -512,13 +570,32 @@ Proof.
         -- lets [? [? WFT]]: typing_regular Typ.
            lets FV: wft_gives_fv WFT.
            cbn in FV.
-           admit.
+           apply fv_delta_equations.
+           ++ intros T Tin.
+              intro HF.
+              lets FV2: fold_left_subset fv_typ Tin.
+              lets FV3: subset_transitive FV2 FV.
+              lets FV4: FV3 HF.
+              rewrite domDelta_app in FV4.
+              rewrite in_union in FV4.
+              destruct FV4; auto.
+           ++ intros R Rin.
+              assert (OKS: okGadt Σ).
+              ** apply~ okt_implies_okgadt.
+                 apply* typing_regular.
+              ** destruct OKS as [? OKS].
+                 lets [? OKD]: OKS H0.
+                 lets Din: fst_from_zip Hin.
+                 lets OKC: OKD Din.
+                 inversion OKC as [? ? ? ? ? ? ? ? ? FrR]; subst.
+                 lets FrEQ: FrR Rin.
+                 rewrite FrEQ. auto.
   - econstructor.
     + apply~ IHTyp.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Admitted.
+Qed.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
