@@ -685,3 +685,22 @@ Lemma empty_inter_implies_notin : forall T (x : T) A B,
   rewrite H in AB.
   apply* in_empty_inv.
 Qed.
+
+Ltac fold_subst_src :=
+  repeat match goal with
+  | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] |- _ ] =>
+    fold (from_list (List.map fst Th)) in H;
+    fold (substitution_sources Th) in H
+  | [ |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] ] =>
+    fold (from_list (List.map fst Th));
+    fold (substitution_sources Th)
+  end.
+
+Lemma subset_transitive : forall T (A B C : fset T),
+    A \c B ->
+    B \c C ->
+    A \c C.
+  introv AB BC.
+  intros x In.
+  auto.
+Qed.

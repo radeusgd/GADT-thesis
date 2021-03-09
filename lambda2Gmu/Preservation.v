@@ -112,27 +112,6 @@ Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
   split~.
 Qed.
 
-Lemma equations_have_no_dom : forall Deqs,
-    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
-    domΔ Deqs = \{}.
-  induction Deqs; cbn; auto; destruct a; intros.
-  - lets HF: H (tc_var A).
-    false~ HF.
-  - apply IHDeqs.
-    intros. auto.
-Qed.
-
-Lemma equations_from_lists_are_equations : forall D Ts Us,
-    D = equations_from_lists Ts Us ->
-    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
-  induction D; cbn; introv Deq Hin; auto.
-  + false.
-  + destruct Ts; destruct Us; cbn; try solve [false].
-    cbn in Deq.
-    inversions Deq.
-    destruct Hin; subst; eauto.
-Qed.
-
 Lemma subst_sources_from_match : forall Σ D Θ,
     subst_matches_typctx Σ D Θ ->
     substitution_sources Θ = domΔ D.
@@ -174,16 +153,6 @@ Proof.
   apply subst_match_remove_eq with U1 U2. auto.
 Qed.
 
-Ltac fold_subst_src :=
-  repeat match goal with
-  | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] |- _ ] =>
-    fold (from_list (List.map fst Th)) in H;
-    fold (substitution_sources Th) in H
-  | [ |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] ] =>
-    fold (from_list (List.map fst Th));
-    fold (substitution_sources Th)
-  end.
-
 Lemma subst_eq_strengthen : forall Θ T1 T2 Y T,
     Y \notin substitution_sources Θ ->
     (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U) ->
@@ -200,15 +169,6 @@ Lemma subst_eq_strengthen : forall Θ T1 T2 Y T,
       rewrite (subst_commute U); auto.
       apply~ IHΘ.
       eauto with listin.
-Qed.
-
-Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
-    subst_matches_typctx Σ Δ Θ ->
-    (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U).
-  introv M Hin.
-  lets EQ: subst_has_no_fv M Hin.
-  rewrite EQ.
-  auto.
 Qed.
 
 Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
@@ -245,19 +205,6 @@ Lemma subst_match_notin_srcs : forall Σ D O1 X U,
   - inversions EQ. auto.
 Qed.
 
-Lemma subst_match_notin_srcs2 : forall O X U,
-    List.In (X, U) O ->
-    X \in substitution_sources O.
-  induction O; introv Hin.
-  - inversion Hin.
-  - cbn in Hin.
-    destruct Hin.
-    + subst. cbn. rewrite in_union. left. apply in_singleton_self.
-    + cbn.
-      rewrite in_union. right. fold_subst_src.
-      apply* IHO.
-Qed.
-
 Lemma subst_match_remove_right_var : forall Σ D1 X D2 O1 U O2 Y V,
     subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) ((O1 |,| [(X, U)]) |,| (O2 |, (Y, V))) ->
     exists D3 D4,
@@ -281,6 +228,7 @@ Lemma subst_match_remove_right_var : forall Σ D1 X D2 O1 U O2 Y V,
     cbn.
     splits~.
 Qed.
+
 Lemma subst_match_remove_right_var2 : forall Σ D1 X D2 O1 U,
     subst_matches_typctx Σ ((D1 |,| [tc_var X]) |,| D2) (O1 |, (X, U)) ->
     subst_matches_typctx Σ D1 O1.
@@ -332,30 +280,6 @@ Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
       * rewrite notin_union in *.
         split; apply~ fv_subst_tt.
       * introv Ain. eauto with listin.
-Qed.
-
-Lemma subst_src_app : forall O1 O2,
-    substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
-  induction O2.
-  - cbn. fold_subst_src.
-    rewrite~ union_empty_r.
-  - cbn. fold_subst_src.
-    rewrite IHO2.
-    repeat rewrite union_assoc.
-    rewrite~ (union_comm \{ fst a}).
-Qed.
-
-Lemma substitution_sources_from_in : forall O A T,
-    List.In (A, T) O ->
-    A \in substitution_sources O.
-  induction O; introv Oin; cbn in *.
-  - false.
-  - fold_subst_src.
-    rewrite in_union.
-    destruct Oin.
-    + subst. cbn.
-      left. apply in_singleton_self.
-    + right. apply* IHO.
 Qed.
 
 Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
@@ -441,76 +365,6 @@ Proof.
   - econstructor; eauto.
     + destruct eq. apply~ equation_weaken_eq.
     + apply~ wft_weaken.
-Qed.
-
-(*
-  Y \notin
-  fv_delta (D2 |,| (tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)))
- *)
-Lemma fv_delta_app : forall D1 D2,
-    fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
-  induction D2 as [| [X | [T1 T2]]];
-    cbn; auto using union_empty_r.
-  rewrite IHD2.
-  repeat rewrite union_assoc.
-  f_equal.
-  rewrite union_comm.
-  repeat rewrite union_assoc.
-  auto.
-Qed.
-
-Lemma fv_delta_alphas : forall As,
-    fv_delta (tc_vars As) = \{}.
-  induction As; cbn; auto.
-Qed.
-
-Lemma fv_delta_equations : forall A Ts Us,
-    (forall T, List.In T Ts -> A \notin fv_typ T) ->
-    (forall U, List.In U Us -> A \notin fv_typ U) ->
-    A \notin fv_delta (equations_from_lists Ts Us).
-  induction Ts as [| T Ts]; cbn; introv FrT FrU; auto.
-  destruct Us as [| U Us]; cbn; auto.
-  repeat rewrite notin_union.
-  split; auto with listin.
-Qed.
-
-Lemma subset_transitive : forall T (A B C : fset T),
-    A \c B ->
-    B \c C ->
-    A \c C.
-  introv AB BC.
-  intros x In.
-  auto.
-Qed.
-
-Lemma fold_left_subset_base : forall T U P As B,
-    B \c List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) As B.
-  induction As; introv; cbn; auto.
-  lets IH: IHAs (B \u P a).
-  apply subset_transitive with (B \u P a); auto.
-Qed.
-
-Lemma fold_left_subset : forall T A P As B,
-    List.In A As ->
-    P A \c List.fold_left (fun (fv : fset var) (x : T) => fv \u P x) As B.
-  induction As; introv In.
-  - inversion In.
-  - inversions In.
-    + cbn.
-      apply subset_transitive with (B \u P A);
-        auto using fold_left_subset_base.
-    + cbn.
-      apply~ IHAs.
-Qed.
-
-Lemma domDelta_app : forall D1 D2,
-    domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
-  induction D2 as [| [|]]; cbn; auto.
-  - rewrite~ union_empty_r.
-  - rewrite union_comm.
-    rewrite (union_comm (\{A})).
-    rewrite IHD2.
-    rewrite~ union_assoc.
 Qed.
 
 Lemma typing_weakening_delta:
@@ -722,33 +576,34 @@ Proof.
     assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
       [ introv Ain; lets*: Afresh Ain | idtac ].
     assert (xfreshL: x \notin L); eauto.
-    lets* IH1: H3 Inzip Alphas x AlphasArity ADistinct.
-    lets* IH2: IH1 AfreshL xfreshL xfreshA.
-    lets IHeq1: H3 Inzip.
-    lets IHeq1_2: IHeq1 Alphas x AlphasArity ADistinct.
-    lets* IHeq2: IHeq1_2 AfreshL xfreshL xfreshA.
-    (* lets IHeq3: IHeq2 (G & x ~ bind_var (open_tt_many_var Alphas (Cargtype def))) F. *)
-    (* rewrite concat_assoc in IHeq3. *)
-    (* TODO figure out TTc *)
-    (* apply IHeq3. *)
-    (*   constructor; auto. *)
-    (*   * rewrite <- (List.app_nil_r (Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def))). *)
-    (*     apply okt_weakening_delta_many_eq. *)
-    (*     -- apply okt_weakening_delta_many; clean_empty_Δ; *)
-    (*          try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto. *)
-    (*     -- apply* equations_from_lists_are_equations. *)
-    (*   * lets [Hokt [? ?]]: typing_regular IH2. *)
-    (*     inversions Hokt. *)
-    (*     -- false* empty_push_inv. *)
-    (*     -- lets [? [Heq ?]]: eq_push_inv H6; subst. *)
-    (*        inversions Heq; auto. *)
-    (*   * apply notin_domΔ_eq. *)
-    (*     split; auto. *)
-    (*     -- apply notin_domΔ_eq. *)
-    (*        split; auto. *)
-    (*        apply notin_dom_tc_vars. auto. *)
-    (*     -- rewrite equations_have_no_dom; eauto using equations_from_lists_are_equations. *)
-Admitted.
+    lets* IH1: H4 Inzip Alphas x AlphasArity ADistinct.
+    lets* IH2: IH1 AfreshL xfreshL xfreshA (G & x ~: open_tt_many_var Alphas (Cargtype def)) F.
+    repeat rewrite concat_assoc in IH2.
+    apply~ IH2.
+
+    constructor; auto.
+    + rewrite <- (List.app_nil_l (Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def))).
+      apply okt_weakening_delta_many_eq.
+      * apply okt_weakening_delta_many; clean_empty_Δ;
+          try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto.
+      * apply* equations_from_lists_are_equations.
+    + assert (OKS: okGadt Σ).
+      * apply~ okt_implies_okgadt.
+        apply* typing_regular.
+      * destruct OKS as [? OKS].
+        lets [? OKD]: OKS H0.
+        lets Din: fst_from_zip Inzip.
+        lets OKC: OKD Din.
+        inversion OKC as [? ? ? ? ? ? Harg ? ? ?]; subst.
+        cbn.
+        apply wft_weaken_simple.
+        apply~ Harg.
+    + repeat rewrite notin_domΔ_eq.
+      split~.
+      * split~.
+        apply notin_dom_tc_vars. auto.
+      * rewrite equations_have_no_dom; eauto using equations_from_lists_are_equations.
+Qed.
 
 (* Hint Resolve typing_implies_term wft_strengthen okt_strengthen. *)
 

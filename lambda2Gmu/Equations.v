@@ -257,3 +257,12 @@ Lemma inversion_typing_eq : forall Σ Δ E e T TT,
   split~.
   eauto using teq_symmetry, teq_transitivity.
 Qed.
+
+Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
+    subst_matches_typctx Σ Δ Θ ->
+    (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U).
+  introv M Hin.
+  lets EQ: subst_has_no_fv M Hin.
+  rewrite EQ.
+  auto.
+Qed.

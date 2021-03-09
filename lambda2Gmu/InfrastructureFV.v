@@ -462,3 +462,118 @@ Lemma wft_gives_fv : forall Σ Δ T,
       false.
   - apply~ subset_fold.
 Qed.
+
+Lemma equations_have_no_dom : forall Deqs,
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    domΔ Deqs = \{}.
+  induction Deqs; cbn; auto; destruct a; intros.
+  - lets HF: H (tc_var A).
+    false~ HF.
+  - apply IHDeqs.
+    intros. auto.
+Qed.
+
+Lemma equations_from_lists_are_equations : forall D Ts Us,
+    D = equations_from_lists Ts Us ->
+    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
+  induction D; cbn; introv Deq Hin; auto.
+  + false.
+  + destruct Ts; destruct Us; cbn; try solve [false].
+    cbn in Deq.
+    inversions Deq.
+    destruct Hin; subst; eauto.
+Qed.
+
+Lemma subst_match_notin_srcs2 : forall O X U,
+    List.In (X, U) O ->
+    X \in substitution_sources O.
+  induction O; introv Hin.
+  - inversion Hin.
+  - cbn in Hin.
+    destruct Hin.
+    + subst. cbn. rewrite in_union. left. apply in_singleton_self.
+    + cbn.
+      rewrite in_union. right. fold_subst_src.
+      apply* IHO.
+Qed.
+
+Lemma subst_src_app : forall O1 O2,
+    substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
+  induction O2.
+  - cbn. fold_subst_src.
+    rewrite~ union_empty_r.
+  - cbn. fold_subst_src.
+    rewrite IHO2.
+    repeat rewrite union_assoc.
+    rewrite~ (union_comm \{ fst a}).
+Qed.
+
+Lemma substitution_sources_from_in : forall O A T,
+    List.In (A, T) O ->
+    A \in substitution_sources O.
+  induction O; introv Oin; cbn in *.
+  - false.
+  - fold_subst_src.
+    rewrite in_union.
+    destruct Oin.
+    + subst. cbn.
+      left. apply in_singleton_self.
+    + right. apply* IHO.
+Qed.
+
+Lemma fv_delta_app : forall D1 D2,
+    fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
+  induction D2 as [| [X | [T1 T2]]];
+    cbn; auto using union_empty_r.
+  rewrite IHD2.
+  repeat rewrite union_assoc.
+  f_equal.
+  rewrite union_comm.
+  repeat rewrite union_assoc.
+  auto.
+Qed.
+
+Lemma fv_delta_alphas : forall As,
+    fv_delta (tc_vars As) = \{}.
+  induction As; cbn; auto.
+Qed.
+
+Lemma fv_delta_equations : forall A Ts Us,
+    (forall T, List.In T Ts -> A \notin fv_typ T) ->
+    (forall U, List.In U Us -> A \notin fv_typ U) ->
+    A \notin fv_delta (equations_from_lists Ts Us).
+  induction Ts as [| T Ts]; cbn; introv FrT FrU; auto.
+  destruct Us as [| U Us]; cbn; auto.
+  repeat rewrite notin_union.
+  split; auto with listin.
+Qed.
+
+Lemma fold_left_subset_base : forall T U P As B,
+    B \c List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) As B.
+  induction As; introv; cbn; auto.
+  lets IH: IHAs (B \u P a).
+  apply subset_transitive with (B \u P a); auto.
+Qed.
+
+Lemma fold_left_subset : forall T A P As B,
+    List.In A As ->
+    P A \c List.fold_left (fun (fv : fset var) (x : T) => fv \u P x) As B.
+  induction As; introv In.
+  - inversion In.
+  - inversions In.
+    + cbn.
+      apply subset_transitive with (B \u P A);
+        auto using fold_left_subset_base.
+    + cbn.
+      apply~ IHAs.
+Qed.
+
+Lemma domDelta_app : forall D1 D2,
+    domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
+  induction D2 as [| [|]]; cbn; auto.
+  - rewrite~ union_empty_r.
+  - rewrite union_comm.
+    rewrite (union_comm (\{A})).
+    rewrite IHD2.
+    rewrite~ union_assoc.
+Qed.
