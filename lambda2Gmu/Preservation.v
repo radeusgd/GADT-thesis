@@ -610,41 +610,46 @@ Qed.
 Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~: U) & F} ⊢(TT1) e ∈ T ->
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
-    {Σ, Δ, E & F} ⊢(TT1) subst_ee x u e ∈ T.
+    {Σ, Δ, E & F} ⊢(Tgen) subst_ee x u e ∈ T.
   Ltac apply_ih :=
     match goal with
     | H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ =>
       apply_ih_bind* H end.
   introv TypT TypU.
-  inductions TypT; introv; cbn; eauto using okt_strengthen;
+  inductions TypT; introv; cbn;
+    try solve [eapply Tgen_from_any; eauto using okt_strengthen];
     lets [okU [termU wftU]]: typing_regular TypU.
   - match goal with
     | [ H: okt ?A ?B ?C |- _ ] =>
       lets: okt_strengthen H
     end.
     case_var.
-    + binds_get H. eauto.
+    + eapply Tgen_from_any. binds_get H. eauto.
       assert (E & F & empty = E & F) as HEF. apply concat_empty_r.
       rewrite <- HEF.
       apply typing_weakening; rewrite concat_empty_r; eauto.
-      admit.
-    + binds_cases H; apply* typing_var.
-  - apply_fresh* typing_abs as y.
+    + eapply Tgen_from_any. binds_cases H; apply* typing_var.
+  - eapply Tgen_from_any.
+    apply_fresh* typing_abs as y.
     rewrite* subst_ee_open_ee_var.
     apply_ih.
-  - apply_fresh* typing_tabs as Y; rewrite* subst_ee_open_te_var.
+  - eapply Tgen_from_any.
+    apply_fresh* typing_tabs as Y; rewrite* subst_ee_open_te_var.
     match goal with
     | [ H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ ] =>
       apply* H
     end.
     rewrite <- (List.app_nil_l (Δ |,| [tc_var Y])).
     apply typing_weakening_delta; clean_empty_Δ; cbn; auto.
-  - apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
+  - eapply Tgen_from_any.
+    apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
     apply_ih.
-  - apply_fresh* typing_let as y.
+  - eapply Tgen_from_any.
+    apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
     apply_ih.
-  - econstructor; eauto.
+  - eapply Tgen_from_any.
+    econstructor; eauto.
     + unfold map_clause_trm_trm.
       rewrite* List.map_length.
     + introv inzip.
@@ -691,7 +696,7 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
         -- rewrite* <- Horder.
-Admitted.
+Qed.
 
 Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
     okt Σ (Δ |,| [tc_var Z]) E ->
@@ -752,162 +757,192 @@ Lemma okt_strengthen_delta_var_subst : forall Σ D1 D2 E X P,
       apply notin_domΔ_eq; split*.
 Qed.
 
+Definition subst_td (A : var) (U : typ) (d : typctx_elem) : typctx_elem :=
+  match d with
+  | tc_var A => tc_var A
+  | tc_eq (T1 ≡ T2) => tc_eq ((subst_tt A U T1) ≡ (subst_tt A U T2))
+  end.
+
+(* This lemma is very WIP *)
+Lemma okt_strengthen_delta_var_subst_new : forall Σ D1 D2 E X P,
+    wft Σ D1 P ->
+    okt Σ (D1 |,| [tc_var X] |,| D2) E ->
+    X # E ->
+    okt Σ (D1 |,| List.map (subst_td X P) D2) (map (subst_tb X P) E).
+  introv WFT OKT.
+  gen_eq G: (D1 |,| [tc_var X] |,| D2). gen D2 X.
+  induction OKT; introv Heq XE; subst.
+  - rewrite map_empty.
+    econstructor; auto.
+  - rewrite map_concat.
+    rewrite map_single.
+    constructor; auto.
+    + apply* wft_subst_tb_2.
+      * admit.
+      * apply~ wft_weaken_simple.
+    + repeat (apply notin_domΔ_eq in H1; destruct H1).
+      apply notin_domΔ_eq; split~.
+      admit.
+Admitted.
+
+(* WIP: new statement of the lemma, accounting substituting stuff inside equations *)
 Lemma typing_through_subst_te:
   forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T ->
     wft Σ (Δ1 |,| Δ2) P ->
     Z \notin fv_typ P ->
     Z # E ->
-    {Σ, Δ1 |,| Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+    {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
 Proof.
-  introv Typ. gen_eq G: (Δ1 |,| [tc_var Z] |,| Δ2). gen Δ2.
-  induction Typ; introv GEQ Hwft FPZ FPE; subst;
-    try match goal with
-        | [ H: okt Σ (Δ1 |,| [tc_var Z] |,| ?Δ2) E |- _ ] =>
-            lets Hokt2: okt_strengthen_delta_var_subst P H
-    end;
-    cbn; auto;
-      try solve [
-            apply Tgen_from_any with Treg;
-            econstructor; lets*: IHTyp Hwft FPE
-          | apply Tgen_from_any with Treg; eauto
-          ].
-  - apply Tgen_from_any with Treg.
-    econstructor; auto.
-    fold (subst_tb Z P (bind_var T)).
-    apply* binds_map.
-  - assert (Hokconstr: okConstructorDef Σ Tarity (mkGADTconstructor (length Ts) CargType CretTypes)).
-    + apply* gadt_constructor_ok. apply* okt_implies_okgadt.
-      lets*: typing_regular Typ.
-    + inversion Hokconstr
-        as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst.
-      apply Tgen_from_any with Treg.
-      econstructor; eauto.
-      * apply* List.map_length.
-      * apply* subst_commutes_open_tt_many.
-        rewrite Farg. eauto.
-      * introv Timaped.
-        lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T.
-        apply Hinmap in Timaped.
-        destruct Timaped as [T' [Teq T'in]].
-        subst.
-        apply* wft_subst_tb_2.
-      * apply* subst_commutes_open_tt_many.
-        cbn. rewrite* fold_empty.
-  - apply Tgen_from_any with Treg.
-    apply_fresh* typing_abs as x.
-    rewrite subst_te_open_ee_var.
-    fold (subst_tb Z P (bind_var V)).
-    rewrite <- map_single.
-    rewrite <- map_concat.
-    apply H0; auto.
-  - apply Tgen_from_any with Treg.
-    apply_fresh* typing_tabs as X.
-    + rewrite* subst_te_open_te_var.
-    + lets IH: H1 X (Δ2 |,| [tc_var X]); auto.
-      rewrite List.app_assoc in *.
-      rewrite* subst_tt_open_tt_var.
-      rewrite* subst_te_open_te_var.
-      apply~ IH.
-      rewrite <- List.app_assoc.
-      apply* wft_weaken_simple.
-  - apply Tgen_from_any with Treg.
-    rewrite* subst_tt_open_tt. apply* typing_tapp.
-    apply* wft_subst_tb_2.
-  - apply Tgen_from_any with Treg.
-    apply_fresh* typing_fix as y.
-    rewrite* subst_te_open_ee_var.
-    unsimpl (subst_tb Z P (bind_var T)).
-    rewrite* subst_te_open_ee_var.
-    rewrite <- map_single.
-    rewrite <- map_concat.
-    apply* H1.
-  - apply Tgen_from_any with Treg.
-    apply_fresh* typing_let as y.
-    unsimpl (subst_tb Z P (bind_var V)).
-    rewrite* subst_te_open_ee_var.
-    rewrite <- map_single.
-    rewrite <- map_concat.
-    apply* H0.
-  - apply Tgen_from_any with Treg.
-    apply_fresh* typing_case as x.
-    + unfold map_clause_trm_trm.
-      rewrite* List.map_length.
-    + introv inzip.
-      lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
-      lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
-      destruct clause as [clA clT]. cbn.
-      inversions Hclsubst.
-      lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
-      lets*: H2 Hzip.
-    + fold (subst_tt).
-      introv inzip.
-      intros Alphas xClause Alen Adist Afresh xfresh xfreshA.
+  (* introv Typ. gen_eq G: (Δ1 |,| [tc_var Z] |,| Δ2). gen Δ2. *)
+  (* induction Typ; introv GEQ Hwft FPZ FPE; subst; *)
+  (*   try match goal with *)
+  (*       | [ H: okt Σ (Δ1 |,| [tc_var Z] |,| ?Δ2) E |- _ ] => *)
+  (*           lets Hokt2: okt_strengthen_delta_var_subst P H *)
+  (*   end; *)
+  (*   cbn; auto; *)
+  (*     try solve [ *)
+  (*           apply Tgen_from_any with Treg; *)
+  (*           econstructor; lets*: IHTyp Hwft FPE *)
+  (*         | apply Tgen_from_any with Treg; eauto *)
+  (*         ]. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   econstructor; auto. *)
+  (*   fold (subst_tb Z P (bind_var T)). *)
+  (*   apply* binds_map. *)
+  (* - assert (Hokconstr: okConstructorDef Σ Tarity (mkGADTconstructor (length Ts) CargType CretTypes)). *)
+  (*   + apply* gadt_constructor_ok. apply* okt_implies_okgadt. *)
+  (*     lets*: typing_regular Typ. *)
+  (*   + inversion Hokconstr *)
+  (*       as [? ? ? ? ? Harity Warg Wret Farg Fret]; subst. *)
+  (*     apply Tgen_from_any with Treg. *)
+  (*     econstructor; eauto. *)
+  (*     * apply* List.map_length. *)
+  (*     * apply* subst_commutes_open_tt_many. *)
+  (*       rewrite Farg. eauto. *)
+  (*     * introv Timaped. *)
+  (*       lets* Hinmap: List.in_map_iff (subst_tt Z P) Ts T. *)
+  (*       apply Hinmap in Timaped. *)
+  (*       destruct Timaped as [T' [Teq T'in]]. *)
+  (*       subst. *)
+  (*       apply* wft_subst_tb_2. *)
+  (*     * apply* subst_commutes_open_tt_many. *)
+  (*       cbn. rewrite* fold_empty. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   apply_fresh* typing_abs as x. *)
+  (*   rewrite subst_te_open_ee_var. *)
+  (*   fold (subst_tb Z P (bind_var V)). *)
+  (*   rewrite <- map_single. *)
+  (*   rewrite <- map_concat. *)
+  (*   apply H0; auto. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   apply_fresh* typing_tabs as X. *)
+  (*   + rewrite* subst_te_open_te_var. *)
+  (*   + lets IH: H1 X (Δ2 |,| [tc_var X]); auto. *)
+  (*     rewrite List.app_assoc in *. *)
+  (*     rewrite* subst_tt_open_tt_var. *)
+  (*     rewrite* subst_te_open_te_var. *)
+  (*     apply~ IH. *)
+  (*     rewrite <- List.app_assoc. *)
+  (*     apply* wft_weaken_simple. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   rewrite* subst_tt_open_tt. apply* typing_tapp. *)
+  (*   apply* wft_subst_tb_2. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   apply_fresh* typing_fix as y. *)
+  (*   rewrite* subst_te_open_ee_var. *)
+  (*   unsimpl (subst_tb Z P (bind_var T)). *)
+  (*   rewrite* subst_te_open_ee_var. *)
+  (*   rewrite <- map_single. *)
+  (*   rewrite <- map_concat. *)
+  (*   apply* H1. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   apply_fresh* typing_let as y. *)
+  (*   unsimpl (subst_tb Z P (bind_var V)). *)
+  (*   rewrite* subst_te_open_ee_var. *)
+  (*   rewrite <- map_single. *)
+  (*   rewrite <- map_concat. *)
+  (*   apply* H0. *)
+  (* - apply Tgen_from_any with Treg. *)
+  (*   apply_fresh* typing_case as x. *)
+  (*   + unfold map_clause_trm_trm. *)
+  (*     rewrite* List.map_length. *)
+  (*   + introv inzip. *)
+  (*     lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip. *)
+  (*     lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped. *)
+  (*     destruct clause as [clA clT]. cbn. *)
+  (*     inversions Hclsubst. *)
+  (*     lets* Hzip: Inzip_from_nth_error Hdefs Hclin. *)
+  (*     lets*: H2 Hzip. *)
+  (*   + fold (subst_tt). *)
+  (*     introv inzip. *)
+  (*     intros Alphas xClause Alen Adist Afresh xfresh xfreshA. *)
 
-      lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip.
-      lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped.
-      destruct clause as [clA clT]. cbn.
-      inversions Hclsubst.
+  (*     lets* [i [Hdefs Hmapped]]: Inzip_to_nth_error inzip. *)
+  (*     lets* [[clA' clT'] [Hclin Hclsubst]]: nth_error_map Hmapped. *)
+  (*     destruct clause as [clA clT]. cbn. *)
+  (*     inversions Hclsubst. *)
 
-      lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
-      lets* IH: H4 Hzip.
-      cbn in IH.
+  (*     lets* Hzip: Inzip_from_nth_error Hdefs Hclin. *)
+  (*     lets* IH: H4 Hzip. *)
+  (*     cbn in IH. *)
 
-      assert (Htypfin: {Σ, Δ1 |,| Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def),
-                        map (subst_tb Z P) E &
-                           xClause ~ bind_var (subst_tt Z P (open_tt_many_var Alphas (Cargtype def)))}
-                         ⊢(Tgen) subst_te Z P (open_te_many_var Alphas clT' open_ee_var xClause)
-                         ∈ subst_tt Z P Tc).
-      * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
-          [ introv Ain; lets*: Afresh Ain | idtac ].
-        assert (xfreshL: xClause \notin L); eauto.
-        lets Htmp: IH Alphas xClause Alen Adist AfreshL.
-        lets Htmp2: Htmp xfreshL xfreshA.
-        lets Htmp3: Htmp2 (Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)).
-        autorewrite with rew_env_map in Htmp3.
-        cbn in Htmp3.
-        repeat rewrite <- List.app_assoc in Htmp3.
-        repeat rewrite <- List.app_assoc.
-        apply Htmp3; try rewrite List.app_assoc; auto.
-        apply* wft_weaken_simple.
-      * rewrite (@subst_tt_fresh _ _ (open_tt_many_var Alphas (Cargtype def))) in Htypfin.
-        2: {
-          lets [Hokt ?]: typing_regular Typ.
-          lets okgadt: okt_implies_okgadt Hokt.
-          unfold okGadt in okgadt.
-          destruct okgadt as [okΣ okCtors].
-          lets [defsNe okDefs]: okCtors H0.
-          lets indef: fst_from_zip Hzip.
-          lets okCtor: okDefs indef.
-          inversions okCtor.
-          cbn.
-          lets Hsub: fv_smaller_many Alphas argT.
-          lets snsu: split_notin_subset_union Z Hsub.
-          apply snsu.
-          - rewrite H8. eauto.
-          - intro Zin.
-            lets [A [Ain Aeq]]: in_from_list Zin.
-            subst.
-            lets: Afresh Ain.
-            assert (Hfalse: A \notin \{A}); eauto.
-            apply Hfalse.
-            apply in_singleton_self.
-        }
-        assert (Horder:
-                  open_te_many_var Alphas (subst_te Z P clT') open_ee_var xClause
-                  =
-                  subst_te Z P (open_te_many_var Alphas clT' open_ee_var xClause)).
-        1: {
-          rewrite* <- subst_commutes_with_unrelated_opens_te_te.
-          - rewrite* subst_te_open_ee_var.
-          - intros A Ain.
-            intro. subst.
-            lets: Afresh Ain.
-            assert (HF: Z \notin \{Z}); eauto.
-            apply HF. apply in_singleton_self.
-        }
-        rewrite* Horder.
-        admit. (* apply Htypfin. *)
+  (*     assert (Htypfin: {Σ, Δ1 |,| Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def), *)
+  (*                       map (subst_tb Z P) E & *)
+  (*                          xClause ~ bind_var (subst_tt Z P (open_tt_many_var Alphas (Cargtype def)))} *)
+  (*                        ⊢(Tgen) subst_te Z P (open_te_many_var Alphas clT' open_ee_var xClause) *)
+  (*                        ∈ subst_tt Z P Tc). *)
+  (*     * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L); *)
+  (*         [ introv Ain; lets*: Afresh Ain | idtac ]. *)
+  (*       assert (xfreshL: xClause \notin L); eauto. *)
+  (*       lets Htmp: IH Alphas xClause Alen Adist AfreshL. *)
+  (*       lets Htmp2: Htmp xfreshL xfreshA. *)
+  (*       lets Htmp3: Htmp2 (Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)). *)
+  (*       autorewrite with rew_env_map in Htmp3. *)
+  (*       cbn in Htmp3. *)
+  (*       repeat rewrite <- List.app_assoc in Htmp3. *)
+  (*       repeat rewrite <- List.app_assoc. *)
+  (*       apply Htmp3; try rewrite List.app_assoc; auto. *)
+  (*       apply* wft_weaken_simple. *)
+  (*     * rewrite (@subst_tt_fresh _ _ (open_tt_many_var Alphas (Cargtype def))) in Htypfin. *)
+  (*       2: { *)
+  (*         lets [Hokt ?]: typing_regular Typ. *)
+  (*         lets okgadt: okt_implies_okgadt Hokt. *)
+  (*         unfold okGadt in okgadt. *)
+  (*         destruct okgadt as [okΣ okCtors]. *)
+  (*         lets [defsNe okDefs]: okCtors H0. *)
+  (*         lets indef: fst_from_zip Hzip. *)
+  (*         lets okCtor: okDefs indef. *)
+  (*         inversions okCtor. *)
+  (*         cbn. *)
+  (*         lets Hsub: fv_smaller_many Alphas argT. *)
+  (*         lets snsu: split_notin_subset_union Z Hsub. *)
+  (*         apply snsu. *)
+  (*         - rewrite H8. eauto. *)
+  (*         - intro Zin. *)
+  (*           lets [A [Ain Aeq]]: in_from_list Zin. *)
+  (*           subst. *)
+  (*           lets: Afresh Ain. *)
+  (*           assert (Hfalse: A \notin \{A}); eauto. *)
+  (*           apply Hfalse. *)
+  (*           apply in_singleton_self. *)
+  (*       } *)
+  (*       assert (Horder: *)
+  (*                 open_te_many_var Alphas (subst_te Z P clT') open_ee_var xClause *)
+  (*                 = *)
+  (*                 subst_te Z P (open_te_many_var Alphas clT' open_ee_var xClause)). *)
+  (*       1: { *)
+  (*         rewrite* <- subst_commutes_with_unrelated_opens_te_te. *)
+  (*         - rewrite* subst_te_open_ee_var. *)
+  (*         - intros A Ain. *)
+  (*           intro. subst. *)
+  (*           lets: Afresh Ain. *)
+  (*           assert (HF: Z \notin \{Z}); eauto. *)
+  (*           apply HF. apply in_singleton_self. *)
+  (*       } *)
+  (*       rewrite* Horder. *)
+  (*       apply Htypfin. *)
+  (*       admit. (* apply Htypfin. *) *)
 Admitted.
 
 Ltac IHR e :=
@@ -937,10 +972,10 @@ Lemma typing_through_subst_te_2 :
     Z # E ->
     Z \notin fv_env E ->
     {Σ, Δ1 |,| Δ2, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
-  intros.
-  rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin.
-  apply* typing_through_subst_te.
-Qed.
+  (* intros. *)
+  (* rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin. *)
+  (* apply* typing_through_subst_te. *)
+Admitted.
 
 Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps TT,
     {Σ, (Δ |,| tc_vars As), E & F} ⊢(TT) e ∈ T ->
@@ -987,11 +1022,55 @@ Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps TT,
     + auto with listin.
 Qed.
 
+(* TODO: may want to generalize this if necessary *)
+Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
+    {Σ, Δ, E & x ~: T1} ⊢( TT) e ∈ U ->
+    entails_semantic Σ Δ (T1 ≡ T2) ->
+    {Σ, Δ, E & x ~: T2} ⊢( TT) e ∈ U.
+Admitted.
+
+Lemma subst_tt_prime_reduce_arrow : forall O T1 T2,
+    subst_tt' (T1 ==> T2) O = subst_tt' T1 O ==> subst_tt' T2 O.
+  induction O as [| [A U]]; cbn; auto.
+Qed.
+
+(* TODO: move to Equations *)
+Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
+    entails_semantic Σ Δ ((TA1 ==> TB1) ≡ (TA2 ==> TB2)) ->
+    entails_semantic Σ Δ (TA1 ≡ TA2) /\
+    entails_semantic Σ Δ (TB1 ≡ TB2).
+  introv Sem; cbn in *.
+  split~;
+       introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_arrow in EQ;
+    inversion~ EQ.
+Qed.
+
+(* Lemma inversion_typing_eq_wft : forall Σ Δ E e T TT, *)
+(*     {Σ, Δ, E} ⊢(TT) e ∈ T -> *)
+(*     exists T', *)
+(*       {Σ, Δ, E} ⊢(Treg) e ∈ T' /\ wft Σ Δ T' /\ entails_semantic Σ Δ (T ≡ T'). *)
+(*   introv Htyp. *)
+(*   lets Htyp2: Htyp. *)
+(*   lets [? [? WFT]]: typing_regular Htyp. *)
+(*   induction Htyp; *)
+(*     try match goal with *)
+(*         | [ H: {Σ, Δ, E} ⊢(Treg) ?e ∈ ?T |- _ ] => *)
+(*           exists T; split~; split~; auto using teq_reflexivity *)
+(*         end. *)
+(*   lets* [T' [IHTyp [IHwft IHeq]]]: IHHtyp Htyp. *)
+(*   - lets~ [? [? ?]]: typing_regular Htyp. *)
+(*   - exists T'. *)
+(*     split~; split~. *)
+(*     eauto using teq_symmetry, teq_transitivity. *)
+(* Qed. *)
+
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
     let Hopen := fresh "Hopen" in
     match goal with
-    | H: forall x, x \notin ?L -> typing _ _ _ _ _ |- _ =>
+    | H: forall x, x \notin ?L -> typing _ _ _ _ _ _ |- _ =>
       rename H into Hopen
     end.
   Ltac find_hval :=
@@ -1009,13 +1088,20 @@ Theorem preservation_thm : preservation.
     introv Hred; inversions Hred;
       try solve [crush_ihred_gen | eauto using Tgen_from_any].
   - (* app *)
-  (*   inversions Htyp2. *)
-  (*   pick_fresh x. *)
-  (*   find_hopen. forwards~ K: (Hopen x). *)
-  (*   rewrite* (@subst_ee_intro x). *)
-  (*   expand_env_empty E. *)
-  (*   apply* typing_through_subst_ee. *)
-  (*   fold_env_empty. *)
+    lets [U [HT EQ]]: inversion_typing_eq Htyp2.
+    inversions HT.
+    pick_fresh x.
+    find_hopen. forwards~ K: (Hopen x).
+    rewrite* (@subst_ee_intro x).
+    expand_env_empty E.
+    apply* typing_through_subst_ee.
+    fold_env_empty.
+    apply teq_symmetry in EQ.
+    lets [EQarg EQret]: inversion_eq_arrow EQ.
+    apply typing_eq with T0 TT; auto.
+    + apply* typing_replace_typ.
+    + lets* [? [? WFT]]: typing_regular Htyp2.
+      inversion~ WFT.
   (* - inversions Htyp. *)
   (*   pick_fresh X. *)
   (*   find_hopen. forwards~ K: (Hopen X). *)
