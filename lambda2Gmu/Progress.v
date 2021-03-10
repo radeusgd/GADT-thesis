@@ -32,6 +32,17 @@ Ltac generalize_typings :=
     end
   end.
 
+(* TODO: move to Equations *)
+Lemma empty_eq_is_equivalent : forall Σ T1 T2,
+  entails_semantic Σ emptyΔ (T1 ≡ T2) ->
+  T1 = T2.
+  introv Sem.
+  cbn in *.
+  lets M: Sem (@nil (var * typ)).
+  forwards * : M.
+  constructor.
+Qed.
+
 #[export] Hint Constructors value red.
 Theorem progress_thm : progress.
   unfold progress.
@@ -59,10 +70,17 @@ Theorem progress_thm : progress.
   - admit.
   - generalize_typings.
     forwards * [Hval | [? ?]]: IHe.
-    admit.
-
-  (*   inversion Hval;  *)
-  (*   right. *)
+    lets [T' [Typ2 EQ]]: inversion_typing_eq H0.
+    apply empty_eq_is_equivalent in EQ. subst.
+    lets* [v1 [v2 ?]]: CanonicalFormTuple Typ2; subst.
+    right*.
+  - generalize_typings.
+    forwards * [Hval | [? ?]]: IHe.
+    lets [T' [Typ2 EQ]]: inversion_typing_eq H0.
+    apply empty_eq_is_equivalent in EQ. subst.
+    lets* [v1 [v2 ?]]: CanonicalFormTuple Typ2; subst.
+    right*.
+  - 
   (* -  *)
   (*   + apply~ IHe. *)
 
