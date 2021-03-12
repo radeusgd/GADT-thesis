@@ -359,7 +359,8 @@ Proof.
   - econstructor; eauto.
     introv In Alen Adist Afr xfr xAfr.
 
-    lets* IH: H4 In xAfr (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)).
+    lets* IH: H4 In xAfr (D2 |,| tc_vars Alphas |,|
+                          equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def))).
     repeat rewrite List.app_assoc in *.
     apply~ IH.
   - econstructor; eauto.
@@ -398,7 +399,7 @@ Proof.
     try let envvars := gather_vars in
     introv Hlen Hdist Afresh xfreshL xfreshA;
       instantiate (1:=envvars) in xfreshL.
-    lets IH: H4 Hin Hlen (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def)); eauto.
+    lets IH: H4 Hin Hlen (D2 |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def))); eauto.
     + introv Ain. lets*: Afresh Ain.
     + eauto.
     + apply~ H3.
@@ -442,14 +443,15 @@ Proof.
                  lets Din: fst_from_zip Hin.
                  lets OKC: OKD Din.
                  inversion OKC as [? ? ? ? ? ? ? ? ? FrR]; subst.
-                 lets FrEQ: FrR Rin.
-                 rewrite FrEQ. auto.
+(*                  lets FrEQ: FrR Rin.
+                 rewrite FrEQ. auto. *)
+                 admit.
   - econstructor.
     + apply~ IHTyp.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Qed.
+Admitted.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
@@ -582,7 +584,7 @@ Proof.
     apply~ IH2.
 
     constructor; auto.
-    + rewrite <- (List.app_nil_l (Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def))).
+    + rewrite <- (List.app_nil_l (Δ |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)))).
       apply okt_weakening_delta_many_eq.
       * apply okt_weakening_delta_many; clean_empty_Δ;
           try solve [introv Ain; cbn; lets: Afresh Ain; auto]; auto.
@@ -670,7 +672,7 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
       lets* Hzip: Inzip_from_nth_error Hdefs Hclin.
       lets* IH: H4 Hzip.
 
-      assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (Crettypes def),
+      assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)),
                         E & F & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
                 ⊢(Tgen) subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
       * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);

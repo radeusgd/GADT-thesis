@@ -857,7 +857,7 @@ Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
-Notation "A |,| B" := (B ++ A) (at level 32) .
+Notation "A |,| B" := (B ++ A) (at level 32, left associativity). (*TODO dodać rev *)
 Notation "A |, b" := (b :: A) (at level 32).
 
 Fixpoint domΔ (Δ : typctx) : fset var :=
@@ -1159,7 +1159,8 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
                  { Σ,
                    (Δ
                       |,| tc_vars Alphas (* in our example: Alphas = [X,Y] *)
-                      |,| equations_from_lists Ts (Crettypes def)
+                      |,| equations_from_lists Ts
+                      (List.map (open_tt_many_var Alphas) (Crettypes def))
                    ),
                    (* Ts === Crettypes def; in our example that equation is X ** Y =:= A *)
                    E
