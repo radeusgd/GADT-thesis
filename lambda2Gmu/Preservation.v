@@ -1049,6 +1049,38 @@ Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
     inversion~ EQ.
 Qed.
 
+Lemma subst_tt_prime_reduce_tuple : forall O T1 T2,
+    subst_tt' (T1 ** T2) O = subst_tt' T1 O ** subst_tt' T2 O.
+  induction O as [| [A U]]; cbn; auto.
+Qed.
+
+Lemma inversion_eq_tuple : forall Σ Δ TA1 TB1 TA2 TB2,
+    entails_semantic Σ Δ ((TA1 ** TB1) ≡ (TA2 ** TB2)) ->
+    entails_semantic Σ Δ (TA1 ≡ TA2) /\
+    entails_semantic Σ Δ (TB1 ≡ TB2).
+  introv Sem; cbn in *.
+  split~;
+       introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_tuple in EQ;
+    inversion~ EQ.
+Qed.
+
+Lemma subst_tt_prime_reduce_typ_all : forall O T,
+    subst_tt' (typ_all T) O = typ_all (subst_tt' T O).
+  induction O as [| [A U]]; cbn; auto.
+Qed.
+
+Lemma inversion_eq_typ_all : forall Σ Δ T U,
+    entails_semantic Σ Δ (typ_all T ≡ typ_all U) ->
+    entails_semantic Σ Δ (T ≡ U).
+  introv Sem; cbn in *.
+  introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_typ_all in EQ;
+    inversion~ EQ.
+Qed.
+
 (* Lemma inversion_typing_eq_wft : forall Σ Δ E e T TT, *)
 (*     {Σ, Δ, E} ⊢(TT) e ∈ T -> *)
 (*     exists T', *)
@@ -1067,6 +1099,64 @@ Qed.
 (*     split~; split~. *)
 (*     eauto using teq_symmetry, teq_transitivity. *)
 (* Qed. *)
+
+Ltac generalize_typings :=
+  match goal with
+  | [ H: {?Σ, ?D, ?E} ⊢(?TT) ?e ∈ ?T |- _ ] =>
+    match TT with
+    | Tgen => fail 1
+    | Treg => fail 1
+    | _ => apply Tgen_from_any in H;
+           try clear TT
+    end
+  end.
+  
+Lemma subst_ttprim_open_tt : forall O T U,
+  (forall A P, List.In (A, P) O -> type P) ->
+  subst_tt' (open_tt T U) O
+  =
+  open_tt (subst_tt' T O) (subst_tt' U O).
+  induction O as [| [X P]]; introv TP; cbn; auto.
+  rewrite subst_tt_open_tt; eauto with listin.
+Qed.
+
+Lemma subst_match_remove_right_var3 : forall Σ D O1 X U,
+    subst_matches_typctx Σ D (O1 |, (X, U)) ->
+    wft Σ emptyΔ U.
+  induction D as [| [Z | [V1 V2]]]; introv M.
+  - cbn in *.
+    inversions M.
+  - inversions M.
+    fold_delta.
+    repeat rewrite notin_domΔ_eq in *.
+    auto.
+  - inversions M.
+    lets~ IH: IHD H3.
+Qed.
+
+Lemma subst_has_wft : forall Σ Δ O,
+  subst_matches_typctx Σ Δ O ->
+  forall A P, List.In (A, P) O -> wft Σ emptyΔ P.
+  induction O; introv M.
+  - intros. false~.
+  - introv Hin.
+    cbn in Hin.
+    destruct Hin; subst.
+    + lets*: subst_match_remove_right_var3 M.
+    
+  
+Lemma teq_open : forall Σ Δ T1 T2 T,
+  entails_semantic Σ Δ (T1 ≡ T2) ->
+  entails_semantic Σ Δ (open_tt T1 T ≡ open_tt T2 T).
+  introv Sem.
+  cbn in *.
+  introv M.
+  assert (forall (A : var) (P : typ), List.In (A, P) Θ -> type P).
+  - 
+  - repeat rewrite~ subst_ttprim_open_tt.
+    f_equal.
+    apply~ Sem.
+Admitted.
 
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
@@ -1088,7 +1178,8 @@ Theorem preservation_thm : preservation.
   clear e'.
   induction Htyp; inversions Hterm;
     introv Hred; inversions Hred;
-      try solve [crush_ihred_gen | eauto using Tgen_from_any].
+      try solve [crush_ihred_gen | eauto using Tgen_from_any];
+      repeat generalize_typings.
   - (* app *)
     lets [U [HT EQ]]: inversion_typing_eq Htyp2.
     inversions HT.
@@ -1104,6 +1195,45 @@ Theorem preservation_thm : preservation.
     + apply* typing_replace_typ.
     + lets* [? [? WFT]]: typing_regular Htyp2.
       inversion~ WFT.
+  - (* tabs *) 
+    lets [U [HT EQ]]: inversion_typing_eq Htyp.
+    inversions HT.
+
+    apply teq_symmetry in EQ.
+    lets: inversion_eq_typ_all EQ; subst.
+    apply typing_eq with (open_tt T0 T) Tgen.
+    + pick_fresh X.
+      rewrite* (@subst_te_intro X).
+      rewrite* (@subst_tt_intro X).
+      admit.
+    + apply~ teq_open.
+    + lets* [? [? WFT]]: typing_regular Htyp.
+      apply~ wft_open.
+   
+  - (* fst *)
+    lets [U [HT EQ]]: inversion_typing_eq Htyp.
+    inversions HT.
+    repeat generalize_typings.
+    apply teq_symmetry in EQ.
+    lets [EQarg EQret]: inversion_eq_tuple EQ.
+    apply* typing_eq.
+    lets* [? [? WFT]]: typing_regular Htyp.
+    inversion~ WFT.
+  - (* snd *)
+    lets [U [HT EQ]]: inversion_typing_eq Htyp.
+    inversions HT.
+    repeat generalize_typings.
+    apply teq_symmetry in EQ.
+    lets [EQarg EQret]: inversion_eq_tuple EQ.
+    apply* typing_eq.
+    lets* [? [? WFT]]: typing_regular Htyp.
+    inversion~ WFT.
+  - admit.
+  - admit.
+  - admit.
+  
+  
+Admitted.
   (* - inversions Htyp. *)
   (*   pick_fresh X. *)
   (*   find_hopen. forwards~ K: (Hopen X). *)
@@ -1235,5 +1365,5 @@ Theorem preservation_thm : preservation.
   (*     lets: Afresh Ain. *)
   (*     auto with listin. *)
   (*   + introv Ain; lets*: Afresh Ain. *)
-Admitted.
+
 
