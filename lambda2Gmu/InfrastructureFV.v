@@ -280,6 +280,14 @@ Lemma notin_env_inv : forall E X x T,
   rewrite* notin_union in Fr.
 Qed.
 
+Lemma domDelta_eq : forall D1 D2,
+  domΔ (D1 |,| List.rev D2) = domΔ D1 \u domΔ D2.
+  induction D2 as [| [A | [T1 T2]]]; intros; cbn.
+  - (* rewrite~ union_empty_l. *) admit.
+  -   
+  - 
+Qed. 
+
 Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ (D1 |,| D2) <->
     X \notin domΔ D1 /\ X \notin domΔ D2.

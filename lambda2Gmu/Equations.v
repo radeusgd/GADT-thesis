@@ -209,16 +209,16 @@ Lemma adding_var_is_not_contradictory : forall Σ Δ A,
   apply Hsmal.
 Admitted.
 
-Lemma adding_vars_is_not_contradictory : forall Σ Δ As,
-    ~ (contradictory_bounds Σ Δ) ->
-    ~ (contradictory_bounds Σ (Δ |,| tc_vars As)).
-  introv Hsmal.
-  induction As.
-  - cbn. clean_empty_Δ. auto.
-  - cbn. fold (tc_vars As).
-  intro HF.
-  apply Hsmal.
-Admitted.
+(* Lemma adding_vars_is_not_contradictory : forall Σ Δ As, *)
+(*     ~ (contradictory_bounds Σ Δ) -> *)
+(*     ~ (contradictory_bounds Σ (Δ |,| tc_vars As)). *)
+(*   introv Hsmal. *)
+(*   induction As. *)
+(*   - cbn. clean_empty_Δ. auto. *)
+(*   - cbn. fold (tc_vars As). *)
+(*   intro HF. *)
+(*   apply Hsmal. *)
+(* Admitted. *)
 
 Lemma empty_is_not_contradictory : forall Σ,
     ~ (contradictory_bounds Σ emptyΔ).
