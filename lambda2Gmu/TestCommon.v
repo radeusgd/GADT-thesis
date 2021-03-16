@@ -74,7 +74,8 @@ Inductive evals : trm -> trm -> Prop :=
 Lemma is_var_defined_split : forall A B c, (is_var_defined A c \/ is_var_defined B c) -> is_var_defined (A |,| B) c.
   unfold is_var_defined.
   intros.
-  apply List.in_or_app. auto.
+  apply List.in_or_app. 
+  destruct H; auto.
 Qed.
 
 Ltac autotyper1 :=
@@ -86,7 +87,7 @@ Ltac autotyper1 :=
            | [ |- okt ?A ?B ?C ] => econstructor
            | [ |- binds ?A ?B ?C ] => solve_bind
            | [ |- ?A \notin ?B ] => simpl_dom; notin_solve; try (apply notin_singleton)
-           | [ |- typing ?A ?B ?C ?D ?E ] => econstructor
+           | [ |- typing ?TT ?A ?B ?C ?D ?E ] => econstructor
            | [ |- forall x, x \notin ?L -> ?P ] =>
              let free := gather_vars in
              let x' := fresh "x" in

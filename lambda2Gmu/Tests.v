@@ -8,7 +8,7 @@ Ltac simpl_op := cbn; try case_if; auto.
 (* Ltac solve_simple_type := repeat ((* let L := gather_vars in try apply typing_abs with L; *) intros; econstructor; eauto; cbn; try case_if; eauto). *)
 Ltac crush_simple_type := repeat (cbv; (try case_if); econstructor; eauto).
 
-Lemma well_typed_id : {empty, emptyΔ, empty} ⊢ id ∈ id_typ.
+Lemma well_typed_id : {empty, emptyΔ, empty} ⊢(Treg) id ∈ id_typ.
   cbv; autotyper1.
 Qed.
 
@@ -31,13 +31,20 @@ Qed.
 
 
 Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
-Lemma id_app_types : {empty, emptyΔ, empty} ⊢ id_app ∈ typ_unit.
+Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
+  cbv.
+  econstructor.
+  - admit.
+  - econstructor.
+    + econstructor.
+      * intros.
   cbv; autotyper1.
   2: {
     instantiate (1 := (@0 ==> @0)).
-    cbn. auto.
+    cbn. autotyper1. 
   }
-  autotyper1.
+  - autotyper1.
+  - autotyper1.
 Qed.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).

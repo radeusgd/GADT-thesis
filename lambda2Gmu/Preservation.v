@@ -765,6 +765,12 @@ Definition subst_td (A : var) (U : typ) (d : typctx_elem) : typctx_elem :=
   | tc_eq (T1 ≡ T2) => tc_eq ((subst_tt A U T1) ≡ (subst_tt A U T2))
   end.
 
+Fixpoint subst_td_many (Xs : list var) (Us : list typ) (d : typctx_elem) : typctx_elem :=
+  match (Xs, Us) with
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_td_many Xt Ut (subst_td X U d)
+  | _ => d
+  end.
+
 (* This lemma is very WIP *)
 Lemma okt_strengthen_delta_var_subst_new : forall Σ D1 D2 E X P,
     wft Σ D1 P ->
@@ -979,8 +985,21 @@ Lemma typing_through_subst_te_2 :
   (* apply* typing_through_subst_te. *)
 Admitted.
 
-Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps TT,
-    {Σ, (Δ |,| tc_vars As), E & F} ⊢(TT) e ∈ T ->
+Lemma typing_through_subst_te_3 :
+  forall Σ Δ E Z e P T TT,
+    {Σ, Δ |,| [tc_var Z], E} ⊢(TT) e ∈ T ->
+    wft Σ Δ P ->
+    Z \notin fv_typ P ->
+    Z # E ->
+    Z \notin fv_env E ->
+    {Σ, Δ, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+  (* intros. *)
+  (* rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin. *)
+  (* apply* typing_through_subst_te. *)
+Admitted.
+
+Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
+    {Σ, (Δ |,| tc_vars As |,| Δ2), E & F} ⊢(TT) e ∈ T ->
     length As = length Ps ->
     (forall P, List.In P Ps -> wft Σ Δ P) ->
     (forall A, List.In A As -> A # E) ->
@@ -988,41 +1007,42 @@ Lemma typing_through_subst_te_many : forall As Σ Δ E F e T Ps TT,
     (forall A P, List.In A As -> List.In P Ps -> A \notin fv_typ P) ->
     (forall A, List.In A As -> A \notin fv_env E) ->
     DistinctList As ->
-    {Σ, Δ, E & map (subst_tb_many As Ps) F} ⊢(Tgen) (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
-  induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP AEE Adist;
-    destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence].
-  - cbn in *. clean_empty_Δ.
-    rewrite map_def.
-    rewrite <- LibList_map.
-    rewrite <- map_id; eauto using Tgen_from_any.
-    intros. destruct x as [? [?]].
-    cbv. auto.
-  - cbn.
-    inversions Adist.
-    lets IH0: IHAts Σ (Δ) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F)
-                   (subst_te Ah Ph e).
-    lets IH: IH0 (subst_tt Ah Ph T) Pts.
-    rewrite <- (@subst_tb_id_on_fresh E Ah Ph).
-    rewrite subst_tb_many_split.
-    eapply IH; auto with listin.
-    + lets HT: typing_through_subst_te Σ (Δ |,| (tc_vars Ats)) emptyΔ Ah.
-      rewrite <- map_concat.
-      apply~ HT; clean_empty_Δ; auto with listin.
-      * rewrite List.app_assoc.
-        unfold tc_vars.
+    {Σ, Δ |,| List.map (subst_td_many As Ps) Δ2, E & map (subst_tb_many As Ps) F} ⊢(Tgen) (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
+(*   induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP AEE Adist; *)
+(*     destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence]. *)
+(*   - cbn in *. clean_empty_Δ. *)
+(*     rewrite map_def. *)
+(*     rewrite <- LibList_map. *)
+(*     rewrite <- map_id; eauto using Tgen_from_any. *)
+(*     intros. destruct x as [? [?]]. *)
+(*     cbv. auto. *)
+(*   - cbn. *)
+(*     inversions Adist. *)
+(*     lets IH0: IHAts Σ (Δ) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F) *)
+(*                    (subst_te Ah Ph e). *)
+(*     lets IH: IH0 (subst_tt Ah Ph T) Pts. *)
+(*     rewrite <- (@subst_tb_id_on_fresh E Ah Ph). *)
+(*     rewrite subst_tb_many_split. *)
+(*     eapply IH; auto with listin. *)
+(*     + lets HT: typing_through_subst_te Σ (Δ |,| (tc_vars Ats)) emptyΔ Ah. *)
+(*       rewrite <- map_concat. *)
+(*       apply~ HT; clean_empty_Δ; auto with listin. *)
+(*       * rewrite List.app_assoc. *)
+(*         unfold tc_vars. *)
 
-        assert (EQ: (List.map tc_var Ats |,| [tc_var Ah]) = (tc_var Ah :: List.map tc_var Ats)); try solve [cbn; auto].
-        rewrite EQ.
-        rewrite <- List.map_cons.
-        fold (tc_vars (Ah :: Ats)).
-        eauto.
-      * rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)).
-        apply wft_weaken.
-        clean_empty_Δ. auto with listin.
-    + lets: fv_env_subst.
-      auto with listin.
-    + auto with listin.
-Qed.
+(*         assert (EQ: (List.map tc_var Ats |,| [tc_var Ah]) = (tc_var Ah :: List.map tc_var Ats)); try solve [cbn; auto]. *)
+(*         rewrite EQ. *)
+(*         rewrite <- List.map_cons. *)
+(*         fold (tc_vars (Ah :: Ats)). *)
+(*         eauto. *)
+(*       * rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)). *)
+(*         apply wft_weaken. *)
+(*         clean_empty_Δ. auto with listin. *)
+(*     + lets: fv_env_subst. *)
+(*       auto with listin. *)
+(*     + auto with listin. *)
+  (* Qed. *)
+Admitted.
 
 (* TODO: may want to generalize this if necessary *)
 Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
@@ -1120,42 +1140,83 @@ Lemma subst_ttprim_open_tt : forall O T U,
   rewrite subst_tt_open_tt; eauto with listin.
 Qed.
 
-Lemma subst_match_remove_right_var3 : forall Σ D O1 X U,
-    subst_matches_typctx Σ D (O1 |, (X, U)) ->
-    wft Σ emptyΔ U.
+Lemma subst_match_remove_right_var3 : forall Σ D O X U,
+    subst_matches_typctx Σ D (O |, (X, U)) ->
+    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O.
   induction D as [| [Z | [V1 V2]]]; introv M.
   - cbn in *.
     inversions M.
   - inversions M.
-    fold_delta.
-    repeat rewrite notin_domΔ_eq in *.
-    auto.
+    splits~.
+    eauto.
   - inversions M.
     lets~ IH: IHD H3.
 Qed.
 
-Lemma subst_has_wft : forall Σ Δ O,
+Lemma subst_has_wft : forall Σ O Δ,
   subst_matches_typctx Σ Δ O ->
   forall A P, List.In (A, P) O -> wft Σ emptyΔ P.
-  induction O; introv M.
+  induction O as [| [X U]]; introv M.
   - intros. false~.
   - introv Hin.
     cbn in Hin.
+    lets* [? [D' ?]]: subst_match_remove_right_var3 M.
     destruct Hin; subst.
-    + lets*: subst_match_remove_right_var3 M.
-    
-  
+    + inversions H1. auto.
+    + apply* IHO.
+Qed.
+
+Lemma subst_has_closed : forall Σ O Δ,
+  subst_matches_typctx Σ Δ O ->
+  forall A P, List.In (A, P) O -> type P.
+  introv M Hin.
+  lets: subst_has_wft M Hin.
+  apply* type_from_wft.
+Qed.
+
 Lemma teq_open : forall Σ Δ T1 T2 T,
   entails_semantic Σ Δ (T1 ≡ T2) ->
   entails_semantic Σ Δ (open_tt T1 T ≡ open_tt T2 T).
   introv Sem.
   cbn in *.
   introv M.
-  assert (forall (A : var) (P : typ), List.In (A, P) Θ -> type P).
-  - 
-  - repeat rewrite~ subst_ttprim_open_tt.
-    f_equal.
-    apply~ Sem.
+  lets: subst_has_closed M.
+  repeat rewrite~ subst_ttprim_open_tt.
+  f_equal.
+  apply~ Sem.
+Qed.
+
+Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
+    entails_semantic Σ Δ (typ_gadt Ts N ≡ typ_gadt Us N) ->
+    List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us.
+Admitted.
+
+Lemma remove_true_equation : forall Σ Δ E e TT V T U,
+    {Σ, Δ |,| [tc_eq (T ≡ U)], E} ⊢(TT) e ∈ V ->
+    entails_semantic Σ Δ (T ≡ U) ->
+    {Σ, Δ, E} ⊢(TT) e ∈ V.
+Admitted.
+
+Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
+    {Σ, Δ |,| equations_from_lists Ts Us, E} ⊢(TT) e ∈ V ->
+    List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us ->
+    {Σ, Δ, E} ⊢(TT) e ∈ V.
+Admitted.
+
+Lemma helper_equations_commute : forall Ts As Us Vs,
+    List.length As = List.length Us ->
+    (forall A, List.In A As -> A \notin fv_typs Ts) ->
+    equations_from_lists
+      Ts
+      (List.map (fun T : typ => subst_tt_many As Us (open_tt_many_var As T)) Vs)
+    =
+    List.map
+      (subst_td_many As Us)
+      (equations_from_lists Ts (List.map (open_tt_many_var As) Vs)).
+  induction As; introv Hlen Afr; destruct Us; try solve [false Hlen].
+  - cbn.
+    repeat rewrite~ List.map_id.
+  - cbn.
 Admitted.
 
 Theorem preservation_thm : preservation.
@@ -1195,7 +1256,7 @@ Theorem preservation_thm : preservation.
     + apply* typing_replace_typ.
     + lets* [? [? WFT]]: typing_regular Htyp2.
       inversion~ WFT.
-  - (* tabs *) 
+  - (* tabs *)
     lets [U [HT EQ]]: inversion_typing_eq Htyp.
     inversions HT.
 
@@ -1205,11 +1266,10 @@ Theorem preservation_thm : preservation.
     + pick_fresh X.
       rewrite* (@subst_te_intro X).
       rewrite* (@subst_tt_intro X).
-      admit.
+      apply~ typing_through_subst_te_3.
     + apply~ teq_open.
     + lets* [? [? WFT]]: typing_regular Htyp.
       apply~ wft_open.
-   
   - (* fst *)
     lets [U [HT EQ]]: inversion_typing_eq Htyp.
     inversions HT.
@@ -1228,142 +1288,181 @@ Theorem preservation_thm : preservation.
     apply* typing_eq.
     lets* [? [? WFT]]: typing_regular Htyp.
     inversion~ WFT.
-  - admit.
-  - admit.
-  - admit.
-  
-  
-Admitted.
-  (* - inversions Htyp. *)
-  (*   pick_fresh X. *)
-  (*   find_hopen. forwards~ K: (Hopen X). *)
-  (*   rewrite* (@subst_te_intro X). *)
-  (*   rewrite* (@subst_tt_intro X). *)
-  (*   rewrite <- (List.app_nil_r Δ). *)
-  (*   apply* typing_through_subst_te_2; clean_empty_Δ; auto. *)
-  (* - inversion Htyp; subst; eauto. *)
-  (* - inversion Htyp; subst; eauto. *)
-  (* - (* fix *) *)
-  (*   pick_fresh x. *)
-  (*   find_hval. *)
-  (*   forwards~ K: (Hval x). *)
-  (*   rewrite* (@subst_ee_intro x). *)
-  (*   expand_env_empty E. *)
-  (*   apply* typing_through_subst_ee. *)
-  (*   fold_env_empty. *)
-  (* - (* let *) *)
-  (*   pick_fresh x. *)
-  (*   find_hopen. *)
-  (*   forwards~ K: (Hopen x). *)
-  (*   rewrite* (@subst_ee_intro x). *)
-  (*   expand_env_empty E. *)
-  (*   apply* typing_through_subst_ee. *)
-  (*   fold_env_empty. *)
-  (* - (* matchgadt *) *)
+  - (* fix *)
+    pick_fresh x.
+    rewrite* (@subst_ee_intro x).
+    expand_env_empty E.
+    apply* typing_through_subst_ee.
+    fold_env_empty.
+  - (* let *)
+    pick_fresh x.
+    rewrite* (@subst_ee_intro x).
+    expand_env_empty E.
+    apply* typing_through_subst_ee.
+    fold_env_empty.
+  - (* matchgadt *)
+    (* we reduce to one of the branches which correspond to their definitions in type *)
+    lets* [Def [nthDef Inzip]]: nth_error_implies_zip_swap Defs H10.
+    lets HclTyp: H3 Inzip.
+    remember (Cargtype Def) as argT.
+    (* prepare fresh vars *)
+    let fresh := gather_vars in
+    lets* [Alphas [Hlen [Adist Afresh]]]: exist_alphas fresh (length Ts0).
+    pick_fresh x.
 
-  (*   (* we reduce to one of the branches which correspond to their definitions in type *) *)
-  (*   lets* [Def [nthDef Inzip]]: nth_error_implies_zip_swap Defs H10. *)
-  (*   lets HclTyp: H3 Inzip. *)
-  (*   remember (Cargtype Def) as argT. *)
+    match goal with
+    | [ H: term (trm_constructor ?A ?B ?C) |- _ ] =>
+      inversions H7
+    end.
 
-  (*   (* prepare fresh vars *) *)
-  (*   let fresh := gather_vars in *)
-  (*   lets* [Alphas [Hlen [Adist Afresh]]]: exist_alphas fresh (length Ts0). *)
-  (*   pick_fresh x. *)
+    (* extract info from well-formedness of GADT env Σ - our constructors are well formed *)
+    lets [Hokt ?]: typing_regular Htyp.
+    lets okgadt: okt_implies_okgadt Hokt.
+    unfold okGadt in okgadt.
+    destruct okgadt as [okΣ okCtors].
+    lets [defsNe okDefs]: okCtors H0.
+    lets indef: fst_from_zip Inzip.
+    lets okCtor: okDefs indef.
+    inversion okCtor.
+    clear H15 H16 Tarity0 Σ0.
+    rename Carity into DefArity.
 
-  (*   match goal with *)
-  (*   | [ H: term (trm_constructor ?A ?B ?C) |- _ ] => *)
-  (*     inversions H7 *)
-  (*   end. *)
+    (* replace open with subst+open_var *)
+    rewrite~ (@subst_ee_intro x);
+      [ idtac
+      | apply fv_open_te_many;
+        [ introv Tin;
+          apply* fv_typs_notin
+        | auto ]
+      ].
 
-  (*   (* extract info from well-formedness of GADT env Σ - our constructors are well formed *) *)
-  (*   lets [Hokt ?]: typing_regular Htyp. *)
-  (*   lets okgadt: okt_implies_okgadt Hokt. *)
-  (*   unfold okGadt in okgadt. *)
-  (*   destruct okgadt as [okΣ okCtors]. *)
-  (*   lets [defsNe okDefs]: okCtors H0. *)
-  (*   lets indef: fst_from_zip Inzip. *)
-  (*   lets okCtor: okDefs indef. *)
-  (*   inversion okCtor. *)
-  (*   clear H15 H16 Tarity0 Σ0. *)
-  (*   rename Carity into DefArity. *)
+    rewrite (@subst_te_intro_many Alphas _ Ts0); auto;
+      [ idtac
+      | introv Ain; subst; cbn; cbn in Afresh; lets*: Afresh Ain
+      | introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin
+      ].
 
-  (*   (* replace open with subst+open_var *) *)
-  (*   rewrite (@subst_ee_intro x); trivial; *)
-  (*     [ idtac *)
-  (*     | apply fv_open_te_many; *)
-  (*       [ introv Tin; *)
-  (*         apply* fv_typs_notin *)
-  (*       | auto ] *)
-  (*     ]. *)
+    (* use fact that subst preserves typing *)
+    lets [T' [Typ2 EQ]]: inversion_typing_eq Htyp.
+    inversions Typ2.
+    match goal with
+    | [ H1: binds ?g ?A Σ, H2: binds ?g ?B Σ |- _ ] =>
+      let H := fresh "H" in
+      lets H: binds_ext H1 H2;
+        inversions H
+    end.
+(*     rewrite (@subst_tt_intro_many Alphas _ Ts0) in EQ; auto.
+    + admit.
+    + 
+      [ idtac
+      | introv Ain; subst; cbn; cbn in Afresh; lets*: Afresh Ain
+      | introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin
+      ]. *)
 
-  (*   rewrite (@subst_te_intro_many Alphas _ Ts0); auto; *)
-  (*     [ idtac *)
-  (*     | introv Ain; subst; cbn; cbn in Afresh; lets*: Afresh Ain *)
-  (*     | introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin *)
-  (*     ]. *)
+    rename H20 into TypCtorArg.
+    match goal with
+    | [ H1: List.nth_error Ctors cid = ?A, H2: List.nth_error Ctors cid = ?B |- _ ] =>
+      let H := fresh "H" in
+      assert (H: A = B); [ rewrite <- H2; auto | idtac ];
+        inversions H
+    end.
+    rewrite (@subst_tt_intro_many Alphas _ Ts0) in TypCtorArg; auto.
+    2: {
+      intros A Ain; subst; cbn; cbn in Afresh.
+      rewrite H13. auto.
+    }
+    2: {
+      intros A U Ain Uin.
+      lets WFT: H29 Uin.
+      lets: wft_gives_fv WFT.
+      intro HF.
+      assert (HA: A \in domΔ Δ); auto.
+      lets HA2: Afresh Ain.
+      apply HA2. repeat rewrite in_union. repeat right~.
+    }
 
-  (*   (* use fact that subst preserves typing *) *)
-  (*   expand_env_empty E. *)
-  (*   apply typing_through_subst_ee with (open_tt_many Ts0 (Cargtype Def)). *)
-  (*   (* apply typing_through_subst_ee with (open_tt_many_var Alphas (Cargtype Def)). *) *)
-  (*   2: { *)
-  (*     subst. cbn. *)
-  (*     inversions Htyp. *)
-  (*     lets Hbeq: binds_ext H19 H0. *)
-  (*     inversions Hbeq. *)
-  (*     rewrite nthDef in H20. inversions H20. *)
-  (*     trivial. *)
-  (*   } *)
+    expand_env_empty E.
+    eapply typing_through_subst_ee with (subst_tt_many Alphas Ts0 (open_tt_many_var Alphas CargType)) Tgen _; [ idtac | eauto ].
 
-  (*   rewrite (@subst_tt_intro_many Alphas _ Ts0); auto; *)
-  (*     [ idtac *)
-  (*     | introv Ain; subst; cbn; cbn in Afresh; lets*: Afresh Ain *)
-  (*     | introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin *)
-  (*     ]. *)
+    (* rewrite (@subst_tt_intro_many Alphas _ Ts0); auto; *)
+    (*   [ idtac *)
+    (*   | introv Ain; subst; cbn; cbn in Afresh; lets*: Afresh Ain *)
+    (*   | introv Ain Tin; lets: Afresh Ain; apply* fv_typs_notin *)
+    (*   ]. *)
 
-  (*   (* instantiate the inductive hypothesis *) *)
-  (*   assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L); *)
-  (*     [ introv Ain; lets*: Afresh Ain | idtac]. *)
-  (*   assert (xfreshL: x \notin L); auto. *)
-  (*   assert (xfreshA: x \notin from_list Alphas); auto. *)
+    (* instantiate the inductive hypothesis *)
+    assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
+      [ introv Ain; lets*: Afresh Ain | idtac].
+    assert (xfreshL: x \notin L); auto.
+    assert (xfreshA: x \notin from_list Alphas); auto.
 
-  (*   assert (length Alphas = Carity Def); *)
-  (*     [ lets Hclarity: H2 Inzip; rewrite <- Hclarity; cbn; trivial | idtac ]. *)
-  (*   lets* IH: H3 Inzip Alphas x Adist xfreshA. *)
-  (*   cbn in IH. *)
+    (* assert (length Alphas = Carity Def); *)
+    (*   [ lets Hclarity: H2 Inzip; rewrite <- Hclarity; cbn; trivial | idtac ]. *)
+    lets* IH: H3 Inzip Alphas x Adist xfreshA.
+    cbn in IH.
 
-  (*   rewrite subst_te_many_commutes_open; auto; *)
-  (*     [ idtac *)
-  (*     | introv Ain; lets: Afresh Ain; *)
-  (*       lets: from_list_spec2 Ain; *)
-  (*       intro; subst; auto *)
-  (*     ]. *)
+    rewrite subst_te_many_commutes_open; auto;
+      [ idtac
+      | introv Ain; lets: Afresh Ain;
+        lets: from_list_spec2 Ain;
+        intro; subst; auto
+      ].
 
-  (*   fold (subst_tb_many Alphas Ts0 (bind_var (open_tt_many_var Alphas (Cargtype Def)))). *)
-  (*   rewrite <- map_single. *)
-  (*   fold_env_empty. *)
+    fold (subst_tb_many Alphas Ts0 (bind_var (open_tt_many_var Alphas CargType))).
+    rewrite <- map_single.
+    fold_env_empty.
 
-  (*   rewrite subst_tt_many_free with Alphas Ts0 Tc; *)
-  (*     [ idtac | introv Ain; lets*: Afresh Ain ]. *)
+    rewrite subst_tt_many_free with Alphas Ts0 Tc;
+      [ idtac | introv Ain; lets*: Afresh Ain ].
 
-  (*   apply typing_through_subst_te_many; trivial. *)
-  (*   + admit. *)
-  (*   + inversions Htyp. *)
-  (*     intros; auto with listin. *)
-  (*   + intros A Ain. *)
-  (*     lets: Afresh Ain. auto. *)
-  (*   + autorewrite with rew_env_dom. *)
-  (*     intros A Ain. *)
-  (*     apply notin_inverse. *)
-  (*     intro HF. *)
-  (*     apply xfreshA. *)
-  (*     rewrite in_singleton in HF. subst. *)
-  (*     apply from_list_spec2. auto. *)
-  (*   + introv Ain Tin. *)
-  (*     apply fv_typs_notin with Ts0; auto. *)
-  (*     lets: Afresh Ain. *)
-  (*     auto with listin. *)
-  (*   + introv Ain; lets*: Afresh Ain. *)
-
-
+    apply remove_true_equations with Ts (List.map (fun T => subst_tt_many Alphas Ts0 (open_tt_many_var Alphas T)) CretTypes).
+    + assert (Hrew:
+          equations_from_lists Ts (List.map (fun T : typ => subst_tt_many Alphas Ts0 (open_tt_many_var Alphas T)) CretTypes)
+          =
+          List.map (subst_td_many Alphas Ts0) (equations_from_lists Ts (List.map (open_tt_many_var Alphas) CretTypes))
+        ).
+      * apply~ helper_equations_commute.
+        introv Ain. lets~ : Afresh Ain.
+      * rewrite Hrew; clear Hrew.
+        apply typing_through_subst_te_many with Tgen; trivial.
+        -- intros A Ain.
+           lets: Afresh Ain. auto.
+        -- autorewrite with rew_env_dom.
+           intros A Ain.
+           apply notin_inverse.
+           intro HF.
+           apply xfreshA.
+           rewrite in_singleton in HF. subst.
+           apply from_list_spec2. auto.
+        -- introv Ain Tin.
+           apply fv_typs_notin with Ts0; auto.
+           lets: Afresh Ain.
+           auto with listin.
+        -- introv Ain; lets*: Afresh Ain.
+    + assert (Hrew:
+                open_tt_many Ts0 (typ_gadt CretTypes Name)
+                =
+                typ_gadt (List.map (open_tt_many Ts0) CretTypes) Name).
+      * clear.
+        rename Ts0 into Ts.
+        rename CretTypes into Us.
+        gen Us.
+        induction Ts; introv.
+        -- cbn. rewrite~ List.map_id.
+        -- cbn. rewrite IHTs.
+           f_equal.
+           rewrite List.map_map.
+           apply List.map_ext.
+           intro T. auto.
+      * rewrite Hrew in EQ; clear Hrew.
+        lets: inversion_eq_typ_gadt EQ.
+        rewrite <- (List.map_ext_in (fun T : typ => open_tt_many Ts0 T)).
+        2: {
+          intros T Tin.
+          rewrite~ (@subst_tt_intro_many Alphas T Ts0).
+          -- rewrite~ H14.
+          -- introv Ain Uin. lets HF2: Afresh Ain.
+             apply* fv_typs_notin.
+        }
+        apply H5.
+Qed.
