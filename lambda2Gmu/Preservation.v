@@ -1343,15 +1343,47 @@ Lemma teq_open : forall Σ Δ T1 T2 T,
   apply~ Sem.
 Qed.
 
+Lemma subst_tt_prime_reduce_typ_gadt : forall O Ts N,
+    subst_tt' (typ_gadt Ts N) O = typ_gadt (List.map (fun T => subst_tt' T O) Ts) N.
+  induction O as [| [A U]]; introv; cbn; auto.
+  - rewrite~ List.map_id.
+  - rewrite IHO.
+    f_equal.
+    rewrite List.map_map. auto.
+Qed.
+
+Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
+    List.map f la = List.map f lb ->
+    List.In (a, b) (zip la lb) ->
+    f a = f b.
+  induction la as [| a' la]; destruct lb as [| b' lb]; introv Map In; try solve [inversion Map | inversion In].
+  cbn in *.
+  inversions Map.
+  destruct In as [In | In].
+  - inversions~ In.
+  - apply IHla with lb; auto.
+Qed.
+
 Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
+    List.length Ts = List.length Us ->
     entails_semantic Σ Δ (typ_gadt Ts N ≡ typ_gadt Us N) ->
     List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us.
-Admitted.
+  introv Len Sem.
+  apply F2_iff_In_zip.
+  split~.
+  intros T U In.
+  cbn in *.
+  introv M.
+  lets EQ: Sem M.
+  repeat rewrite subst_tt_prime_reduce_typ_gadt in EQ.
+  inversion EQ as [EQ2].
+  lets~ : lists_map_eq EQ2 In.
+Qed.
 
-Lemma remove_true_equation : forall Σ Δ E e TT V T U,
-    {Σ, Δ |,| [tc_eq (T ≡ U)], E} ⊢(TT) e ∈ V ->
-    entails_semantic Σ Δ (T ≡ U) ->
-    {Σ, Δ, E} ⊢(TT) e ∈ V.
+Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT V T U,
+    {Σ, Δ1 |,| [tc_eq (T ≡ U)] |,| Δ2, E} ⊢(TT) e ∈ V ->
+    entails_semantic Σ (Δ1 |,| Δ2) (T ≡ U) ->
+    {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ V.
 Admitted.
 
 Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
@@ -1613,7 +1645,19 @@ Theorem preservation_thm : preservation.
            apply List.map_ext.
            intro T. auto.
       * rewrite Hrew in EQ; clear Hrew.
-        lets: inversion_eq_typ_gadt EQ.
+        assert (Hrew: (List.map (fun T : typ => subst_tt_many Alphas Ts0 (open_tt_many_var Alphas T)) CretTypes) = List.map (open_tt_many Ts0) CretTypes).
+        1: {
+          apply List.map_ext_in.
+          intros T Tin.
+          rewrite~ <- subst_tt_intro_many.
+          - intros A Ain.
+            rewrite~ H14.
+          - intros A U Ain Uin.
+            lets: Afresh Ain.
+            apply fv_typs_notin with Ts0; auto.
+        }
+        rewrite Hrew; clear Hrew.
+        lets EQ2: inversion_eq_typ_gadt EQ.
         rewrite <- (List.map_ext_in (fun T : typ => open_tt_many Ts0 T)).
         2: {
           intros T Tin.
@@ -1622,5 +1666,23 @@ Theorem preservation_thm : preservation.
           -- introv Ain Uin. lets HF2: Afresh Ain.
              apply* fv_typs_notin.
         }
-        apply H5.
+        -- rewrite List.map_length.
+
+
+           lets [OKT [? WFT2]]: typing_regular Htyp.
+           inversions WFT2.
+           lets OKS: okt_implies_okgadt OKT.
+           inversion OKS as [? OKC].
+           lets [? OKD]: OKC H0.
+           cbn in *.
+           lets OKE: OKD indef.
+           inversions OKE.
+           match goal with
+           | [ H1: binds ?g ?A Σ, H2: binds ?g ?B Σ |- _ ] =>
+             let H := fresh "H" in
+             lets H: binds_ext H1 H2;
+               inversions H
+           end.
+           auto.
+        -- apply EQ2.
 Qed.
