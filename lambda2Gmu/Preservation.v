@@ -1045,11 +1045,178 @@ Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
 Admitted.
 
 (* TODO: may want to generalize this if necessary *)
+
+Lemma okt_replace_typ : forall Σ Δ E F x T1 T2,
+  okt Σ Δ (E & x ~: T1 & F) ->
+  wft Σ Δ T2 ->
+  okt Σ Δ (E & x ~: T2 & F).
+  induction F using env_ind; introv OK WFT.
+  - rewrite concat_empty_r.
+    rewrite concat_empty_r in OK.
+    inversions OK.
+    + false* empty_push_inv.
+    + apply eq_push_inv in H.
+      destruct H as [? [HS ?]]; inversions HS.
+      constructor; auto.
+  - rewrite concat_assoc in *.
+    inversions OK.
+    + false* empty_push_inv.
+    + apply eq_push_inv in H.
+      destruct H as [? [HS ?]]. inversions HS.
+      constructor; auto.
+      apply* IHF.
+Qed.
+
+
+Ltac generalize_typings :=
+  match goal with
+  | [ H: {?Σ, ?D, ?E} ⊢(?TT) ?e ∈ ?T |- _ ] =>
+    match TT with
+    | Tgen => fail 1
+    | Treg => fail 1
+    | _ => apply Tgen_from_any in H;
+           try clear TT
+    end
+  end.
+
+(* TODO maybe merge with the origl one *)
+Lemma okt_is_wft_2 : forall Σ Δ E F x T,
+    okt Σ Δ (E & x ~: T & F) -> wft Σ Δ T.
+  induction F using env_ind; introv OK.
+  - rewrite concat_empty_r in OK.
+    apply* okt_is_wft.
+  - rewrite concat_assoc in OK.
+    inversions OK.
+    + false* empty_push_inv.
+    + lets (?&?&?): eq_push_inv H. subst.
+      apply* IHF.
+Qed.
+
+Opaque entails_semantic.
+Lemma equations_weaken_match : forall Σ Δ As Ts Us T1 T2,
+  List.length Ts = List.length Us ->
+  entails_semantic Σ Δ (T1 ≡ T2) ->
+  entails_semantic Σ
+    (Δ |,| tc_vars As |,| equations_from_lists Ts Us)
+    (T1 ≡ T2).
+  induction Ts as [| T Ts]; introv Len Sem.
+  - cbn.
+    induction As as [| A As].
+    + cbn. auto.
+    + cbn.
+      fold (tc_vars As).
+      fold_delta.
+      rewrite <- (List.app_nil_l (Δ |,| tc_vars As |,| [tc_var A])).
+      apply~ equation_weaken_var; cbn; auto.
+  - destruct Us as [| U Us].
+    + inversion Len.
+    + cbn.
+      fold (equations_from_lists Ts Us).
+      fold_delta.
+      rewrite <- (List.app_nil_l (Δ |,| tc_vars As |,| equations_from_lists Ts Us |,| [tc_eq (T ≡ U)])).
+      apply equation_weaken_eq.
+      rewrite List.app_nil_l.
+      apply* IHTs.
+Qed.
+Transparent entails_semantic.
+
+Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
+    {Σ, Δ, E & x ~: T1 & F} ⊢( TT) e ∈ U ->
+    wft Σ Δ T2 ->
+    entails_semantic Σ Δ (T1 ≡ T2) ->
+    {Σ, Δ, E & x ~: T2 & F} ⊢(Tgen) e ∈ U.
+  introv Typ.
+  (* assert (okt Σ Δ (E & x ~: T2 & F)); [admit | idtac]. *)
+  gen_eq K: (E & x~: T1 & F). gen F x T1.
+  induction Typ using typing_ind; introv EQ WFT Sem; subst; eauto;
+    try solve [apply Tgen_from_any with Treg; eauto].
+  - apply Tgen_from_any with Treg;
+      econstructor. apply* okt_replace_typ.
+  - destruct (classicT (x = x0)); subst.
+    + lets: okt_is_ok H0.
+      apply binds_middle_eq_inv in H; auto.
+      inversions H.
+      apply typing_eq with T2 Treg.
+      * constructor.
+        -- apply binds_concat_left.
+           ++ apply binds_push_eq.
+           ++ lets* [? ?]: ok_middle_inv H1.
+        -- apply* okt_replace_typ.
+      * apply~ teq_symmetry.
+      * apply* okt_is_wft_2.
+    + apply Tgen_from_any with Treg.
+      constructor.
+      * lets [? | [[? [? ?]] | [? [? ?]]]]: binds_middle_inv H; subst.
+        -- apply~ binds_concat_right.
+        -- false.
+        -- apply~ binds_concat_left.
+      * apply* okt_replace_typ.
+  - apply Tgen_from_any with Treg.
+    econstructor.
+    introv xiL.
+    lets IH: H0 xiL (F & x0 ~: V) x T0.
+    repeat rewrite concat_assoc in IH.
+    apply* IH.
+  - apply Tgen_from_any with Treg.
+    econstructor; eauto.
+    introv xiL.
+    lets IH: H1 xiL F x T0.
+    repeat rewrite concat_assoc in IH.
+    apply* IH.
+    + apply~ wft_weaken_simple.
+    + rewrite <- (List.app_nil_l (Δ |,| [tc_var X])).
+      apply~ equation_weaken_var.
+      cbn. auto.
+  - apply Tgen_from_any with Treg.
+    econstructor; eauto.
+    introv xiL.
+    lets IH: H1 xiL (F & x0 ~: T) x T1.
+    repeat rewrite concat_assoc in IH.
+    apply* IH.
+  - apply Tgen_from_any with Treg.
+    econstructor; eauto.
+    introv xiL.
+    lets IH: H0 xiL (F & x0 ~: V) x T1.
+    repeat rewrite concat_assoc in IH.
+    apply* IH.
+  - apply Tgen_from_any with Treg.
+    econstructor; eauto.
+    introv In Alen Adist Afr xfr xAfr.
+    lets Htmp: H4 In Alen Adist Afr xfr.
+    lets IH: Htmp xAfr (F & x0 ~: open_tt_many_var Alphas (Cargtype def)) x T1. clear Htmp.
+    repeat rewrite concat_assoc in IH.
+    apply* IH.
+    + repeat apply* wft_weaken_simple.
+    + apply~ equations_weaken_match.
+      rewrite List.map_length.
+      lets [OKT [? WFT2]]: typing_regular Typ.
+      inversions WFT2.
+      lets OKS: okt_implies_okgadt OKT.
+      inversion OKS as [? OKC].
+      lets [? OKD]: OKC H0.
+      lets indef: fst_from_zip In.
+      lets OKE: OKD indef.
+      inversions OKE.
+      cbn.
+      match goal with
+      | [ H1: binds ?g ?A Σ, H2: binds ?g ?B Σ |- _ ] =>
+        let H := fresh "H" in
+        lets H: binds_ext H1 H2;
+          inversions H
+      end.
+      auto.
+Qed.
+
 Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
     {Σ, Δ, E & x ~: T1} ⊢( TT) e ∈ U ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
-    {Σ, Δ, E & x ~: T2} ⊢( TT) e ∈ U.
-Admitted.
+    wft Σ Δ T2 ->
+    {Σ, Δ, E & x ~: T2} ⊢( Tgen) e ∈ U.
+  intros.
+  rewrite <- (concat_empty_r (E & x ~: T2)).
+  apply* typing_replace_typ_gen.
+  fold_env_empty.
+Qed.
 
 Lemma subst_tt_prime_reduce_arrow : forall O T1 T2,
     subst_tt' (T1 ==> T2) O = subst_tt' T1 O ==> subst_tt' T2 O.
@@ -1120,16 +1287,6 @@ Qed.
 (*     eauto using teq_symmetry, teq_transitivity. *)
 (* Qed. *)
 
-Ltac generalize_typings :=
-  match goal with
-  | [ H: {?Σ, ?D, ?E} ⊢(?TT) ?e ∈ ?T |- _ ] =>
-    match TT with
-    | Tgen => fail 1
-    | Treg => fail 1
-    | _ => apply Tgen_from_any in H;
-           try clear TT
-    end
-  end.
   
 Lemma subst_ttprim_open_tt : forall O T U,
   (forall A P, List.In (A, P) O -> type P) ->
@@ -1252,8 +1409,9 @@ Theorem preservation_thm : preservation.
     fold_env_empty.
     apply teq_symmetry in EQ.
     lets [EQarg EQret]: inversion_eq_arrow EQ.
-    apply typing_eq with T0 TT; auto.
+    apply typing_eq with T0 Tgen; auto.
     + apply* typing_replace_typ.
+      lets*: typing_regular Htyp1.
     + lets* [? [? WFT]]: typing_regular Htyp2.
       inversion~ WFT.
   - (* tabs *)
