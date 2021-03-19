@@ -282,6 +282,49 @@ Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
       * introv Ain. eauto with listin.
 Qed.
 
+(*
+(A |,| B) |,| C = C ++ (B ++ A)
+A |,| (B |,| C) = (C ++ B) ++ A
+
+(A |,| B) |,| C = rev C ++ (rev B ++ A)
+rev (A++B) = rev B ++ rev A
+A |,| (B |,| C) = rev (rev C ++ B) ++ A = rev B ++ C ++ A
+
+X |,| Y := rev Y ++ rev X --> rev (X ++ Y)
+(A |,| B) |,| C = rev ((rev (A ++ B)) ++ C) = rev (rev B ++ rev A ++ C)
+
+A,B
+A ++ B
+B ++ A
+B ++ A
+
+x & y & from_list [z, w]
+    == x & y & z & w
+[w, z, y, x]
+-->
+E & F
+[y, x] & [w, z]
+
+
+
+A,x
+A ++ [x]
+A|,|x -> [x] ++ A
+[x] ++ A
+-D1-     -D2-
+ A,B, X, C,D
+        ++
+  [A,B] |,| [X] |,| [C,D]
+
+P [] ->
+P (L |,| [x]) ->
+P L
+- pierwotne rozw. z list A ++ B
+- własna struktura 'lista od prawej'
+  [C,D,X,A,B]
+  D2 ++ [X] ++ D1
+  *)
+
 Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
     subst_matches_typctx Σ (D1 |,| [tc_var X] |,| D2) (Θ1 |,| [(X, T)] |,| Θ2) ->
     X \notin fv_delta D2 ->
