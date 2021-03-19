@@ -1299,7 +1299,7 @@ Qed.
 
 Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     subst_matches_typctx Σ D (O |, (X, U)) ->
-    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O.
+    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O /\ X \notin substitution_sources O.
   induction D as [| [Z | [V1 V2]]]; introv M.
   - cbn in *.
     inversions M.
@@ -1380,10 +1380,133 @@ Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
   lets~ : lists_map_eq EQ2 In.
 Qed.
 
-Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT V T U,
-    {Σ, Δ1 |,| [tc_eq (T ≡ U)] |,| Δ2, E} ⊢(TT) e ∈ V ->
-    entails_semantic Σ (Δ1 |,| Δ2) (T ≡ U) ->
-    {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ V.
+Lemma subst_split : forall O1 O2 T,
+    subst_tt' T (O1 |,| O2) = subst_tt' (subst_tt' T O2) O1.
+  induction O2 as [| [A U]]; introv; cbn; auto.
+Qed.
+Lemma subst_src_rev : forall O,
+    substitution_sources O = substitution_sources (List.rev O).
+  induction O; cbn; auto.
+  fold_subst_src.
+  rewrite subst_src_app.
+  cbn.
+  rewrite IHO.
+  rewrite~ union_empty_r.
+Qed.
+
+Lemma subst_rev : forall O T E D,
+    subst_matches_typctx E D O ->
+    subst_tt' T O = subst_tt' T (List.rev O).
+  induction O as [| [A U]]; introv M; cbn in *; auto.
+  rewrite subst_split.
+  lets [? [D2 [? ?]]]: subst_match_remove_right_var3 M.
+  rewrite (IHO _ E D2); auto.
+  cbn.
+  rewrite~ subst_tt_inside.
+  - f_equal.
+    apply subst_ttΘ_fresh.
+    lets FV: wft_gives_fv H.
+    cbn in  FV.
+    assert (EQ: fv_typ U = \{}).
+    + apply* fset_extens.
+    + rewrite EQ. apply inter_empty_r.
+  - rewrite~ <- subst_src_rev.
+  - intros X V In.
+    apply List.in_rev in In.
+    lets FV: subst_has_no_fv H0 In.
+    rewrite FV. auto.
+Qed.
+
+(* Lemma subst_split_2 : forall O1 O2 T E D, *)
+(*     subst_matches_typctx E D (O1 |,| O2) -> *)
+(*     subst_tt' T (O1 |,| O2) = subst_tt' (subst_tt' T O1) O2. *)
+(*   introv M. *)
+(*   erewrite subst_rev. *)
+
+(* Lemma subst_commutes : forall O1 O2 T, *)
+(*     subst_tt' T (O1 |,| O2) = subst_tt' T (O2 |,| O1). *)
+(*   induction O2; introv; auto. *)
+(*   - admit. *)
+(*   - fold_ *)
+(*     rewrite IHO2. *)
+(*   induction O2 as [| [A U]]; introv; cbn; auto. *)
+  (* Qed. *)
+
+Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
+    subst_matches_typctx E D (O1 |,| O2) ->
+    subst_tt' T1 O1 = subst_tt' T2 O1 ->
+    subst_tt' T1 (O1 |,| O2) = subst_tt' T2 (O1 |,| O2).
+  induction O2 as [| [A U]]; introv M EQ; cbn in *; auto.
+  lets [? [D2 [?]]]: subst_match_remove_right_var3 M.
+  apply* IHO2.
+  assert (forall (X : var) (U0 : typ), List.In (X, U0) O1 -> A \notin fv_typ U0).
+  - admit.
+  - assert (A \notin substitution_sources O1).
+    + admit.
+    + repeat rewrite* subst_tt_inside.
+      f_equal.
+      auto.
+Admitted.
+
+Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
+    subst_matches_typctx Σ Δ1 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| Δ2) (O1 |,| O2) ->
+    subst_tt' U1 O1 = subst_tt' U2 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (O1 |,| O2).
+  induction Δ2 as [| [| [V1 V2]]]; introv M1 M2 EQ; cbn in *; fold_delta.
+  - constructor; auto.
+    apply* subst_eq_weaken2.
+  - 
+  (* this may not work*)
+Admitted.
+
+Lemma subst_match_split : forall Σ Δ1 Δ2 O,
+    subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
+    exists O1 O2, O = O1 |,| O2 /\ subst_matches_typctx Σ Δ1 O1.
+  induction Δ2; introv M; cbn in *.
+  - exists O (@nil (var*typ)). auto.
+  - inversions M.
+    + lets [O1 [O2 [EQ M2]]]: IHΔ2 H2; subst.
+      exists O1 (O2 |, (A, T)).
+      auto.
+    + apply IHΔ2.
+      auto.
+Qed.
+
+Lemma equation_strengthen : forall Σ Δ1 Δ2 U1 U2 T1 T2,
+    entails_semantic Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (T1 ≡ T2) ->
+    entails_semantic Σ Δ1 (U1 ≡ U2) ->
+    entails_semantic Σ (Δ1 |,| Δ2) (T1 ≡ T2).
+  introv SemT SemU.
+  cbn in *.
+  fold_delta.
+  introv M.
+  lets [O1 [O2 [? M2]]]: subst_match_split M; subst.
+  lets EQ: SemU M2.
+  apply SemT.
+  apply~ subst_strengthen_true_eq.
+Qed.
+
+Lemma okt_strengthen_delta_eq : forall Σ Δ1 Δ2 eq E,
+    okt Σ (Δ1 |,| [tc_eq eq] |,| Δ2) E ->
+    okt Σ (Δ1 |,| Δ2) E.
+Admitted.
+
+Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
+    {Σ, Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2, E} ⊢(TT) e ∈ T ->
+    entails_semantic Σ Δ1 (U1 ≡ U2) ->
+    {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ T.
+  introv Typ.
+  gen_eq D3: (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2). gen Δ1 Δ2.
+  induction Typ using typing_ind; introv EQ Sem; subst; eauto;
+    try solve [econstructor; eauto using okt_strengthen_delta_eq].
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - lets: equation_strengthen H Sem.
+    econstructor; eauto.
+    apply* wft_strengthen_equation.
 Admitted.
 
 Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
