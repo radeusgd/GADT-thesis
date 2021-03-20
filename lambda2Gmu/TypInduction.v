@@ -2,7 +2,6 @@ Require Import Definitions.
 Require Import Zip.
 Require Import TLC.LibLN.
 Require Import List.
-Import List.ListNotations.
 
 (* Lemma typing_ind_ext *)
 (*      : forall P : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Prop, *)

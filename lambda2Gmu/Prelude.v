@@ -10,7 +10,6 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.EqNat.
 Require Import List.
-Export List.ListNotations.
 
 #[export] Hint Constructors type term wft typing red value.
 

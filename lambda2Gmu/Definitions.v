@@ -35,8 +35,13 @@ Require Import TLC.LibLN.
 Require Import TLC.LibTactics.
 Require Import List.
 Require Import Coq.Init.Nat.
-Import List.ListNotations.
 Require Import Zip.
+
+Notation "[ ]" := nil (format "[ ]") : list_scope.
+Notation "[ x ]" := (cons x nil) : list_scope.
+Notation "[ x ; y ; .. ; z ]" :=  (cons z .. (cons y (cons x nil)) ..) : list_scope.
+Notation "A |,| B" := (B ++ A) (at level 32, left associativity).
+Notation "A |, b" := (b :: A) (at level 32).
 
 Inductive DistinctList : list var -> Prop :=
 | distinctive_empty : DistinctList []
@@ -857,8 +862,6 @@ Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
-Notation "A |,| B" := (B ++ A) (at level 32, left associativity). (*TODO dodać rev *)
-Notation "A |, b" := (b :: A) (at level 32).
 
 Fixpoint domΔ (Δ : typctx) : fset var :=
   match Δ with
@@ -945,11 +948,11 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
     A \notin substitution_sources Θ -> (* we want variables to be fresh as it helps with proofs *)
     A \notin domΔ Δ ->
     (* I'm adding to the env on the right to be consistent, but to subst to the left because the order does not matter - A's are different and T's have no free vars so reordering the substitution does not change anything. *)
-    subst_matches_typctx Σ (Δ |,| [tc_var A]) ((A, T) :: Θ)
+    subst_matches_typctx Σ (Δ |, tc_var A) (Θ |, (A, T))
 | tc_add_eq : forall Θ Δ T1 T2,
     subst_matches_typctx Σ Δ Θ ->
     (subst_tt' T1 Θ) = (subst_tt' T2 Θ) ->
-    subst_matches_typctx Σ (Δ |,| [tc_eq (T1 ≡ T2)]) Θ.
+    subst_matches_typctx Σ (Δ |, tc_eq (T1 ≡ T2)) Θ.
 
 (* Semantic entailment of a set of equations, noted in the paper as Δ ⊨ T1 ≡ T2.
    It is defined such that an equation is entailed by Δ if for each substitution matching delta, both sides of that equation are alpha equivalent after applying that substitution.
