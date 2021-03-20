@@ -1,6 +1,86 @@
 Require Import Prelude.
 Require Import Infrastructure.
 
+Ltac fold_from_list :=
+  repeat progress
+         match goal with
+         | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} ?L]  |- _ ] =>
+           fold (from_list L) in H
+         | |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} ?L] =>
+           fold (from_list L)
+         end.
+
+Lemma notin_from_list : forall As (A : var),
+    ~ (List.In A As) ->
+    A \notin from_list As.
+  intros.
+  intro HF.
+  lets [A' [Hin Heq]]: in_from_list HF.
+  subst.
+  auto.
+Qed.
+
+Lemma inv_distinct : forall l a,
+    DistinctList (l ++ [a]) ->
+    ~ List.In a l /\ DistinctList l.
+  induction l.
+  - cbn. intros. split~. constructor.
+  - introv D.
+    inversions D.
+    apply IHl in H2. destruct H2.
+    split~.
+    + introv In.
+      cbn in In.
+      destruct In; subst.
+      * apply H1. apply List.in_or_app; right; cbn; auto.
+      * auto.
+    + constructor; auto.
+      introv In.
+      apply H1.
+      apply List.in_or_app. auto.
+Qed.
+
+Lemma tc_vars_app : forall a b,
+    tc_vars (a ++ b) = tc_vars a ++ tc_vars b.
+  introv. unfold tc_vars.
+  rewrite List.map_app. auto.
+Qed.
+
+Lemma list_in_inv_r : forall T (L : list T) A B,
+    List.In A (L ++ [B]) ->
+    List.In A L \/ A = B.
+  intros.
+  apply List.in_app_or in H.
+  destruct~ H.
+  right. inversion~ H.
+  inversion H0.
+Qed.
+
+Ltac lister :=
+  match goal with
+  | [ H: context [tc_vars (?l ++ [?a]) ] |- _ ] =>
+    rewrite tc_vars_app in H; cbn in H
+  | [ |- context [tc_vars (?l ++ [?a]) ] ] =>
+    rewrite tc_vars_app; cbn
+  | [ H: DistinctList (?l ++ [?a]) |- _ ] =>
+    apply inv_distinct in H; destruct H
+  | [ H: context [length (?a ++ ?b) ] |- _ ] =>
+    rewrite List.app_length in H
+  | [ |- context [length (?a ++ ?b) ] ] =>
+    rewrite List.app_length
+  | [H: List.In ?X (?L ++ [?Y]) |- _] =>
+    apply list_in_inv_r in H
+  end.
+Ltac autodestruct :=
+  match goal with
+  | [ H: ?A \/ ?B |- _ ] => destruct H
+  | [ H: ?A /\ ?B |- _ ] => destruct H
+  | [ H: (?a,?b) = (?c,?d) |- _ ] => inversions* H
+  end.
+
+Tactic Notation "lister *" :=
+  repeat progress (lister; repeat progress autodestruct; auto).
+
 (* Proofs regarding proposition 2.1 from the paper *)
 Section SimpleEquationProperties.
 
@@ -34,13 +114,11 @@ Section SimpleEquationProperties.
       (forall X U, List.In (X, U) Θ -> fv_typ U = \{}).
     induction 1; introv Hin.
     - false.
-    - cbn in Hin.
-      destruct Hin as [Hin | Hin].
-      + inversions Hin.
-        lets Hfv: wft_gives_fv H.
+    - lister*.
+      + apply* IHsubst_matches_typctx.
+      + lets Hfv: wft_gives_fv H.
         cbn in Hfv.
         apply~ fset_extens.
-      + apply* IHsubst_matches_typctx.
     - apply* IHsubst_matches_typctx.
   Qed.
 
@@ -48,61 +126,48 @@ Section SimpleEquationProperties.
       List.In (tc_eq (T ≡ U)) Δ ->
       entails_semantic Σ Δ (T ≡ U).
     unfold entails_semantic.
-    induction Δ; introv Hin M.
+    induction Δ using List.rev_ind; introv Hin M.
     - contradiction.
-    - cbn in Hin.
-      destruct Hin as [Hin | Hin].
-      + subst. inversion M.
-        easy.
-      + inversion M; auto.
-        cbn.
-        repeat rewrite subst_tt_inside; auto.
-        * f_equal.
-          apply IHΔ; auto.
-        * introv Uin.
-          lets Fr: subst_has_no_fv Uin.
-          -- eauto.
-          -- rewrite Fr. apply notin_empty.
-        * introv Uin.
-          lets Fr: subst_has_no_fv Uin.
-          -- eauto.
-          -- rewrite Fr. apply notin_empty.
+    - lister*.
+      + subst. invert_subst_match.
+        * 
+        * admit.
+        * 
+        * cbn.
+          repeat rewrite subst_tt_inside; auto.
+          -- f_equal.
+             apply IHΔ; auto.
+          -- introv Uin.
+             lets Fr: subst_has_no_fv Uin.
+             ++ eauto.
+             ++ rewrite Fr. apply notin_empty.
+          -- introv Uin.
+             lets Fr: subst_has_no_fv Uin.
+             ++ eauto.
+             ++ rewrite Fr. apply notin_empty.
+        * apply* IHΔ.
+      + inversions Hin. invert_subst_match.
+        auto.
   Qed.
 
 End SimpleEquationProperties.
 
-Ltac fold_from_list :=
-  repeat progress match goal with
-  | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} ?L]  |- _ ] =>
-    fold (from_list L) in H
-  | |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} ?L] =>
-    fold (from_list L)
-                  end.
-
-Lemma notin_from_list : forall As (A : var),
-    ~ (List.In A As) ->
-    A \notin from_list As.
-  intros.
-  intro HF.
-  lets [A' [Hin Heq]]: in_from_list HF.
-  subst.
-  auto.
-Qed.
 
 Lemma spawn_unit_subst : forall Σ As,
     DistinctList As ->
     exists Θ, length Θ = length As /\ subst_matches_typctx Σ (tc_vars As) Θ /\ substitution_sources Θ = from_list As.
-  induction As as [| Ah Ats]; introv ADist.
+  induction As as [| Ah Ats] using List.rev_ind; introv ADist.
   - cbn.
     exists (@nil (var * typ)).
     splits~.
     constructor.
-  - inversions ADist.
+  - lister*.
     destruct IHAts as [LT [Len [Match Src]]]; auto.
-    exists ((Ah, typ_unit) :: LT).
+    exists (LT ++ [(Ah, typ_unit)]).
     splits.
-    + cbn. auto.
-    + constructor;
+    + cbn. lister*.
+    + apply tc_add_var.
+      constructor.
         fold (List.map tc_var Ats);
         fold (tc_vars Ats);
         auto.

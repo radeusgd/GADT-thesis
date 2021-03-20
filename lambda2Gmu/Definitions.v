@@ -857,8 +857,7 @@ Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
 Definition emptyΔ : typctx := [].
-Notation "A |,| B" := (B ++ A) (at level 32, left associativity). (*TODO dodać rev *)
-Notation "A |, b" := (b :: A) (at level 32).
+Notation "A |,| B" := (A ++ B) (at level 32, left associativity).
 
 Fixpoint domΔ (Δ : typctx) : fset var :=
   match Δ with
@@ -945,7 +944,7 @@ Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
     A \notin substitution_sources Θ -> (* we want variables to be fresh as it helps with proofs *)
     A \notin domΔ Δ ->
     (* I'm adding to the env on the right to be consistent, but to subst to the left because the order does not matter - A's are different and T's have no free vars so reordering the substitution does not change anything. *)
-    subst_matches_typctx Σ (Δ |,| [tc_var A]) ((A, T) :: Θ)
+    subst_matches_typctx Σ (Δ |,| [tc_var A]) (Θ ++ [(A, T)])
 | tc_add_eq : forall Θ Δ T1 T2,
     subst_matches_typctx Σ Δ Θ ->
     (subst_tt' T1 Θ) = (subst_tt' T2 Θ) ->
@@ -1279,8 +1278,3 @@ Definition preservation := forall TT Σ e T e',
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     e --> e' ->
     {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.
-(*
-TODO:
-try proving uniqueness of reduction
-+ try proving prog+pres at once
-*)

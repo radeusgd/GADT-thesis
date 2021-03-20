@@ -283,29 +283,44 @@ Qed.
 Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ (D1 |,| D2) <->
     X \notin domΔ D1 /\ X \notin domΔ D2.
-  induction D2; intros; constructor;
-    try solve [cbn in *; intuition]; intro H;
-      destruct a; try destruct eq; cbn in *;
-        repeat rewrite notin_union in *;
-        destruct (IHD2 X) as [IH1 IH2];
-        intuition.
+  induction D1 as [| [| []]]; constructor; intros; cbn in *;
+    repeat rewrite notin_union in *;
+    repeat progress match goal with
+    | [ H: ?A /\ ?B |- _ ] =>
+      destruct H
+        end;
+    try match goal with
+    | [ H: ?X \notin domΔ (?D1 |,| ?D2) |- _ ] =>
+        apply IHD1 in H
+    end;
+    repeat progress match goal with
+    | [ H: ?A /\ ?B |- _ ] =>
+      destruct H
+        end;
+    repeat split; auto.
+  - apply~ IHD1.
+  - apply~ IHD1.
 Qed.
 
 Lemma in_domΔ_eq : forall D1 D2 X,
     X \in domΔ (D1 |,| D2) <->
-    X \in domΔ D1 \/ X \in domΔ D2.
-  induction D2; intros; constructor;
-    intro H;
-    try solve [
-          cbn in *; intuition
-        | destruct a; try destruct eq; cbn in *;
-          repeat rewrite in_union in *;
-          destruct (IHD2 X) as [IH1 IH2];
-          intuition
-        ].
-  destruct H.
-  - cbn. auto.
-  - cbn in H. false* in_empty_inv.
+          X \in domΔ D1 \/ X \in domΔ D2.
+  intros.
+  induction D1 as [| [| []]]; cbn; auto; constructor;
+  repeat rewrite in_union in *;
+  intros;
+  repeat progress (
+           try match goal with
+           | [ H: ?A \/ ?B |- _ ] =>
+             destruct H
+           end; auto;
+           try match goal with
+           | [ H: X \in domΔ (D1 |,| D2) |- _ ] =>
+             apply IHD1 in H
+           end; auto).
+  - false* in_empty_inv.
+  - right*.
+  - right*.
 Qed.
 
 Lemma fold_empty : forall Ts,
@@ -499,13 +514,12 @@ Qed.
 
 Lemma subst_src_app : forall O1 O2,
     substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
-  induction O2.
+  induction O1; introv.
   - cbn. fold_subst_src.
-    rewrite~ union_empty_r.
+    rewrite~ union_empty_l.
   - cbn. fold_subst_src.
-    rewrite IHO2.
-    repeat rewrite union_assoc.
-    rewrite~ (union_comm \{ fst a}).
+    rewrite IHO1.
+    repeat rewrite~ union_assoc.
 Qed.
 
 Lemma substitution_sources_from_in : forall O A T,
@@ -523,14 +537,11 @@ Qed.
 
 Lemma fv_delta_app : forall D1 D2,
     fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
-  induction D2 as [| [X | [T1 T2]]];
-    cbn; auto using union_empty_r.
-  rewrite IHD2.
+  induction D1 as [| [X | [T1 T2]]]; introv;
+    cbn; auto using union_empty_l.
+  rewrite IHD1.
   repeat rewrite union_assoc.
   f_equal.
-  rewrite union_comm.
-  repeat rewrite union_assoc.
-  auto.
 Qed.
 
 Lemma fv_delta_alphas : forall As,
@@ -570,10 +581,10 @@ Qed.
 
 Lemma domDelta_app : forall D1 D2,
     domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
-  induction D2 as [| [|]]; cbn; auto.
-  - rewrite~ union_empty_r.
+  induction D1 as [| [|]]; cbn; auto; introv.
+  - rewrite~ union_empty_l.
   - rewrite union_comm.
-    rewrite (union_comm (\{A})).
-    rewrite IHD2.
+    rewrite IHD1.
+    rewrite (union_comm (domΔ D1 \u domΔ D2) (\{A})).
     rewrite~ union_assoc.
 Qed.
