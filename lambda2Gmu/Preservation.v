@@ -1299,7 +1299,7 @@ Qed.
 
 Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     subst_matches_typctx Σ D (O |, (X, U)) ->
-    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O.
+    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O /\ X \notin substitution_sources O.
   induction D as [| [Z | [V1 V2]]]; introv M.
   - cbn in *.
     inversions M.
@@ -1380,11 +1380,111 @@ Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
   lets~ : lists_map_eq EQ2 In.
 Qed.
 
-Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT V T U,
-    {Σ, Δ1 |,| [tc_eq (T ≡ U)] |,| Δ2, E} ⊢(TT) e ∈ V ->
-    entails_semantic Σ (Δ1 |,| Δ2) (T ≡ U) ->
-    {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ V.
+Lemma okt_strengthen_delta_eq : forall Σ D1 D2 E eq,
+    okt Σ (D1 |,| [tc_eq eq] |,| D2) E -> okt Σ (D1 |,| D2) E.
+  introv OK.
+  induction E using env_ind.
+  - constructor.
+    lets*: okt_implies_okgadt.
+  - destruct v as [T].
+    inversions OK.
+    + lets*: empty_push_inv H.
+    + lets [? [? ?]]: eq_push_inv H.
+      match goal with
+      | H: bind_var ?A = bind_var ?B |- _ => inversions H
+      end.
+      constructor; auto.
+      * apply* wft_strengthen_equation.
+      * rewrite notin_domΔ_eq in *; auto.
+Qed.
+
+Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
+    subst_matches_typctx E D (O1 |,| O2) ->
+    subst_tt' T1 O1 = subst_tt' T2 O1 ->
+    subst_tt' T1 (O1 |,| O2) = subst_tt' T2 (O1 |,| O2).
+  induction O2 as [| [A U]]; introv M EQ; cbn in *; auto.
+  lets [? [D2 ]]: subst_match_remove_right_var3 M.
+  apply* IHO2.
+  assert (forall (X : var) (U0 : typ), List.In (X, U0) O1 -> A \notin fv_typ U0).
+  - admit.
+  - assert (A \notin substitution_sources O1).
+    + admit.
+    + repeat rewrite* subst_tt_inside.
+      f_equal.
+      auto.
 Admitted.
+
+Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
+    subst_matches_typctx Σ Δ1 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| Δ2) (O1 |,| O2) ->
+    subst_tt' U1 O1 = subst_tt' U2 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (O1 |,| O2).
+  induction Δ2 as [| [| [V1 V2]]]; introv M1 M2 EQ; cbn in *; fold_delta.
+  - constructor; auto.
+    apply* subst_eq_weaken2.
+  - inversions M2.
+    destruct O2.
+    + cbn in H1. subst.
+      econstructor; eauto.
+      * admit.
+      * admit.
+    + inversions H1.
+      econstructor; eauto.
+      (* TODO continue here *)
+  (* this may not work ?? it should *)
+Admitted.
+
+Lemma subst_match_split : forall Σ Δ1 Δ2 O,
+    subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
+    exists O1 O2, O = O1 |,| O2 /\ subst_matches_typctx Σ Δ1 O1.
+  induction Δ2; introv M; cbn in *.
+  - exists O (@nil (var*typ)). auto.
+  - inversions M.
+    + lets [O1 [O2 [EQ M2]]]: IHΔ2 H2; subst.
+      exists O1 (O2 |, (A, T)).
+      auto.
+    + apply IHΔ2.
+      auto.
+Qed.
+
+Lemma equation_strengthen : forall Σ Δ1 Δ2 U1 U2 T1 T2,
+    entails_semantic Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (T1 ≡ T2) ->
+    entails_semantic Σ Δ1 (U1 ≡ U2) ->
+    entails_semantic Σ (Δ1 |,| Δ2) (T1 ≡ T2).
+  introv SemT SemU.
+  cbn in *.
+  fold_delta.
+  introv M.
+  lets [O1 [O2 [? M2]]]: subst_match_split M; subst.
+  lets EQ: SemU M2.
+  apply SemT.
+  apply~ subst_strengthen_true_eq.
+Qed.
+
+Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
+    {Σ, Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2, E} ⊢(TT) e ∈ T ->
+    entails_semantic Σ Δ1 (U1 ≡ U2) ->
+    {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ T.
+  introv Typ.
+  gen_eq D3: (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2). gen Δ1 Δ2.
+  lets: okt_strengthen_delta_eq.
+  lets: wft_strengthen_equation.
+  induction Typ using typing_ind; introv EQ Sem; subst; eauto.
+  - econstructor; eauto.
+    introv XFr.
+    lets IH: H3 XFr Δ1 (Δ2 |,| [tc_var X]).
+    apply* IH.
+  - econstructor; eauto.
+    introv clin Hlen Hdist Afresh xfresh xfreshA.
+    lets Htmp: H6 clin Hlen Hdist Afresh xfresh.
+    lets IH: Htmp xfreshA Δ1
+                  (Δ2 |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)));
+      clear Htmp.
+    repeat rewrite List.app_assoc in *.
+    apply* IH.
+  - lets: equation_strengthen H1 Sem.
+    econstructor; eauto.
+Qed.
 
 Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
     {Σ, Δ |,| equations_from_lists Ts Us, E} ⊢(TT) e ∈ V ->
