@@ -438,20 +438,34 @@ Proof.
               assert (OKS: okGadt Σ).
               ** apply~ okt_implies_okgadt.
                  apply* typing_regular.
-              ** destruct OKS as [? OKS].
-                 lets [? OKD]: OKS H0.
-                 lets Din: fst_from_zip Hin.
-                 lets OKC: OKD Din.
-                 inversion OKC as [? ? ? ? ? ? ? ? ? FrR]; subst.
-(*                  lets FrEQ: FrR Rin.
-                 rewrite FrEQ. auto. *)
-                 admit.
+              ** apply List.in_map_iff in Rin.
+                 destruct Rin as [rT [? rTin]]; subst.
+                 lets Sub: fv_smaller_many Alphas rT.
+                 intro HF.
+                 lets HF2: Sub HF.
+                 rewrite in_union in HF2.
+                 destruct HF2 as [HF2 | HF2].
+                 ---
+                   destruct OKS as [? OKS].
+                   lets [? OKD]: OKS H0.
+                   lets Din: fst_from_zip Hin.
+                   lets OKC: OKD Din.
+                   inversion OKC as [? ? ? ? ? ? ? ? ? FrR]; subst.
+                   cbn in rTin.
+                   lets FR: FrR rTin.
+                   rewrite FR in HF2.
+                   false* in_empty_inv.
+                 ---
+                   lets [A [Ain ?]]: in_from_list HF2; subst.
+                   lets: Afresh Ain.
+                   assert (A \notin \{ A}); auto.
+                   false* notin_same.
   - econstructor.
     + apply~ IHTyp.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Admitted.
+Qed.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
@@ -1403,16 +1417,21 @@ Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
     subst_tt' T1 O1 = subst_tt' T2 O1 ->
     subst_tt' T1 (O1 |,| O2) = subst_tt' T2 (O1 |,| O2).
   induction O2 as [| [A U]]; introv M EQ; cbn in *; auto.
-  lets [? [D2 ]]: subst_match_remove_right_var3 M.
+  lets [? [D2 [? Src]]]: subst_match_remove_right_var3 M.
   apply* IHO2.
   assert (forall (X : var) (U0 : typ), List.In (X, U0) O1 -> A \notin fv_typ U0).
-  - admit.
-  - assert (A \notin substitution_sources O1).
-    + admit.
-    + repeat rewrite* subst_tt_inside.
-      f_equal.
-      auto.
-Admitted.
+  - lets FV: subst_has_no_fv M.
+    introv In.
+    rewrite~ (FV X).
+    cbn. right.
+    apply List.in_or_app. right~.
+  - rewrite subst_src_app in Src.
+    rewrite notin_union in Src.
+    destruct Src.
+    repeat rewrite* subst_tt_inside.
+    f_equal.
+    auto.
+Qed.
 
 Lemma subst_match_split : forall Σ Δ1 Δ2 O,
     subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
