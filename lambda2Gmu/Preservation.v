@@ -786,36 +786,36 @@ Fixpoint subst_td_many (Xs : list var) (Us : list typ) (d : typctx_elem) : typct
   end.
 
 (* This lemma is very WIP *)
-Lemma okt_strengthen_delta_var_subst_new : forall Σ D1 D2 E X P,
-    wft Σ D1 P ->
-    okt Σ (D1 |,| [tc_var X] |,| D2) E ->
-    X # E ->
-    okt Σ (D1 |,| List.map (subst_td X P) D2) (map (subst_tb X P) E).
-  introv WFT OKT.
-  gen_eq G: (D1 |,| [tc_var X] |,| D2). gen D2 X.
-  induction OKT; introv Heq XE; subst.
-  - rewrite map_empty.
-    econstructor; auto.
-  - rewrite map_concat.
-    rewrite map_single.
-    constructor; auto.
-    + apply* wft_subst_tb_2.
-      * admit.
-      * apply~ wft_weaken_simple.
-    + repeat (apply notin_domΔ_eq in H1; destruct H1).
-      apply notin_domΔ_eq; split~.
-      admit.
-Admitted.
+(* Lemma okt_strengthen_delta_var_subst_new : forall Σ D1 D2 E X P, *)
+(*     wft Σ D1 P -> *)
+(*     okt Σ (D1 |,| [tc_var X] |,| D2) E -> *)
+(*     X # E -> *)
+(*     okt Σ (D1 |,| List.map (subst_td X P) D2) (map (subst_tb X P) E). *)
+(*   introv WFT OKT. *)
+(*   gen_eq G: (D1 |,| [tc_var X] |,| D2). gen D2 X. *)
+(*   induction OKT; introv Heq XE; subst. *)
+(*   - rewrite map_empty. *)
+(*     econstructor; auto. *)
+(*   - rewrite map_concat. *)
+(*     rewrite map_single. *)
+(*     constructor; auto. *)
+(*     + apply* wft_subst_tb_2. *)
+(*       * admit. *)
+(*       * apply~ wft_weaken_simple. *)
+(*     + repeat (apply notin_domΔ_eq in H1; destruct H1). *)
+(*       apply notin_domΔ_eq; split~. *)
+(*       admit. *)
+(* Admitted. *)
 
 (* WIP: new statement of the lemma, accounting substituting stuff inside equations *)
-Lemma typing_through_subst_te:
-  forall Σ Δ1 Δ2 E Z e P T TT,
-    {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T ->
-    wft Σ (Δ1 |,| Δ2) P ->
-    Z \notin fv_typ P ->
-    Z # E ->
-    {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
-Proof.
+(* Lemma typing_through_subst_te: *)
+(*   forall Σ Δ1 Δ2 E Z e P T TT, *)
+(*     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T -> *)
+(*     wft Σ (Δ1 |,| Δ2) P -> *)
+(*     Z \notin fv_typ P -> *)
+(*     Z # E -> *)
+(*     {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T. *)
+(* Proof. *)
   (* introv Typ. gen_eq G: (Δ1 |,| [tc_var Z] |,| Δ2). gen Δ2. *)
   (* induction Typ; introv GEQ Hwft FPZ FPE; subst; *)
   (*   try match goal with *)
@@ -965,7 +965,7 @@ Proof.
   (*       rewrite* Horder. *)
   (*       apply Htypfin. *)
   (*       admit. (* apply Htypfin. *) *)
-Admitted.
+
 
 Ltac IHR e :=
   match goal with
@@ -986,18 +986,226 @@ Ltac crush_ihred_gen :=
     crush_ihred e
   end.
 
-Lemma typing_through_subst_te_2 :
-  forall Σ Δ1 Δ2 E Z e P T TT,
+(* Lemma typing_through_subst_te_2 : *)
+(*   forall Σ Δ1 Δ2 E Z e P T TT, *)
+(*     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T -> *)
+(*     wft Σ (Δ1 |,| Δ2) P -> *)
+(*     Z \notin fv_typ P -> *)
+(*     Z # E -> *)
+(*     Z \notin fv_env E -> *)
+(*     {Σ, Δ1 |,| Δ2, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T. *)
+(*   (* intros. *) *)
+(*   (* rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin. *) *)
+(*   (* apply* typing_through_subst_te. *) *)
+(* Admitted. *)
+
+Lemma wft_subst_tb_3 : forall Σ D1 D2 Z P T,
+  wft Σ (D1 |,| [tc_var Z] |,| D2) T ->
+  wft Σ D1 P ->
+  wft Σ (D1 |,| List.map (subst_td Z P) D2) (subst_tt Z P T).
+Proof.
+  introv WT WP; gen_eq G: (D1 |,| [tc_var Z] |,| D2). gen D2.
+  induction WT; intros; subst; simpl subst_tt; auto.
+  - case_var*.
+  (*   constructor. *)
+  (*   unfold is_var_defined in *. *)
+  (*   repeat destruct_app_list; auto using List.in_or_app. *)
+  (*   cbn in H. destruct H. *)
+  (*   * congruence. *)
+  (*   * contradiction. *)
+  (* - apply_fresh* wft_all as Y. *)
+  (*   lets: wft_type. *)
+  (*   rewrite* subst_tt_open_tt_var. *)
+  (*   lets* IH: H0 Y (D2 |,| [tc_var Y]). *)
+  (*   rewrite List.app_assoc in *. *)
+  (*   apply~ IH. *)
+  (*   rewrite <- List.app_assoc. *)
+  (*   apply* wft_weaken_simple. *)
+  (* - apply* wft_gadt. *)
+  (*   + introv Tin. *)
+  (*     apply List.in_map_iff in Tin. *)
+  (*     destruct Tin as [U [? Tin]]; subst. *)
+  (*     apply* H0. *)
+  (*   + apply List.map_length. *)
+Admitted.
+
+(* Lemma okt_delta_fresh : forall Σ Δ E, *)
+(*     okt Σ Δ E -> *)
+
+
+Lemma okt_push_fresh : forall Σ Δ E x T,
+    okt Σ Δ (E & x ~: T) ->
+    x # E /\ x \notin domΔ Δ.
+  induction E using env_ind; introv OK.
+  - split~.
+    inversions OK.
+    + false* empty_push_inv.
+    + lets [? [EQ ?]]: eq_push_inv H; inversions EQ.
+      auto.
+  - inversions OK.
+    + false* empty_push_inv.
+    + lets [? [EQ ?]]: eq_push_inv H; inversions EQ.
+      split~.
+Qed.
+
+Lemma notin_domDelta_subst_td : forall x Δ Z P,
+  x \notin domΔ Δ ->
+  x \notin domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [|[]]]; introv FR; cbn in *; auto.
+Qed.
+
+Lemma okt_through_subst_tdtb : forall Σ D1 D2 E Z P,
+    okt Σ (D1 |,| [tc_var Z] |,| D2) E ->
+    wft Σ D1 P ->
+    okt Σ (D1 |,| List.map (subst_td Z P) D2) (map (subst_tb Z P) E).
+  induction E using env_ind; introv OKT WFT.
+  - rewrite map_empty.
+    constructor.
+    apply* okt_implies_okgadt.
+  - rewrite map_push.
+    destruct v as [T]; cbn.
+    lets [? ?]: okt_push_fresh OKT.
+    constructor; auto.
+    + apply* IHE.
+    + apply* wft_subst_tb_3.
+      apply* okt_is_wft.
+    + repeat rewrite notin_domΔ_eq in *.
+      destruct H0 as [[? ?] ?].
+      split~.
+      apply~ notin_domDelta_subst_td.
+Qed.
+
+Lemma subst_idempotent : forall Θ T,
+    (forall (X : var) (U : typ), List.In (X, U) Θ -> fv_typ U = \{}) ->
+    subst_tt' (subst_tt' T Θ) Θ = subst_tt' T Θ.
+  induction Θ as [| [X U]]; introv FV; cbn; auto.
+Admitted.
+
+Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
+    entails_semantic Σ (Δ1 |,| [tc_var Z] |,| Δ2) (T1 ≡ T2) ->
+    Z \notin domΔ Δ1 ->
+    wft Σ Δ1 P ->
+    entails_semantic Σ (Δ1 |,| List.map (subst_td Z P) Δ2)
+                     (subst_tt Z P T1 ≡ subst_tt Z P T2).
+  induction Δ2 as [| [| []]]; introv Sem ZFR WFT.
+  - cbn in *.
+    introv M.
+    assert (Z \notin substitution_sources Θ);
+      [ rewrite~ (subst_sources_from_match M) | idtac].
+    assert (forall (X : var) (U : typ), List.In (X, U) Θ -> Z \notin fv_typ U).
+    + introv In.
+      rewrite (subst_has_no_fv _ _ _ M _ _ In).
+      auto.
+    + repeat rewrite~ subst_tt_inside.
+      lets HS: Sem (Θ |, (Z, (subst_tt' P Θ))).
+      cbn in HS.
+      repeat rewrite~ subst_tt_inside in HS.
+      rewrite~ subst_idempotent in HS.
+      * apply HS.
+        constructor; eauto.
+        admit.
+      * admit.
+  - fold_delta.
+    cbn in *.
+    introv M.
+    apply* IHΔ2.
+  (*   rewrite <- (List.app_nil_l (Δ1 |,| List.map (subst_td Z P) (Δ2 |,| [tc_var A]))). *)
+  (*   apply equation_weaken_var; cbn in *; auto. *)
+  (*   introv M. *)
+  (*   fold (List.map (subst_td Z P) Δ2) in M. *)
+  (*   apply* IHΔ2. *)
+  (*   introv M2. *)
+  (*   admit. *)
+  (* - fold_delta. *)
+  (*   rewrite <- (List.app_nil_l (Δ1 |,| List.map (subst_td Z P) (Δ2 |,| [tc_eq (T ≡ U)]))). *)
+  (*   apply equation_weaken_eq; cbn in *; eauto. *)
+  (*   introv M. *)
+  (*   fold (List.map (subst_td Z P) Δ2) in M. *)
+  (*   apply* IHΔ2. *)
+  (*   introv M2. *)
+Admitted.
+
+Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T ->
-    wft Σ (Δ1 |,| Δ2) P ->
+    wft Σ Δ1 P ->
     Z \notin fv_typ P ->
     Z # E ->
-    Z \notin fv_env E ->
-    {Σ, Δ1 |,| Δ2, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
-  (* intros. *)
-  (* rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin. *)
-  (* apply* typing_through_subst_te. *)
+    {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+  introv Typ.
+  gen_eq G: (Δ1 |,| [tc_var Z] |,| Δ2). gen Δ2.
+  induction Typ; introv EQ WFT FVZP FVZE; subst; eapply Tgen_from_any;
+    cbn; eauto.
+  - constructor. apply~ okt_through_subst_tdtb.
+  - cbn. econstructor.
+    + fold (subst_tb Z P (bind_var T)).
+      apply~ binds_map.
+    + apply~ okt_through_subst_tdtb.
+  - econstructor; eauto; admit.
+  - apply_fresh typing_abs as x.
+    fold (subst_tb Z P (bind_var V)).
+    rewrite <- map_push.
+    rewrite subst_te_open_ee_var.
+    apply~ H0.
+  - lets: type_from_wft WFT.
+    apply_fresh typing_tabs as X.
+    + forwards~ : H X.
+      rewrite~ subst_te_open_te_var.
+    + forwards * IH : H1 X (Δ2 |,| [tc_var X]).
+      fold_delta.
+      repeat rewrite List.app_assoc in *.
+      rewrite~ subst_te_open_te_var.
+      rewrite~ subst_tt_open_tt_var.
+      apply* IH.
+  - econstructor; auto.
+    + apply* IHTyp.
+    + apply* wft_subst_tb_3.
+    + fold subst_tt.
+      rewrite* subst_tt_open_tt.
+  - apply_fresh typing_fix as x.
+    + forwards~ : H x.
+      rewrite subst_te_open_ee_var.
+      apply~ subst_te_value.
+      apply* type_from_wft.
+    + fold (subst_tb Z P (bind_var T)).
+      rewrite <- map_push.
+      rewrite subst_te_open_ee_var.
+      apply~ H1.
+  - apply_fresh typing_let as x.
+    + apply* IHTyp.
+    + rewrite subst_te_open_ee_var.
+      fold (subst_tb Z P (bind_var V)).
+      rewrite <- map_push.
+      apply~ H0.
+  - econstructor; admit.
+  - econstructor; eauto.
+    + apply* entails_through_subst.
+    + apply* wft_subst_tb_3.
 Admitted.
+
+Lemma typing_through_subst_te_gen_2 : forall Σ Δ1 Δ2 E F Z e P T TT,
+    {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E & F} ⊢(TT) e ∈ T ->
+    wft Σ Δ1 P ->
+    Z \notin fv_typ P ->
+    Z # E ->
+    Z # F ->
+    Z \notin fv_env E ->
+    {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, E &  map (subst_tb Z P) F} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+  intros.
+  assert (Rew: E = map (subst_tb Z P) E).
+  - clear H.
+    induction E using env_ind.
+    + rewrite~ map_empty.
+    + rewrite map_push.
+      destruct v.
+      rewrite fv_env_extend in H4.
+      rewrite <- IHE; auto.
+      * f_equal. f_equal.
+        cbn. f_equal.
+        rewrite~ subst_tt_fresh.
+  - rewrite Rew.
+    rewrite <- map_concat.
+    apply* typing_through_subst_te_gen.
+Qed.
 
 Lemma typing_through_subst_te_3 :
   forall Σ Δ E Z e P T TT,
