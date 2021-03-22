@@ -1414,26 +1414,6 @@ Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
       auto.
 Admitted.
 
-Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
-    subst_matches_typctx Σ Δ1 O1 ->
-    subst_matches_typctx Σ (Δ1 |,| Δ2) (O1 |,| O2) ->
-    subst_tt' U1 O1 = subst_tt' U2 O1 ->
-    subst_matches_typctx Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (O1 |,| O2).
-  induction Δ2 as [| [| [V1 V2]]]; introv M1 M2 EQ; cbn in *; fold_delta.
-  - constructor; auto.
-    apply* subst_eq_weaken2.
-  - inversions M2.
-    destruct O2.
-    + cbn in H1. subst.
-      econstructor; eauto.
-      * admit.
-      * admit.
-    + inversions H1.
-      econstructor; eauto.
-      (* TODO continue here *)
-  (* this may not work ?? it should *)
-Admitted.
-
 Lemma subst_match_split : forall Σ Δ1 Δ2 O,
     subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
     exists O1 O2, O = O1 |,| O2 /\ subst_matches_typctx Σ Δ1 O1.
@@ -1445,6 +1425,66 @@ Lemma subst_match_split : forall Σ Δ1 Δ2 O,
       auto.
     + apply IHΔ2.
       auto.
+Qed.
+
+(* Lemma subst_match_remove_right_var4 : forall Σ D O X U, *)
+(*     subst_matches_typctx Σ D (O |, (X, U)) -> *)
+(*     wft Σ emptyΔ U /\ exists (D1 D2 : typctx), *)
+(*         subst_matches_typctx Σ D1 O /\ *)
+(*         X \notin substitution_sources O /\ *)
+(*         D1 |,| D2 = D. *)
+(*   induction D as [| [Z | [V1 V2]]]; introv M. *)
+(*   - cbn in *. *)
+(*     inversions M. *)
+(*   - inversions M. *)
+(*     split~. *)
+(*     exists D [tc_var X]. *)
+(*     split~. *)
+(*   - inversions M. *)
+(*     lets [? [D3 [D4 [? [? ?]]]]]: IHD H3; subst. *)
+(*     split~. *)
+(*     exists D3 (D4 |, tc_eq (V1 ≡ V2)). *)
+(*     split~. *)
+(* Qed. *)
+
+Lemma subst_match_inv_missing_var : forall Σ D1 O D2 A T,
+  subst_matches_typctx Σ D1 (O |, (A, T)) ->
+  subst_matches_typctx Σ (D1 |,| D2) O ->
+  False.
+  introv M1 M2.
+  lets [? [D0 [? HF]]]: subst_match_remove_right_var3 M1; subst.
+  (* lets [? [D0 [D0' [M0 [? ?]]]]]: subst_match_remove_right_var4 M1; subst. *)
+  lets S1: subst_sources_from_match M1.
+  lets S2: subst_sources_from_match M2.
+  cbn in S1. fold_subst_src.
+  rewrite domDelta_app in S2.
+  apply HF.
+  rewrite S2.
+  rewrite in_union. left.
+  rewrite <- S1.
+  rewrite in_union. left.
+  apply in_singleton_self.
+Qed.
+
+Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
+    subst_matches_typctx Σ Δ1 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| Δ2) (O1 |,| O2) ->
+    subst_tt' U1 O1 = subst_tt' U2 O1 ->
+    subst_matches_typctx Σ (Δ1 |,| [tc_eq (U1 ≡ U2)] |,| Δ2) (O1 |,| O2).
+  induction Δ2 as [| [| [V1 V2]]]; introv M1 M2 EQ; cbn in *; fold_delta.
+  - constructor; auto.
+    apply* subst_eq_weaken2.
+  - inversions M2.
+    destruct O2.
+    + cbn in H1. subst.
+      false* subst_match_inv_missing_var.
+    + inversions H1.
+      econstructor; eauto.
+      repeat rewrite notin_domΔ_eq in *;
+        destruct H5; repeat split~;
+                            cbn; auto.
+  - inversions M2.
+    econstructor; eauto.
 Qed.
 
 Lemma equation_strengthen : forall Σ Δ1 Δ2 U1 U2 T1 T2,
@@ -1486,14 +1526,51 @@ Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
     econstructor; eauto.
 Qed.
 
+Lemma Forall2_eq_len : forall A P (l1 l2 : list A),
+    List.Forall2 P l1 l2 ->
+    List.length l1 = List.length l2.
+  induction l1; destruct l2;
+    introv H; cbn in *;
+      inversions H; auto.
+Qed.
+
 Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
     {Σ, Δ |,| equations_from_lists Ts Us, E} ⊢(TT) e ∈ V ->
     List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us ->
     {Σ, Δ, E} ⊢(TT) e ∈ V.
-Admitted.
+  induction 2 as [| T U Ts Us].
+  - cbn in *. auto.
+  - cbn in H.
+    fold (equations_from_lists Ts Us) in H.
+    apply* IHForall2.
+    rewrite <- (List.app_nil_l ((Δ |,| equations_from_lists Ts Us) |, tc_eq (T ≡ U))) in H.
+    forwards~ H2: remove_true_equation H.
+    forwards* H3: equations_weaken_match (@nil var) Ts Us.
+    apply* Forall2_eq_len.
+Qed.
+
+Lemma equations_from_lists_map : forall F F1 F2 Ts Us,
+    List.length Ts = List.length Us ->
+    (forall T U, List.In (T,U) (zip Ts Us) -> F (tc_eq (T ≡ U)) = tc_eq (F1 T ≡ F2 U)) ->
+    List.map F (equations_from_lists Ts Us)
+    =
+    equations_from_lists (List.map F1 Ts) (List.map F2 Us).
+  induction Ts as [| T Ts]; destruct Us as [| U Us];
+    introv Len;  try solve [inversion~ Len].
+  introv EQ.
+  cbn.
+  fold (equations_from_lists Ts Us).
+  fold (equations_from_lists (List.map F1 Ts) (List.map F2 Us)).
+  f_equal.
+  - apply EQ. cbn. auto.
+  - apply* IHTs.
+    introv In.
+    apply EQ. cbn. auto.
+Qed.
 
 Lemma helper_equations_commute : forall Ts As Us Vs,
     List.length As = List.length Us ->
+    List.length Ts = List.length Vs ->
     (forall A, List.In A As -> A \notin fv_typs Ts) ->
     equations_from_lists
       Ts
@@ -1502,11 +1579,32 @@ Lemma helper_equations_commute : forall Ts As Us Vs,
     List.map
       (subst_td_many As Us)
       (equations_from_lists Ts (List.map (open_tt_many_var As) Vs)).
-  induction As; introv Hlen Afr; destruct Us; try solve [false Hlen].
-  - cbn.
-    repeat rewrite~ List.map_id.
-  - cbn.
-Admitted.
+  intros.
+  rewrite (equations_from_lists_map _ (subst_tt_many As Us) (subst_tt_many As Us)).
+  - f_equal.
+    + gen Us.
+      induction As as [| A As]; introv Len.
+      * cbn. rewrite~ List.map_id.
+      * destruct Us as [| U Us]; cbn.
+        -- rewrite~ List.map_id.
+        -- rewrite <- List.map_map.
+           rewrite (List.map_ext_in (subst_tt A U) (fun x => x)).
+           ++ rewrite List.map_id.
+              apply~ IHAs; auto with listin.
+           ++ intros T Tin.
+              apply subst_tt_fresh.
+              apply fv_typs_notin with Ts; auto with listin.
+    + rewrite List.map_map. auto.
+  - rewrite~ List.map_length.
+  - introv In.
+    gen H.
+    clear.
+    rename U into T2. rename T into T1.
+    gen Us T1 T2.
+    induction As as [| A As]; introv Len; destruct Us as [| U Us]; auto.
+    cbn.
+    rewrite~ IHAs.
+Qed.
 
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=
@@ -1705,6 +1803,25 @@ Theorem preservation_thm : preservation.
     rewrite subst_tt_many_free with Alphas Ts0 Tc;
       [ idtac | introv Ain; lets*: Afresh Ain ].
 
+    assert (length CretTypes = length Ts).
+    1: {
+      lets [OKT [? WFT2]]: typing_regular Htyp.
+      inversions WFT2.
+      lets OKS: okt_implies_okgadt OKT.
+      inversion OKS as [? OKC].
+      lets [? OKD]: OKC H0.
+      cbn in *.
+      lets OKE: OKD indef.
+      inversions OKE.
+      match goal with
+      | [ H1: binds ?g ?A Σ, H2: binds ?g ?B Σ |- _ ] =>
+        let H := fresh "H" in
+        lets H: binds_ext H1 H2;
+          inversions H
+      end.
+      auto.
+    }
+
     apply remove_true_equations with Ts (List.map (fun T => subst_tt_many Alphas Ts0 (open_tt_many_var Alphas T)) CretTypes).
     + assert (Hrew:
           equations_from_lists Ts (List.map (fun T : typ => subst_tt_many Alphas Ts0 (open_tt_many_var Alphas T)) CretTypes)
@@ -1766,23 +1883,6 @@ Theorem preservation_thm : preservation.
           -- introv Ain Uin. lets HF2: Afresh Ain.
              apply* fv_typs_notin.
         }
-        -- rewrite List.map_length.
-
-
-           lets [OKT [? WFT2]]: typing_regular Htyp.
-           inversions WFT2.
-           lets OKS: okt_implies_okgadt OKT.
-           inversion OKS as [? OKC].
-           lets [? OKD]: OKC H0.
-           cbn in *.
-           lets OKE: OKD indef.
-           inversions OKE.
-           match goal with
-           | [ H1: binds ?g ?A Σ, H2: binds ?g ?B Σ |- _ ] =>
-             let H := fresh "H" in
-             lets H: binds_ext H1 H2;
-               inversions H
-           end.
-           auto.
+        -- rewrite~ List.map_length.
         -- apply EQ2.
 Qed.
