@@ -1081,34 +1081,115 @@ Lemma subst_idempotent : forall Θ T,
   induction Θ as [| [X U]]; introv FV; cbn; auto.
 Admitted.
 
+Lemma subst_match_remove_right_var3 : forall Σ D O X U,
+    subst_matches_typctx Σ D (O |, (X, U)) ->
+    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O /\ X \notin substitution_sources O.
+  induction D as [| [Z | [V1 V2]]]; introv M.
+  - cbn in *.
+    inversions M.
+  - inversions M.
+    splits~.
+    eauto.
+  - inversions M.
+    lets~ IH: IHD H3.
+Qed.
+
+
+Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
+    subst_matches_typctx Σ (Δ1 |,| List.map (subst_td X U) Δ2) (O1 |,| O2) ->
+    subst_matches_typctx Σ Δ1 O1 ->
+    wft Σ emptyΔ U ->
+    X \notin substitution_sources (O1 |,| O2) ->
+    X \notin domΔ (Δ1 |,| Δ2) ->
+    subst_matches_typctx Σ (Δ1 |,| [tc_var X] |,| Δ2) (O1 |,| [(X, U)] |,| O2).
+  induction Δ2 as [| [| [V1 V2]]]; introv M M1 WFT XO XD; cbn in *.
+  - destruct O2 as [| [Y T]].
+    + cbn in *.
+      constructor; auto.
+    + rewrite <- List.app_comm_cons in M.
+      lets [? [Δ' [? HF]]]: subst_match_remove_right_var3 M.
+      false.
+      lets HF1: subst_sources_from_match M.
+      lets HF2: subst_sources_from_match M1.
+      cbn in HF1. fold_subst_src. rewrite <- HF2 in HF1.
+      apply HF.
+      rewrite subst_src_app. rewrite in_union. left.
+      rewrite <- HF1.
+      rewrite in_union. left. apply in_singleton_self.
+  - inversions M.
+    destruct O2.
+    + cbn in *; subst.
+      false.
+      rewrite notin_domΔ_eq in H5.
+      destruct H5 as [HF].
+      apply HF.
+      lets HF1: subst_sources_from_match M1.
+      rewrite <- HF1.
+      cbn. fold_subst_src. rewrite in_union; left; apply in_singleton_self.
+    + destruct p as [A' T'].
+      rewrite <- List.app_comm_cons in H1.
+      inversions H1.
+      constructor; auto; try fold (O1 |, (X, U) |,| O2).
+      * apply~ IHΔ2.
+        admit.
+      * admit.
+      * admit.
+  - inversions M.
+    constructor.
+    + apply* IHΔ2.
+    + admit.
+Admitted.
+
+Lemma subst_match_split : forall Σ Δ1 Δ2 O,
+    subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
+    exists O1 O2, O = O1 |,| O2 /\ subst_matches_typctx Σ Δ1 O1.
+  induction Δ2; introv M; cbn in *.
+  - exists O (@nil (var*typ)). auto.
+  - inversions M.
+    + lets [O1 [O2 [EQ M2]]]: IHΔ2 H2; subst.
+      exists O1 (O2 |, (A, T)).
+      auto.
+    + apply IHΔ2.
+      auto.
+Qed.
+
+
 Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
     entails_semantic Σ (Δ1 |,| [tc_var Z] |,| Δ2) (T1 ≡ T2) ->
     Z \notin domΔ Δ1 ->
     wft Σ Δ1 P ->
     entails_semantic Σ (Δ1 |,| List.map (subst_td Z P) Δ2)
                      (subst_tt Z P T1 ≡ subst_tt Z P T2).
-  induction Δ2 as [| [| []]]; introv Sem ZFR WFT.
-  - cbn in *.
-    introv M.
-    assert (Z \notin substitution_sources Θ);
-      [ rewrite~ (subst_sources_from_match M) | idtac].
-    assert (forall (X : var) (U : typ), List.In (X, U) Θ -> Z \notin fv_typ U).
-    + introv In.
-      rewrite (subst_has_no_fv _ _ _ M _ _ In).
-      auto.
-    + repeat rewrite~ subst_tt_inside.
-      lets HS: Sem (Θ |, (Z, (subst_tt' P Θ))).
-      cbn in HS.
-      repeat rewrite~ subst_tt_inside in HS.
-      rewrite~ subst_idempotent in HS.
-      * apply HS.
-        constructor; eauto.
-        admit.
-      * admit.
-  - fold_delta.
-    cbn in *.
-    introv M.
-    apply* IHΔ2.
+  introv Sem ZFR WFT.
+  cbn in *.
+  introv M.
+  lets [O1 [O2 [? M1]]]: subst_match_split M; subst.
+  forwards~ M2: subst_remove_used_var M M1.
+  (* TODO: emptyΔ *)
+  lets: Sem M2.
+  admit.
+  (* induction Δ2 as [| [| []]]; introv Sem ZFR WFT. *)
+  (* - cbn in *. *)
+  (*   introv M. *)
+  (*   assert (Z \notin substitution_sources Θ); *)
+  (*     [ rewrite~ (subst_sources_from_match M) | idtac]. *)
+  (*   assert (forall (X : var) (U : typ), List.In (X, U) Θ -> Z \notin fv_typ U). *)
+  (*   + introv In. *)
+  (*     rewrite (subst_has_no_fv _ _ _ M _ _ In). *)
+  (*     auto. *)
+  (*   + repeat rewrite~ subst_tt_inside. *)
+  (*     lets HS: Sem (Θ |, (Z, (subst_tt' P Θ))). *)
+  (*     cbn in HS. *)
+  (*     repeat rewrite~ subst_tt_inside in HS. *)
+  (*     rewrite~ subst_idempotent in HS. *)
+  (*     * apply HS. *)
+  (*       constructor; eauto. *)
+  (*       admit. *)
+  (*     * apply* subst_has_no_fv. *)
+  (* - fold_delta. *)
+  (*   cbn in *. *)
+  (*   introv M. *)
+  (*   apply* IHΔ2. *)
   (*   rewrite <- (List.app_nil_l (Δ1 |,| List.map (subst_td Z P) (Δ2 |,| [tc_var A]))). *)
   (*   apply equation_weaken_var; cbn in *; auto. *)
   (*   introv M. *)
@@ -1519,19 +1600,6 @@ Lemma subst_ttprim_open_tt : forall O T U,
   rewrite subst_tt_open_tt; eauto with listin.
 Qed.
 
-Lemma subst_match_remove_right_var3 : forall Σ D O X U,
-    subst_matches_typctx Σ D (O |, (X, U)) ->
-    wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O /\ X \notin substitution_sources O.
-  induction D as [| [Z | [V1 V2]]]; introv M.
-  - cbn in *.
-    inversions M.
-  - inversions M.
-    splits~.
-    eauto.
-  - inversions M.
-    lets~ IH: IHD H3.
-Qed.
-
 Lemma subst_has_wft : forall Σ O Δ,
   subst_matches_typctx Σ Δ O ->
   forall A P, List.In (A, P) O -> wft Σ emptyΔ P.
@@ -1639,19 +1707,6 @@ Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
     repeat rewrite* subst_tt_inside.
     f_equal.
     auto.
-Qed.
-
-Lemma subst_match_split : forall Σ Δ1 Δ2 O,
-    subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
-    exists O1 O2, O = O1 |,| O2 /\ subst_matches_typctx Σ Δ1 O1.
-  induction Δ2; introv M; cbn in *.
-  - exists O (@nil (var*typ)). auto.
-  - inversions M.
-    + lets [O1 [O2 [EQ M2]]]: IHΔ2 H2; subst.
-      exists O1 (O2 |, (A, T)).
-      auto.
-    + apply IHΔ2.
-      auto.
 Qed.
 
 (* Lemma subst_match_remove_right_var4 : forall Σ D O X U, *)
