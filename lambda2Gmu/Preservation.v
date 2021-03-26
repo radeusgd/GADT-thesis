@@ -1094,6 +1094,41 @@ Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     lets~ IH: IHD H3.
 Qed.
 
+Lemma wft_subst_matching : forall Σ Δ O T,
+  subst_matches_typctx Σ Δ O ->
+  wft Σ Δ T ->
+  wft Σ emptyΔ (subst_tt' T O).
+Admitted.
+
+Lemma domDelta_subst_td : forall Δ Z P,
+    domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [| []]]; eauto; introv; cbn.
+  f_equal. auto.
+Qed.
+
+Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
+    wft Σ Δ1 U ->
+    subst_matches_typctx Σ Δ1 O1 ->
+    (forall X U, List.In (X, U) (O1 |,| O2) -> fv_typ U = \{}) ->
+    X \notin substitution_sources (O1 |,| O2) ->
+    subst_tt' (subst_tt X U V1) (O1 |,| O2) =
+    subst_tt' (subst_tt X U V2) (O1 |,| O2) ->
+    subst_tt' V1 (O1 |, (X, subst_tt' U O1) |,| O2) =
+    subst_tt' V2 (O1 |, (X, subst_tt' U O1) |,| O2).
+Admitted.
+
+Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
+    wft Σ Δ1 U ->
+    subst_matches_typctx Σ Δ1 O1 ->
+    (forall X U, List.In (X, U) (O1 |,| O2) -> fv_typ U = \{}) ->
+    X \notin substitution_sources (O1 |,| O2) ->
+    subst_tt' V1 (O1 |,| [(X, subst_tt' U O1)] |,| O2) =
+    subst_tt' V2 (O1 |,| [(X, subst_tt' U O1)] |,| O2) ->
+    subst_tt X (subst_tt' U (O1 |,| O2))
+             (subst_tt' V1 (O1 |,| O2)) =
+    subst_tt X (subst_tt' U (O1 |,| O2))
+             (subst_tt' V2 (O1 |,| O2)).
+Admitted.
 
 Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
     subst_matches_typctx Σ (Δ1 |,| List.map (subst_td X U ) Δ2) (O1 |,| O2) ->
@@ -1106,7 +1141,8 @@ Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
   - destruct O2 as [| [Y T]].
     + cbn in *.
       constructor; auto.
-      admit.
+      fold_subst_src.
+      apply* wft_subst_matching.
     + rewrite <- List.app_comm_cons in M.
       lets [? [Δ' [? HF]]]: subst_match_remove_right_var3 M.
       false.
@@ -1134,15 +1170,29 @@ Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
       * apply~ IHΔ2.
         cbn in XO. fold_subst_src.
         lets~ : notin_union.
-      * admit.
-      * admit.
+      * fold (O1 |,| [(X, subst_tt' U O1)]).
+        repeat rewrite subst_src_app in *.
+        repeat rewrite notin_union in *.
+        destruct H4.
+        repeat split~.
+        cbn.
+        rewrite notin_union; split~.
+        apply notin_inverse. destruct~ XD.
+      * fold_delta.
+        repeat rewrite domDelta_app in *.
+        repeat rewrite notin_union in *.
+        destruct H5 as [? FD2].
+        rewrite <- domDelta_subst_td in FD2.
+        repeat split~.
+        cbn.
+        rewrite notin_union; split~.
+        apply notin_inverse. destruct~ XD.
   - inversions M.
     constructor.
     + apply* IHΔ2.
-    +
-      (* rewrite subst_tt_inside in H4. *)
-      admit.
-Admitted.
+    + lets: subst_has_no_fv H3.
+      apply* subst_eq_reorder1.
+Qed.
 
 Lemma subst_match_split : forall Σ Δ1 Δ2 O,
     subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
@@ -1155,12 +1205,6 @@ Lemma subst_match_split : forall Σ Δ1 Δ2 O,
       auto.
     + apply IHΔ2.
       auto.
-Qed.
-
-Lemma domDelta_subst_td : forall Δ Z P,
-    domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
-  induction Δ as [| [| []]]; eauto; introv; cbn.
-  f_equal. auto.
 Qed.
 
 Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
@@ -1190,42 +1234,44 @@ Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
   forwards~ M2: subst_remove_used_var M M1.
   lets: Sem M2.
   repeat rewrite~ subst_tt_inside.
-  (* induction Δ2 as [| [| []]]; introv Sem ZFR WFT. *)
-  (* - cbn in *. *)
-  (*   introv M. *)
-  (*   assert (Z \notin substitution_sources Θ); *)
-  (*     [ rewrite~ (subst_sources_from_match M) | idtac]. *)
-  (*   assert (forall (X : var) (U : typ), List.In (X, U) Θ -> Z \notin fv_typ U). *)
-  (*   + introv In. *)
-  (*     rewrite (subst_has_no_fv _ _ _ M _ _ In). *)
-  (*     auto. *)
-  (*   + repeat rewrite~ subst_tt_inside. *)
-  (*     lets HS: Sem (Θ |, (Z, (subst_tt' P Θ))). *)
-  (*     cbn in HS. *)
-  (*     repeat rewrite~ subst_tt_inside in HS. *)
-  (*     rewrite~ subst_idempotent in HS. *)
-  (*     * apply HS. *)
-  (*       constructor; eauto. *)
-  (*       admit. *)
-  (*     * apply* subst_has_no_fv. *)
-  (* - fold_delta. *)
-  (*   cbn in *. *)
-  (*   introv M. *)
-  (*   apply* IHΔ2. *)
-  (*   rewrite <- (List.app_nil_l (Δ1 |,| List.map (subst_td Z P) (Δ2 |,| [tc_var A]))). *)
-  (*   apply equation_weaken_var; cbn in *; auto. *)
-  (*   introv M. *)
-  (*   fold (List.map (subst_td Z P) Δ2) in M. *)
-  (*   apply* IHΔ2. *)
-  (*   introv M2. *)
-  (*   admit. *)
-  (* - fold_delta. *)
-  (*   rewrite <- (List.app_nil_l (Δ1 |,| List.map (subst_td Z P) (Δ2 |,| [tc_eq (T ≡ U)]))). *)
-  (*   apply equation_weaken_eq; cbn in *; eauto. *)
-  (*   introv M. *)
-  (*   fold (List.map (subst_td Z P) Δ2) in M. *)
-  (*   apply* IHΔ2. *)
-  (*   introv M2. *)
+  lets FV: subst_has_no_fv M.
+  apply* subst_eq_reorder2.
+Qed.
+
+Lemma nth_error_map : forall A B (F : A -> B) l n d,
+    List.nth_error (List.map F l) n = Some d ->
+    exists e, List.nth_error l n = Some e /\ d = F e.
+Proof.
+  induction l; destruct n; introv EQ; cbn in *; try solve [false*].
+  - inversions EQ. eauto.
+  - eauto.
+Qed.
+
+Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
+    List.In (def, cl)
+            (zip Defs (map_clause_trm_trm F Clauses)) ->
+    exists (clA : nat) (clT : trm),
+      List.In (def, (clause clA clT)) (zip Defs Clauses) /\
+      cl = clause clA (F clT).
+  introv In.
+  lets [n [ND NC]]: Inzip_to_nth_error In.
+  unfold map_clause_trm_trm in NC.
+  lets [[clA clT] [? ?]]: nth_error_map NC.
+  exists clA clT.
+  split~.
+  apply* Inzip_from_nth_error.
+Qed.
+
+Lemma subst_td_alphas : forall Z P As,
+    List.map (subst_td Z P) (tc_vars As) =
+    tc_vars As.
+Admitted.
+
+Lemma subst_td_eqs : forall Z P Ts Us,
+    (forall U, List.In U Us -> Z \notin fv_typ U) ->
+    List.map (subst_td Z P)
+             (equations_from_lists Ts Us) =
+    equations_from_lists (List.map (subst_tt Z P) Ts) Us.
 Admitted.
 
 Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
@@ -1264,8 +1310,13 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     + intros T' Tin.
       apply List.in_map_iff in Tin.
       destruct Tin as [T [? Tin]]; subst.
-      admit.
-    + admit.
+      apply* wft_subst_tb_3.
+    + rewrite~ subst_commutes_open_tt_many.
+      * apply* type_from_wft.
+      * cbn. fold (fv_typs CretTypes).
+        apply~ notin_fold.
+        intros TR Tin.
+        rewrite~ FVret.
   - apply_fresh typing_abs as x.
     fold (subst_tb Z P (bind_var V)).
     rewrite <- map_push.
@@ -1313,15 +1364,94 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
       apply~ H0.
   - econstructor; eauto.
     + cbn. eauto.
-    + admit.
+    + unfold map_clause_trm_trm.
+      rewrite~ List.map_length.
     + introv Inzip.
-      admit.
-    + introv Inzip Len Dist FA Fx FxA.
-      admit.
+      lets [clA [clT [In2 ?]]]: inzip_map_clause_trm Inzip; subst.
+      lets: H2 In2.
+      cbn in *. auto.
+    + let FV := gather_vars in
+      introv Inzip Len Dist FA Fx FxA;
+        instantiate (1 := FV) in FA.
+      lets [clA [clT [In2 ?]]]: inzip_map_clause_trm Inzip; subst.
+      assert (OKS: okGadt Σ).
+      1: {
+        apply~ okt_implies_okgadt.
+        apply* typing_regular.
+      }
+      destruct OKS as [? OKS].
+      lets [? OKD]: OKS H0; clear OKS.
+      lets Din: fst_from_zip In2.
+      lets OKC: OKD Din.
+      inversion OKC as [? ? ? ? ? ? Harg Hwft FVarg FVret]; subst.
+      cbn in *.
+      lets~ IH : H4 In2 x Len Dist (Δ2 |,| tc_vars Alphas
+                                |,| equations_from_lists Ts
+                                (List.map (open_tt_many_var Alphas) retTs)).
+      * introv Ain. lets*: FA Ain.
+      * cbn in *.
+        forwards~ IH2: IH; clear IH.
+        -- repeat rewrite~ List.app_assoc.
+        -- repeat rewrite domDelta_app in *.
+           repeat rewrite notin_union.
+           repeat rewrite notin_union in FVZD.
+           destruct FVZD.
+           repeat split~.
+           ++ apply notin_dom_tc_vars.
+              apply~ notin_from_list.
+              intro HF.
+              lets HF2 : FA HF.
+              repeat rewrite notin_union in HF2.
+              assert (Z \notin \{ Z }).
+              ** destruct~ HF2 as [? [[? ?] ?]].
+              ** apply* notin_same.
+           ++ rewrite~ equations_have_no_dom.
+              apply* equations_from_lists_are_equations.
+        -- assert (FVZA: forall X : var, List.In X Alphas -> X <> Z).
+           1: {
+             intros A Ain.
+             intro HF.
+             subst.
+             lets FA2: FA Ain.
+             repeat rewrite notin_union in FA2.
+             destruct~ FA2 as [? [[?]]].
+             apply* notin_same.
+           }
+           rewrite~ <- subst_commutes_with_unrelated_opens_te.
+           ** rewrite subst_te_open_ee_var.
+              rewrite List.map_app in IH2.
+              rewrite List.map_app in IH2.
+              rewrite subst_td_alphas in IH2.
+              rewrite subst_td_eqs in IH2.
+              --- rewrite map_concat in IH2.
+                  rewrite map_single in IH2.
+                  cbn in IH2.
+                  assert (Hrew: subst_tt Z P (open_tt_many_var Alphas argT) = open_tt_many_var Alphas argT).
+                  +++ rewrite~ subst_commutes_with_unrelated_opens.
+                      *** f_equal. rewrite~ subst_tt_fresh.
+                          rewrite~ FVarg.
+                      *** apply* type_from_wft.
+                  +++ rewrite Hrew in IH2; clear Hrew.
+                      repeat rewrite List.app_assoc in *.
+                      apply IH2.
+              --- introv Uin.
+                  apply List.in_map_iff in Uin.
+                  destruct Uin as [V [EQ Vin]]; subst.
+                  intro HF.
+                  lets Sm: fv_smaller_many Alphas V.
+                  apply Sm in HF.
+                  rewrite in_union in HF.
+                  destruct HF as [HF|HF].
+                  +++ rewrite~ FVret in HF.
+                      apply* in_empty_inv.
+                  +++ apply from_list_spec in HF.
+                      apply LibList_mem in HF.
+                      lets: FVZA HF. false.
+           ** apply* type_from_wft.
   - econstructor; eauto.
     + apply* entails_through_subst.
     + apply* wft_subst_tb_3.
-Admitted.
+Qed.
 
 Lemma typing_through_subst_te_gen_2 : forall Σ Δ1 Δ2 E F Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E & F} ⊢(TT) e ∈ T ->
