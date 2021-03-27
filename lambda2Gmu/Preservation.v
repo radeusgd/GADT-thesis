@@ -1106,6 +1106,7 @@ Lemma domDelta_subst_td : forall Δ Z P,
   f_equal. auto.
 Qed.
 
+(* TODO: may split O2 into separate weakening *)
 Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
     wft Σ Δ1 U ->
     subst_matches_typctx Σ Δ1 O1 ->
@@ -1460,6 +1461,7 @@ Lemma typing_through_subst_te_gen_2 : forall Σ Δ1 Δ2 E F Z e P T TT,
     Z # E ->
     Z # F ->
     Z \notin fv_env E ->
+    Z \notin domΔ (Δ1 |,| Δ2) ->
     {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, E &  map (subst_tb Z P) F} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
   intros.
   assert (Rew: E = map (subst_tb Z P) E).
@@ -1485,11 +1487,14 @@ Lemma typing_through_subst_te_3 :
     Z \notin fv_typ P ->
     Z # E ->
     Z \notin fv_env E ->
+    Z \notin domΔ Δ ->
     {Σ, Δ, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
-  (* intros. *)
-  (* rewrite <- (@subst_tb_id_on_fresh E Z P); auto with listin. *)
-  (* apply* typing_through_subst_te. *)
-Admitted.
+  introv Typ WFT ZP ZE1 ZE2 ZD.
+  rewrite <- (List.app_nil_l (Δ |,| [tc_var Z])) in Typ.
+  lets HT: typing_through_subst_te_gen Typ WFT ZP ZD ZE1.
+  cbn in HT.
+  rewrite~ subst_tb_id_on_fresh in HT.
+Qed.
 
 Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
     {Σ, (Δ |,| tc_vars As |,| Δ2), E & F} ⊢(TT) e ∈ T ->
@@ -1497,45 +1502,50 @@ Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
     (forall P, List.In P Ps -> wft Σ Δ P) ->
     (forall A, List.In A As -> A # E) ->
     (forall A, List.In A As -> A # F) ->
+    (forall A, List.In A As -> A \notin domΔ Δ) ->
+    (forall A, List.In A As -> A \notin domΔ Δ2) ->
     (forall A P, List.In A As -> List.In P Ps -> A \notin fv_typ P) ->
     (forall A, List.In A As -> A \notin fv_env E) ->
     DistinctList As ->
     {Σ, Δ |,| List.map (subst_td_many As Ps) Δ2, E & map (subst_tb_many As Ps) F} ⊢(Tgen) (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
-(*   induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AP AEE Adist; *)
-(*     destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence]. *)
-(*   - cbn in *. clean_empty_Δ. *)
-(*     rewrite map_def. *)
-(*     rewrite <- LibList_map. *)
-(*     rewrite <- map_id; eauto using Tgen_from_any. *)
-(*     intros. destruct x as [? [?]]. *)
-(*     cbv. auto. *)
-(*   - cbn. *)
-(*     inversions Adist. *)
-(*     lets IH0: IHAts Σ (Δ) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F) *)
-(*                    (subst_te Ah Ph e). *)
-(*     lets IH: IH0 (subst_tt Ah Ph T) Pts. *)
-(*     rewrite <- (@subst_tb_id_on_fresh E Ah Ph). *)
-(*     rewrite subst_tb_many_split. *)
-(*     eapply IH; auto with listin. *)
-(*     + lets HT: typing_through_subst_te Σ (Δ |,| (tc_vars Ats)) emptyΔ Ah. *)
-(*       rewrite <- map_concat. *)
-(*       apply~ HT; clean_empty_Δ; auto with listin. *)
-(*       * rewrite List.app_assoc. *)
-(*         unfold tc_vars. *)
-
-(*         assert (EQ: (List.map tc_var Ats |,| [tc_var Ah]) = (tc_var Ah :: List.map tc_var Ats)); try solve [cbn; auto]. *)
-(*         rewrite EQ. *)
-(*         rewrite <- List.map_cons. *)
-(*         fold (tc_vars (Ah :: Ats)). *)
-(*         eauto. *)
-(*       * rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)). *)
-(*         apply wft_weaken. *)
-(*         clean_empty_Δ. auto with listin. *)
-(*     + lets: fv_env_subst. *)
-(*       auto with listin. *)
-(*     + auto with listin. *)
-  (* Qed. *)
-Admitted.
+  induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AD AD2 AP AEE Adist;
+    destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence].
+  - cbn. cbn in Htyp.
+    rewrite List.map_id.
+    rewrite map_def.
+    rewrite <- LibList_map.
+    rewrite <- map_id; eauto using Tgen_from_any.
+    intros. destruct x as [? [?]].
+    cbv. auto.
+  - cbn.
+    inversions Adist.
+    lets IH0: IHAts Σ Δ (List.map (subst_td Ah Ph) Δ2) (map (subst_tb Ah Ph) E) (map (subst_tb Ah Ph) F).
+    lets IH: IH0 (subst_te Ah Ph e) (subst_tt Ah Ph T) Pts; clear IH0.
+    rewrite <- (@subst_tb_id_on_fresh E Ah Ph).
+    rewrite subst_tb_many_split.
+    rewrite List.map_map in IH.
+    eapply IH; auto with listin.
+    + clear IH IHAts.
+      cbn in Htyp. fold_delta.
+      lets HT: typing_through_subst_te_gen Ph Htyp.
+      rewrite <- map_concat.
+      apply HT; auto with listin.
+      * assert (WFT: wft Σ Δ Ph); auto with listin.
+        apply* wft_weaken_simple.
+      * repeat rewrite domDelta_app.
+        repeat rewrite notin_union.
+        repeat split; auto with listin.
+        apply notin_dom_tc_vars.
+        intro HF.
+        apply from_list_spec in HF.
+        apply LibList_mem in HF.
+        false~.
+    + introv Ain.
+      rewrite <- domDelta_subst_td; auto with listin.
+    + introv Ain.
+      apply~ fv_env_subst; auto with listin.
+    + auto with listin.
+Qed.
 
 (* TODO: may want to generalize this if necessary *)
 
@@ -1780,7 +1790,6 @@ Qed.
 (*     eauto using teq_symmetry, teq_transitivity. *)
 (* Qed. *)
 
-  
 Lemma subst_ttprim_open_tt : forall O T U,
   (forall A P, List.In (A, P) O -> type P) ->
   subst_tt' (open_tt T U) O
@@ -2313,6 +2322,11 @@ Theorem preservation_thm : preservation.
            apply xfreshA.
            rewrite in_singleton in HF. subst.
            apply from_list_spec2. auto.
+        -- introv Ain.
+           lets~ : Afresh Ain.
+        -- introv Ain.
+           rewrite~ equations_have_no_dom.
+           apply* equations_from_lists_are_equations.
         -- introv Ain Tin.
            apply fv_typs_notin with Ts0; auto.
            lets: Afresh Ain.

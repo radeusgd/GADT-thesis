@@ -37,6 +37,7 @@ Require Import List.
 Require Import Coq.Init.Nat.
 Require Import Zip.
 
+(* TODO: maybe try changing notation slightly *)
 Notation "[ ]" := nil (format "[ ]") : list_scope.
 Notation "[ x ]" := (cons x nil) : list_scope.
 Notation "[ x ; y ; .. ; z ]" :=  (cons z .. (cons y (cons x nil)) ..) : list_scope.
