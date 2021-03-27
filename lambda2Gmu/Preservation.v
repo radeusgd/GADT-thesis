@@ -1266,14 +1266,24 @@ Qed.
 Lemma subst_td_alphas : forall Z P As,
     List.map (subst_td Z P) (tc_vars As) =
     tc_vars As.
-Admitted.
+  induction As; cbn; auto.
+  rewrite List.map_map.
+  f_equal.
+Qed.
 
 Lemma subst_td_eqs : forall Z P Ts Us,
     (forall U, List.In U Us -> Z \notin fv_typ U) ->
     List.map (subst_td Z P)
              (equations_from_lists Ts Us) =
     equations_from_lists (List.map (subst_tt Z P) Ts) Us.
-Admitted.
+  induction Ts as [| T Ts]; destruct Us as [| U Us];
+    introv ZU; cbn; auto.
+  repeat f_equal.
+  - rewrite~ subst_tt_fresh.
+    auto with listin.
+  - apply IHTs.
+    auto with listin.
+Qed.
 
 Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z] |,| Δ2, E} ⊢(TT) e ∈ T ->
