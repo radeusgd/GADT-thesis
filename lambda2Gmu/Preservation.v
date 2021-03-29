@@ -1082,15 +1082,74 @@ Lemma domDelta_subst_td : forall Δ Z P,
 Qed.
 
 (* TODO: may split O2 into separate weakening *)
+
+Lemma subst_eq_reorder1_2 : forall Σ Δ1 U O1 O2 X V1 V2,
+    wft Σ Δ1 U ->
+    subst_matches_typctx Σ Δ1 O1 ->
+    (forall X U, List.In (X, U) O1 -> fv_typ U = \{}) ->
+    X \notin substitution_sources (O1 |,| O2) ->
+    subst_tt' (subst_tt X U V1) O1 =
+    subst_tt' (subst_tt X U V2) O1 ->
+    subst_tt' V1 (O1 |, (X, subst_tt' U O1)) =
+    subst_tt' V2 (O1 |, (X, subst_tt' U O1)).
+Admitted.
+
+Lemma subst_tt_split : forall O1 O2 T,
+    subst_tt' T (O1 |,| O2) = subst_tt' (subst_tt' T O2) O1.
+  induction O2 as [| [A U]]; cbn; auto.
+Qed.
+
 Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
     wft Σ Δ1 U ->
     subst_matches_typctx Σ Δ1 O1 ->
     (forall X U, List.In (X, U) (O1 |,| O2) -> fv_typ U = \{}) ->
     X \notin substitution_sources (O1 |,| O2) ->
+    substitution_sources O1 \n substitution_sources O2 = \{} ->
     subst_tt' (subst_tt X U V1) (O1 |,| O2) =
     subst_tt' (subst_tt X U V2) (O1 |,| O2) ->
     subst_tt' V1 (O1 |, (X, subst_tt' U O1) |,| O2) =
     subst_tt' V2 (O1 |, (X, subst_tt' U O1) |,| O2).
+  introv W M F S SS EQ.
+  repeat rewrite subst_tt_split in *.
+  rewrite subst_src_app in S. rewrite notin_union in S. destruct S as [S1 S2].
+  assert (forall (X0 : var) (U0 : typ), List.In (X0, U0) O2 -> X \notin fv_typ U0).
+  1: {
+    intros A V In. rewrite* (F A).
+    apply~ List.in_or_app.
+  }
+  rewrite~ subst_tt_inside in EQ.
+  rewrite~ (subst_tt_inside O2) in EQ.
+  assert (R: subst_tt' U O2 = U).
+  1: {
+    rewrite~ subst_ttΘ_fresh.
+    lets FV: wft_gives_fv W.
+    lets SD: subst_sources_from_match M.
+    apply~ fset_extens.
+    intros x HF.
+    rewrite in_inter in HF. destruct HF as [HF1 HF2].
+    false.
+    rewrite <- SD in FV.
+    apply FV in HF2.
+    apply~ in_empty_inv.
+    rewrite <- SS.
+    rewrite in_inter. eauto.
+  }
+  rewrite R in EQ.
+  apply~ subst_eq_reorder1_2; eauto.
+  - introv In. rewrite~ (F X0).
+    apply~ List.in_or_app.
+  - rewrite subst_src_app. rewrite* notin_union.
+Qed.
+
+Lemma subst_eq_reorder2_2 : forall Σ Δ1 U O1 X V1 V2,
+    wft Σ Δ1 U ->
+    subst_matches_typctx Σ Δ1 O1 ->
+    (forall X U, List.In (X, U) O1 -> fv_typ U = \{}) ->
+    X \notin substitution_sources O1 ->
+    subst_tt' V1 (O1 |,| [(X, subst_tt' U O1)]) =
+    subst_tt' V2 (O1 |,| [(X, subst_tt' U O1)]) ->
+    subst_tt X (subst_tt' U O1) (subst_tt' V1 O1) =
+    subst_tt X (subst_tt' U O1) (subst_tt' V2 O1).
 Admitted.
 
 Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
@@ -1104,7 +1163,59 @@ Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
              (subst_tt' V1 (O1 |,| O2)) =
     subst_tt X (subst_tt' U (O1 |,| O2))
              (subst_tt' V2 (O1 |,| O2)).
+  intros.
 Admitted.
+
+Lemma sources_list_fst : forall A O,
+  List.In A (List.map fst O) ->
+  A \in substitution_sources O.
+  induction O as [| [X V]]; cbn; introv In; fold_subst_src.
+  - false.
+  - destruct In; subst; rewrite in_union.
+    + left. apply in_singleton_self.
+    + right~.
+Qed.
+
+Lemma sources_distinct : forall Σ O Δ,
+    subst_matches_typctx Σ Δ O ->
+    DistinctList (List.map fst O).
+  induction O as [| [A U]]; introv M.
+  - cbn; constructor.
+  - cbn.
+    lets [? [D2 [M2 S2]]]: subst_match_remove_right_var3 M.
+    constructor; eauto.
+    intro HF.
+    apply S2.
+    apply~ sources_list_fst.
+Qed.
+
+Lemma distinct_split1 : forall O1 O2,
+    DistinctList (List.map fst O1 |,| List.map fst O2) ->
+    substitution_sources O1 \n substitution_sources O2 = \{}.
+  induction O2 as [| [A U]]; cbn; introv D; fold_subst_src.
+  - apply inter_empty_r.
+  - inversions D.
+    lets SS: IHO2 H2.
+    rewrite inter_comm.
+    rewrite union_distributes.
+    rewrite inter_comm in SS.
+    rewrite SS.
+    rewrite union_empty_r.
+    apply~ fset_extens.
+    intros x HF.
+    false.
+    rewrite in_inter in HF. destruct HF as [HF1 HF2].
+    rewrite in_singleton in HF1. subst.
+    apply H1.
+    apply List.in_or_app. right.
+    gen HF2. clear. intro H.
+    induction O1 as [| [X V]]; cbn in *.
+    + apply* in_empty_inv.
+    + fold_subst_src.
+      rewrite in_union in H. destruct H as [H | H].
+      * left. rewrite~ in_singleton in H.
+      * right~.
+Qed.
 
 Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
     subst_matches_typctx Σ (Δ1 |,| List.map (subst_td X U ) Δ2) (O1 |,| O2) ->
@@ -1168,6 +1279,9 @@ Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
     + apply* IHΔ2.
     + lets: subst_has_no_fv H3.
       apply* subst_eq_reorder1.
+      apply distinct_split1.
+      rewrite <- List.map_app.
+      apply* sources_distinct.
 Qed.
 
 Lemma subst_match_split : forall Σ Δ1 Δ2 O,
