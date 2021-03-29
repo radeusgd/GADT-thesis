@@ -905,32 +905,175 @@ Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     lets~ IH: IHD H3.
 Qed.
 
-Lemma subst_tt_prime_reduce_typ_fvar_defined : forall O X T,
-    List.In (X, T) O ->
-    fv_typ T = \{} ->
-    subst_tt' (typ_fvar X) O = T.
-  induction O as [| [A U]]; cbn; introv In FV; auto.
-  - false.
-  - destruct In as [In | In].
-    + inversions In.
-      case_var.
-      admit.
-    + case_var.
-      * admit.
-      * 
-Admitted.
+Lemma is_var_defined_dom : forall D X,
+    is_var_defined D X <-> X \in domΔ D.
+  induction D as [| [|]]; constructor; intros; cbn in *; try solve [false*].
+  - apply* in_empty_inv.
+  - destruct H as [H|H].
+    + inversions H. rewrite in_union; left; apply in_singleton_self.
+    + rewrite in_union; right. apply* IHD.
+  - rewrite in_union in H.
+    destruct H as [H|H].
+    + rewrite in_singleton in H.
+      subst. auto.
+    + right. apply~ IHD.
+  - destruct H as [H|H].
+    + inversion H.
+    + apply~ IHD.
+  - right. apply~ IHD.
+Qed.
 
-Lemma wft_subst_matching : forall Σ O Δ T,
+Lemma subst_tt_prime_reduce_typ_fvar_defined : forall Σ O Δ X,
+  subst_matches_typctx Σ Δ O ->
+  is_var_defined Δ X ->
+  exists T, subst_tt' (typ_fvar X) O = T /\ wft Σ emptyΔ T.
+  induction O as [| [A U]]; cbn; introv M Def; auto.
+  - lets: subst_sources_from_match M.
+    cbn in H.
+    apply is_var_defined_dom in Def.
+    rewrite <- H in Def.
+    false* in_empty_inv.
+  - lets [W [D1 [M1 Src]]]: subst_match_remove_right_var3 M.
+    case_var.
+    + exists U; split~.
+      apply subst_ttΘ_fresh.
+      lets FV: wft_gives_fv W. cbn in FV.
+      assert (HE: fv_typ U = \{}).
+      * apply* fset_extens.
+      * rewrite HE. apply~ inter_empty_r.
+    + apply* IHO.
+      lets S: subst_sources_from_match M.
+      lets S1: subst_sources_from_match M1.
+      cbn in S. fold_subst_src.
+      rewrite S1 in S.
+      apply is_var_defined_dom.
+      apply is_var_defined_dom in Def.
+      rewrite <- S in Def.
+      rewrite in_union in Def.
+      destruct~ Def as [H|H].
+      rewrite in_singleton in H. false.
+Qed.
+
+Lemma subst_tt_prime_reduce_typ_fvar_undefined : forall O X,
+  X \notin substitution_sources O ->
+  subst_tt' (typ_fvar X) O = typ_fvar X.
+  induction O as [| [A U]]; cbn; eauto.
+  fold_subst_src.
+  introv XFr.
+  case_var.
+  rewrite~ IHO.
+Qed.
+
+Lemma is_var_defined_split : forall A B c,
+    is_var_defined (B |,| A) c ->
+    (is_var_defined A c \/ is_var_defined B c).
+  unfold is_var_defined.
+  intros.
+  apply~ List.in_app_or.
+Qed.
+
+Lemma subst_has_wft : forall Σ O Δ,
+  subst_matches_typctx Σ Δ O ->
+  forall A P, List.In (A, P) O -> wft Σ emptyΔ P.
+  induction O as [| [X U]]; introv M.
+  - intros. false~.
+  - introv Hin.
+    cbn in Hin.
+    lets* [? [D' ?]]: subst_match_remove_right_var3 M.
+    destruct Hin; subst.
+    + inversions H1. auto.
+    + apply* IHO.
+Qed.
+
+Lemma subst_has_closed : forall Σ O Δ,
+  subst_matches_typctx Σ Δ O ->
+  forall A P, List.In (A, P) O -> type P.
+  introv M Hin.
+  lets: subst_has_wft M Hin.
+  apply* type_from_wft.
+Qed.
+
+Lemma wft_subst_matching_gen : forall Σ T O Δ D2,
+  subst_matches_typctx Σ Δ O ->
+  wft Σ (Δ |,| D2) T ->
+  domΔ Δ \n domΔ D2 = \{} ->
+  wft Σ (emptyΔ |,| D2) (subst_tt' T O).
+  introv M W.
+  gen_eq D: (Δ |,| D2). gen D2.
+  induction W; introv EQ FV; subst; repeat rewrite List.app_nil_r in *.
+  - rewrite subst_tt_prime_reduce_typ_unit.
+    constructor.
+  - lets [Def | Def]: is_var_defined_split H.
+    + rewrite~ subst_tt_prime_reduce_typ_fvar_undefined.
+      lets S: subst_sources_from_match M.
+      rewrite S.
+      intro HF.
+      rewrite is_var_defined_dom in Def.
+      eapply in_empty_inv.
+      rewrite <- FV.
+      rewrite* in_inter.
+    + lets [T [? W]]: subst_tt_prime_reduce_typ_fvar_defined M Def.
+      subst. rewrite <- (List.app_nil_r D2).
+      apply~ wft_weaken_simple.
+  - rewrite subst_tt_prime_reduce_arrow.
+    forwards ~ : IHW1 M D2.
+    forwards ~ : IHW2 M D2.
+    repeat rewrite List.app_nil_r in *.
+    constructor; auto.
+  - rewrite subst_tt_prime_reduce_tuple.
+    forwards ~ : IHW1 M D2.
+    forwards ~ : IHW2 M D2.
+    repeat rewrite List.app_nil_r in *.
+    constructor; auto.
+  - rewrite subst_tt_prime_reduce_typ_all.
+    econstructor.
+    let FV := gather_vars in
+    introv XFr;
+      instantiate (1:=FV) in XFr.
+    assert (HE: typ_fvar X = (subst_tt' (typ_fvar X) O)).
+    + rewrite~ subst_tt_prime_reduce_typ_fvar_undefined.
+      lets R: subst_sources_from_match M.
+      rewrite~ R.
+    + rewrite HE.
+      rewrite <- subst_ttprim_open_tt.
+      * forwards * : H0 (D2 |,| [tc_var X]); auto.
+        -- cbn.
+           rewrite inter_comm.
+           rewrite union_distributes.
+           rewrite (inter_comm (domΔ D2)).
+           rewrite FV.
+           rewrite union_empty_r.
+           apply~ fset_extens.
+           intros x HF.
+           rewrite in_inter in HF.
+           destruct HF as [HF1 HF2].
+           rewrite in_singleton in HF1. subst.
+           assert (HF3: X \notin domΔ Δ); auto.
+           false* HF3.
+        -- repeat rewrite List.app_nil_r in *.
+           auto.
+      * apply* subst_has_closed.
+  - rewrite subst_tt_prime_reduce_typ_gadt.
+    econstructor; eauto.
+    + intros T' Inm.
+      apply List.in_map_iff in Inm.
+      destruct Inm as [T [? In]]; subst.
+      forwards*: H0 D2.
+      repeat rewrite List.app_nil_r in *.
+      auto.
+    + rewrite~ List.map_length.
+Qed.
+
+Lemma wft_subst_matching : forall Σ T O Δ,
   subst_matches_typctx Σ Δ O ->
   wft Σ Δ T ->
   wft Σ emptyΔ (subst_tt' T O).
-  induction 2.
-  (* induction O as [| [A U]]; introv M W. *)
-  (* - cbn. *)
-
-  (* - introv M W. *)
-  (*   cbn. *)
-Admitted.
+  intros.
+  rewrite <- (List.app_nil_l emptyΔ).
+  apply* wft_subst_matching_gen.
+  cbn.
+  apply inter_empty_r.
+Qed.
 
 Lemma domDelta_subst_td : forall Δ Z P,
     domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
@@ -1615,28 +1758,6 @@ Qed.
 (*     split~; split~. *)
 (*     eauto using teq_symmetry, teq_transitivity. *)
 (* Qed. *)
-
-Lemma subst_has_wft : forall Σ O Δ,
-  subst_matches_typctx Σ Δ O ->
-  forall A P, List.In (A, P) O -> wft Σ emptyΔ P.
-  induction O as [| [X U]]; introv M.
-  - intros. false~.
-  - introv Hin.
-    cbn in Hin.
-    lets* [? [D' ?]]: subst_match_remove_right_var3 M.
-    destruct Hin; subst.
-    + inversions H1. auto.
-    + apply* IHO.
-Qed.
-
-Lemma subst_has_closed : forall Σ O Δ,
-  subst_matches_typctx Σ Δ O ->
-  forall A P, List.In (A, P) O -> type P.
-  introv M Hin.
-  lets: subst_has_wft M Hin.
-  apply* type_from_wft.
-Qed.
-
 Lemma teq_open : forall Σ Δ T1 T2 T,
   entails_semantic Σ Δ (T1 ≡ T2) ->
   entails_semantic Σ Δ (open_tt T1 T ≡ open_tt T2 T).
