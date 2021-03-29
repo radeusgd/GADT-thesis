@@ -703,3 +703,15 @@ Lemma subset_transitive : forall T (A B C : fset T),
   intros x In.
   auto.
 Qed.
+
+Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
+    List.map f la = List.map f lb ->
+    List.In (a, b) (zip la lb) ->
+    f a = f b.
+  induction la as [| a' la]; destruct lb as [| b' lb]; introv Map In; try solve [inversion Map | inversion In].
+  cbn in *.
+  inversions Map.
+  destruct In as [In | In].
+  - inversions~ In.
+  - apply IHla with lb; auto.
+Qed.
