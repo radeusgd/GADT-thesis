@@ -886,12 +886,6 @@ Lemma okt_through_subst_tdtb : forall Σ D1 D2 E Z P,
       apply~ notin_domDelta_subst_td.
 Qed.
 
-Lemma subst_idempotent : forall Θ T,
-    (forall (X : var) (U : typ), List.In (X, U) Θ -> fv_typ U = \{}) ->
-    subst_tt' (subst_tt' T Θ) Θ = subst_tt' T Θ.
-  induction Θ as [| [X U]]; introv FV; cbn; auto.
-Admitted.
-
 Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     subst_matches_typctx Σ D (O |, (X, U)) ->
     wft Σ emptyΔ U /\ exists D', subst_matches_typctx Σ D' O /\ X \notin substitution_sources O.
@@ -1081,18 +1075,39 @@ Lemma domDelta_subst_td : forall Δ Z P,
   f_equal. auto.
 Qed.
 
-(* TODO: may split O2 into separate weakening *)
+Lemma subst_idempotent_simple : forall Σ Δ O T,
+    wft Σ Δ T ->
+    subst_matches_typctx Σ Δ O ->
+    (forall (X : var) (U : typ), List.In (X, U) O -> fv_typ U = \{}) ->
+    subst_tt' (subst_tt' T O) O = subst_tt' T O.
+  introv W M F.
+  lets W2: wft_subst_matching M W.
+  lets F2: wft_gives_fv W2.
+  cbn in F2.
+  rewrite~ subst_ttΘ_fresh.
+  assert (FV: fv_typ (subst_tt' T O) = \{}).
+  - apply* fset_extens.
+  - rewrite FV. apply inter_empty_r.
+Qed.
 
-Lemma subst_eq_reorder1_2 : forall Σ Δ1 U O1 O2 X V1 V2,
+Lemma subst_eq_reorder1_2 : forall Σ Δ1 U O1 X V1 V2,
     wft Σ Δ1 U ->
     subst_matches_typctx Σ Δ1 O1 ->
     (forall X U, List.In (X, U) O1 -> fv_typ U = \{}) ->
-    X \notin substitution_sources (O1 |,| O2) ->
+    X \notin substitution_sources O1 ->
     subst_tt' (subst_tt X U V1) O1 =
     subst_tt' (subst_tt X U V2) O1 ->
     subst_tt' V1 (O1 |, (X, subst_tt' U O1)) =
     subst_tt' V2 (O1 |, (X, subst_tt' U O1)).
-Admitted.
+  introv W M F S EQ.
+  cbn.
+  assert (forall (X0 : var) (U0 : typ), List.In (X0, U0) O1 -> X \notin fv_typ U0).
+  - intros A T In.
+    rewrite~ (F A).
+  - repeat rewrite~ subst_tt_inside.
+    rewrite~ (@subst_idempotent_simple Σ Δ1).
+    repeat rewrite~ <- subst_tt_inside.
+Qed.
 
 Lemma subst_tt_split : forall O1 O2 T,
     subst_tt' T (O1 |,| O2) = subst_tt' (subst_tt' T O2) O1.
@@ -1135,12 +1150,12 @@ Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
     rewrite in_inter. eauto.
   }
   rewrite R in EQ.
-  apply~ subst_eq_reorder1_2; eauto.
+  apply subst_eq_reorder1_2 with Σ Δ1; auto.
   - introv In. rewrite~ (F X0).
     apply~ List.in_or_app.
-  - rewrite subst_src_app. rewrite* notin_union.
 Qed.
 
+(* TODO these may not need as strong assumptions *)
 Lemma subst_eq_reorder2_2 : forall Σ Δ1 U O1 X V1 V2,
     wft Σ Δ1 U ->
     subst_matches_typctx Σ Δ1 O1 ->
@@ -1150,21 +1165,53 @@ Lemma subst_eq_reorder2_2 : forall Σ Δ1 U O1 X V1 V2,
     subst_tt' V2 (O1 |,| [(X, subst_tt' U O1)]) ->
     subst_tt X (subst_tt' U O1) (subst_tt' V1 O1) =
     subst_tt X (subst_tt' U O1) (subst_tt' V2 O1).
-Admitted.
+  introv W M F S EQ.
+  cbn in EQ.
+  assert (forall (X0 : var) (U0 : typ), List.In (X0, U0) O1 -> X \notin fv_typ U0).
+  - intros A T In.
+    rewrite~ (F A).
+  - rewrite~ subst_tt_inside in EQ.
+    rewrite~ subst_tt_inside in EQ.
+    rewrite~ (@subst_idempotent_simple Σ Δ1) in EQ.
+Qed.
 
 Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
     wft Σ Δ1 U ->
     subst_matches_typctx Σ Δ1 O1 ->
     (forall X U, List.In (X, U) (O1 |,| O2) -> fv_typ U = \{}) ->
     X \notin substitution_sources (O1 |,| O2) ->
+    substitution_sources O1 \n substitution_sources O2 = \{} ->
     subst_tt' V1 (O1 |,| [(X, subst_tt' U O1)] |,| O2) =
     subst_tt' V2 (O1 |,| [(X, subst_tt' U O1)] |,| O2) ->
     subst_tt X (subst_tt' U (O1 |,| O2))
              (subst_tt' V1 (O1 |,| O2)) =
     subst_tt X (subst_tt' U (O1 |,| O2))
              (subst_tt' V2 (O1 |,| O2)).
-  intros.
-Admitted.
+  introv W M F S SS EQ.
+  repeat rewrite subst_tt_split in *.
+  assert (R: subst_tt' U O2 = U).
+  1: {
+    rewrite~ subst_ttΘ_fresh.
+    lets FV: wft_gives_fv W.
+    lets SD: subst_sources_from_match M.
+    apply~ fset_extens.
+    intros x HF.
+    rewrite in_inter in HF. destruct HF as [HF1 HF2].
+    false.
+    rewrite <- SD in FV.
+    apply FV in HF2.
+    apply~ in_empty_inv.
+    rewrite <- SS.
+    rewrite in_inter. eauto.
+  }
+  repeat rewrite R in *.
+  apply subst_eq_reorder2_2 with Σ Δ1; auto.
+  - introv In. rewrite~ (F X0).
+    apply~ List.in_or_app.
+  - rewrite subst_src_app in S.
+    rewrite~ notin_union in S.
+    destruct~ S.
+Qed.
 
 Lemma sources_list_fst : forall A O,
   List.In A (List.map fst O) ->
@@ -1326,6 +1373,9 @@ Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
   repeat rewrite~ subst_tt_inside.
   lets FV: subst_has_no_fv M.
   apply* subst_eq_reorder2.
+  apply distinct_split1.
+  rewrite <- List.map_app.
+  apply* sources_distinct.
 Qed.
 
 Lemma nth_error_map : forall A B (F : A -> B) l n d,
