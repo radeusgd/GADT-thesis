@@ -342,26 +342,6 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
         -- rewrite* <- Horder.
 Qed.
 
-
-Ltac IHR e :=
-  match goal with
-  | Hr: e --> ?e' |- _ =>
-    match goal with
-    | IH: term e -> ?P |- _ =>
-      let H := fresh "IHRed" in
-      eapply IH in Hr as H; eauto
-    end
-  end.
-
-Ltac crush_ihred e :=
-  IHR e; inversion IHRed; constructor; econstructor; eauto.
-
-Ltac crush_ihred_gen :=
-  match goal with
-  | H: ?e --> ?e' |- _ =>
-    crush_ihred e
-  end.
-
 Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z]* |,| Δ2, E} ⊢(TT) e ∈ T ->
     wft Σ Δ1 P ->
@@ -834,7 +814,7 @@ Theorem preservation_thm : preservation.
   clear e'.
   induction Htyp; inversions Hterm;
     introv Hred; inversions Hred;
-      try solve [crush_ihred_gen | eauto using Tgen_from_any];
+      try solve [eauto using Tgen_from_any];
       repeat generalize_typings.
   - (* app *)
     lets [U [HT EQ]]: inversion_typing_eq Htyp2.
