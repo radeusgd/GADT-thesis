@@ -181,47 +181,6 @@ Lemma contradictory_env_test : forall Σ Δ A B C D,
   congruence.
 Qed.
 
-(* Lemma only_vars_is_never_contradictory : forall Σ Δ, *)
-(*     (forall tc, List.In tc Δ -> exists A, tc = tc_var A) -> *)
-(*     ~ (contradictory_bounds Σ Δ). *)
-(*   intros. *)
-(*   intro HF. *)
-(*   unfold contradictory_bounds in HF. *)
-(*   lets F: HF typ_unit (typ_unit ** typ_unit). *)
-(*   unfold entails_semantic in F. *)
-(*   lets* [As AsEQ]: only_vars_is_tc_vars. subst. *)
-(*   lets [Θ [TLen TMatch]]: spawn_unit_subst Σ As. *)
-(*   assert (Contr: typ_unit = typ_unit ** typ_unit). *)
-(*   - unfold alpha_equivalent in F. *)
-(*     lets F2: F TMatch. *)
-(*     rewrite subst_ttΘ_fresh in F2. *)
-(*     + rewrite~ subst_ttΘ_fresh in F2. *)
-(*       cbn. *)
-(*       rewrite union_empty_r. *)
-(*       rewrite~ inter_empty_r. *)
-(*     + cbn. *)
-(*       rewrite~ inter_empty_r. *)
-(*   - false. *)
-(* Qed. *)
-(* Lemma adding_var_is_not_contradictory : forall Σ Δ A, *)
-(*     ~ (contradictory_bounds Σ Δ) -> *)
-(*     ~ (contradictory_bounds Σ (Δ |,| [tc_var A])). *)
-(*   introv Hsmal. *)
-(*   intro HF. *)
-(*   apply Hsmal. *)
-(* Admitted. *)
-
-(* Lemma adding_vars_is_not_contradictory : forall Σ Δ As, *)
-(*     ~ (contradictory_bounds Σ Δ) -> *)
-(*     ~ (contradictory_bounds Σ (Δ |,| tc_vars As)). *)
-(*   introv Hsmal. *)
-(*   induction As. *)
-(*   - cbn. clean_empty_Δ. auto. *)
-(*   - cbn. fold (tc_vars As). *)
-(*   intro HF. *)
-(*   apply Hsmal. *)
-(* Admitted. *)
-
 Lemma empty_is_not_contradictory : forall Σ,
     ~ (contradictory_bounds Σ emptyΔ).
   intros.

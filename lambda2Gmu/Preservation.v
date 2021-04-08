@@ -521,32 +521,6 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     + apply* wft_subst_tb_3.
 Qed.
 
-Lemma typing_through_subst_te_gen_2 : forall Σ Δ1 Δ2 E F Z e P T TT,
-    {Σ, Δ1 |,| [tc_var Z]* |,| Δ2, E & F} ⊢(TT) e ∈ T ->
-    wft Σ Δ1 P ->
-    Z \notin fv_typ P ->
-    Z # E ->
-    Z # F ->
-    Z \notin fv_env E ->
-    Z \notin domΔ (Δ1 |,| Δ2) ->
-    {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, E &  map (subst_tb Z P) F} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
-  intros.
-  assert (Rew: E = map (subst_tb Z P) E).
-  - clear H.
-    induction E using env_ind.
-    + rewrite~ map_empty.
-    + rewrite map_push.
-      destruct v.
-      rewrite fv_env_extend in H4.
-      rewrite <- IHE; auto.
-      * f_equal. f_equal.
-        cbn. f_equal.
-        rewrite~ subst_tt_fresh.
-  - rewrite Rew.
-    rewrite <- map_concat.
-    apply* typing_through_subst_te_gen.
-Qed.
-
 Lemma typing_through_subst_te_3 :
   forall Σ Δ E Z e P T TT,
     {Σ, Δ |,| [tc_var Z]*, E} ⊢(TT) e ∈ T ->

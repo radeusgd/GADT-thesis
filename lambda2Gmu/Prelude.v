@@ -211,16 +211,6 @@ Lemma union_distribute : forall T (A B C : fset T),
   rewrite* CuA.
 Qed.
 
-
-Lemma fold_map : forall A B bs G F a0,
-    List.fold_left (fun (a : A) (b : B) => G a b) (List.map F bs) a0 =
-    List.fold_left (fun (a : A) (b : B) => G a (F b)) bs a0.
-  induction bs; intros.
-  - cbn. eauto.
-  - cbn.
-    apply* IHbs.
-Qed.
-
 Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset var) (z' : fset var),
     List.fold_left (fun (a : fset var) (b : B) => a \u P b) ls (z \u z')
     =
@@ -282,17 +272,6 @@ Ltac apply_folding E lemma :=
 Ltac add_notin x L :=
   let Fr := fresh "Fr" in
   assert (Fr: x \notin L); auto.
-
-Lemma in_right_inv : forall A (x a : A) l,
-    List.In x (l |,| [a]*) ->
-    x = a \/ List.In x l.
-  introv Hin.
-  lets Hin2: List.in_app_or Hin.
-  destruct Hin2 as [Hin2 | Hin2]; auto.
-  left.
-  inversion~ Hin2.
-  contradiction.
-Qed.
 
 Require Import TLC.LibFset TLC.LibList.
 (* different Fset impl? taken from repo: *)
@@ -397,51 +376,6 @@ Lemma in_from_list : forall As (x : var),
       exists A. split*.
 Qed.
 
-(* Lemma add_types_assoc : forall E F As, *)
-(*     (add_types (E & F) As = E & add_types F As)%env. *)
-(*   induction As; cbn; eauto. *)
-(*   - rewrite IHAs. eauto using concat_assoc. *)
-(* Qed. *)
-
-(* Lemma add_types_dom_is_from_list : forall As, *)
-(*     (dom (add_types EnvOps.empty As) = from_list As)%env. *)
-(*   induction As; cbn. *)
-(*   - apply dom_empty. *)
-(*   - rewrite dom_concat. *)
-(*     rewrite IHAs. *)
-(*     rewrite union_comm. *)
-(*     unfold from_list. *)
-(*     rewrite dom_single. *)
-(*     trivial. *)
-(* Qed. *)
-
-Lemma fromlist_notin_restated : forall T (X : T) As,
-    ~ List.In X As ->
-    X \notin from_list As.
-  induction As as [|Ah Ats]; introv Hnotin.
-  - cbn. eauto.
-  - cbn.
-    rewrite notin_union.
-    constructor.
-    + apply notin_singleton.
-      intro HF. subst.
-      apply Hnotin. eauto with listin.
-    + unfold from_list in IHAts.
-      apply* IHAts.
-      intro HF.
-      apply Hnotin. eauto with listin.
-Qed.
-
-Lemma env_map_ext_id : forall T (E : env T) (f : T -> T),
-    (forall x, f x = x) ->
-    EnvOps.map f E = E.
-  induction E using env_ind; introv fext;
-    autorewrite with rew_env_map; trivial.
-  - rewrite* IHE.
-    rewrite fext.
-    trivial.
-Qed.
-
 Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : A -> C),
     (forall x, g (f x) = h x) ->
     EnvOps.map g (EnvOps.map f E) = EnvOps.map h E.
@@ -471,14 +405,6 @@ Ltac clean_empty_Δ :=
          | [ |- context [ ?D |,| []* ] ] =>
            rewrite List.app_nil_l
          end.
-
-Lemma LibList_app_def : forall A (La Lb : list A),
-    List.app La Lb = La ++ Lb.
-  induction La; intros; cbn.
-  - clean_empty_Δ. trivial.
-  - rewrite IHLa.
-    auto.
-Qed.
 
 Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
     binds x v1 E ->

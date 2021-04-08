@@ -93,16 +93,6 @@ Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
     auto.
 Qed.
 
-Lemma okt_strengthen_simple_delta : forall Σ Δ E Z,
-    okt Σ (Δ |,| [tc_var Z]*) E ->
-    Z # E ->
-    Z \notin fv_env E ->
-    okt Σ Δ E.
-  intros.
-  rewrite <- (List.app_nil_l Δ).
-  eapply okt_strengthen_delta_var with Z; auto.
-Qed.
-
 (* TODO try merging with others *)
 Lemma wft_subst_tb_2 : forall Σ D1 D2 Z P T,
   wft Σ (D1 |,| [tc_var Z]* |,| D2) T ->
@@ -183,25 +173,6 @@ Lemma okt_push_fresh : forall Σ Δ E x T,
     + false* empty_push_inv.
     + lets [? [EQ ?]]: eq_push_inv H; inversions EQ.
       split~.
-Qed.
-
-
-Lemma okt_strengthen_delta_var_subst : forall Σ D1 D2 E X P,
-    wft Σ (D1 |,| D2) P ->
-    okt Σ (D1 |,| [tc_var X]* |,| D2) E ->
-    X # E ->
-    okt Σ (D1 |,| D2) (map (subst_tb X P) E).
-  introv WFT OKT.
-  gen_eq G: (D1 |,| [tc_var X]* |,| D2). gen D2 X.
-  induction OKT; introv WFT Heq XE; subst.
-  - rewrite map_empty.
-    econstructor; auto.
-  - rewrite map_concat.
-    rewrite map_single.
-    constructor; auto.
-    + apply* wft_subst_tb_2.
-    + repeat (apply notin_domΔ_eq in H1; destruct H1).
-      apply notin_domΔ_eq; split*.
 Qed.
 
 (* TODO maybe merge with the origl one *)
