@@ -28,9 +28,9 @@ Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructur
 Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo TypInduction.vo
 Prelude.vio: Prelude.v Zip.vio Definitions.vio TypInduction.vio
 Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos TypInduction.vos
-Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo Regularity2.vo Equations.vo
-Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio Regularity2.vio Equations.vio
-Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos Regularity2.vos Equations.vos
+Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo Regularity2.vo SubstMatch.vo Equations.vo
+Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio Regularity2.vio SubstMatch.vio Equations.vio
+Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos Regularity2.vos SubstMatch.vos Equations.vos
 Progress.vo Progress.glob Progress.v.beautified Progress.required_vo: Progress.v Prelude.vo Infrastructure.vo Regularity.vo CanonicalForms.vo Equations.vo
 Progress.vio: Progress.v Prelude.vio Infrastructure.vio Regularity.vio CanonicalForms.vio Equations.vio
 Progress.vos Progress.vok Progress.required_vos: Progress.v Prelude.vos Infrastructure.vos Regularity.vos CanonicalForms.vos Equations.vos
@@ -40,6 +40,9 @@ Regularity2.vos Regularity2.vok Regularity2.required_vos: Regularity2.v Prelude.
 Regularity.vo Regularity.glob Regularity.v.beautified Regularity.required_vo: Regularity.v Prelude.vo Infrastructure.vo Equations.vo
 Regularity.vio: Regularity.v Prelude.vio Infrastructure.vio Equations.vio
 Regularity.vos Regularity.vok Regularity.required_vos: Regularity.v Prelude.vos Infrastructure.vos Equations.vos
+SubstMatch.vo SubstMatch.glob SubstMatch.v.beautified SubstMatch.required_vo: SubstMatch.v Prelude.vo Infrastructure.vo Regularity.vo Regularity2.vo Equations.vo
+SubstMatch.vio: SubstMatch.v Prelude.vio Infrastructure.vio Regularity.vio Regularity2.vio Equations.vio
+SubstMatch.vos SubstMatch.vok SubstMatch.required_vos: SubstMatch.v Prelude.vos Infrastructure.vos Regularity.vos Regularity2.vos Equations.vos
 TestCommon.vo TestCommon.glob TestCommon.v.beautified TestCommon.required_vo: TestCommon.v Prelude.vo Infrastructure.vo
 TestCommon.vio: TestCommon.v Prelude.vio Infrastructure.vio
 TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos Infrastructure.vos

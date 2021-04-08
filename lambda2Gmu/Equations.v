@@ -1,6 +1,8 @@
 Require Import Prelude.
 Require Import Infrastructure.
 
+Open Scope list_scope.
+
 (* Proofs regarding proposition 2.1 from the paper *)
 Section SimpleEquationProperties.
 
@@ -265,4 +267,73 @@ Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
   lets EQ: subst_has_no_fv M Hin.
   rewrite EQ.
   auto.
+Qed.
+
+Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
+    entails_semantic Σ Δ ((TA1 ==> TB1) ≡ (TA2 ==> TB2)) ->
+    entails_semantic Σ Δ (TA1 ≡ TA2) /\
+    entails_semantic Σ Δ (TB1 ≡ TB2).
+  introv Sem; cbn in *.
+  split~;
+       introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_arrow in EQ;
+    inversion~ EQ.
+Qed.
+
+Lemma inversion_eq_tuple : forall Σ Δ TA1 TB1 TA2 TB2,
+    entails_semantic Σ Δ ((TA1 ** TB1) ≡ (TA2 ** TB2)) ->
+    entails_semantic Σ Δ (TA1 ≡ TA2) /\
+    entails_semantic Σ Δ (TB1 ≡ TB2).
+  introv Sem; cbn in *.
+  split~;
+       introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_tuple in EQ;
+    inversion~ EQ.
+Qed.
+
+Lemma inversion_eq_typ_all : forall Σ Δ T U,
+    entails_semantic Σ Δ (typ_all T ≡ typ_all U) ->
+    entails_semantic Σ Δ (T ≡ U).
+  introv Sem; cbn in *.
+  introv M;
+    lets EQ: Sem M;
+    repeat rewrite subst_tt_prime_reduce_typ_all in EQ;
+    inversion~ EQ.
+Qed.
+
+Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
+    List.length Ts = List.length Us ->
+    entails_semantic Σ Δ (typ_gadt Ts N ≡ typ_gadt Us N) ->
+    List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us.
+  introv Len Sem.
+  apply F2_iff_In_zip.
+  split~.
+  intros T U In.
+  cbn in *.
+  introv M.
+  lets EQ: Sem M.
+  repeat rewrite subst_tt_prime_reduce_typ_gadt in EQ.
+  inversion EQ as [EQ2].
+  lets~ : lists_map_eq EQ2 In.
+Qed.
+
+Lemma equations_from_lists_map : forall F F1 F2 Ts Us,
+    List.length Ts = List.length Us ->
+    (forall T U, List.In (T,U) (zip Ts Us) -> F (tc_eq (T ≡ U)) = tc_eq (F1 T ≡ F2 U)) ->
+    List.map F (equations_from_lists Ts Us)
+    =
+    equations_from_lists (List.map F1 Ts) (List.map F2 Us).
+  induction Ts as [| T Ts]; destruct Us as [| U Us];
+    introv Len;  try solve [inversion~ Len].
+  introv EQ.
+  cbn.
+  fold (equations_from_lists Ts Us).
+  fold (equations_from_lists (List.map F1 Ts) (List.map F2 Us)).
+  f_equal.
+  - apply EQ. cbn. auto.
+  - apply* IHTs.
+    introv In.
+    apply EQ. cbn. auto.
 Qed.

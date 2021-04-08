@@ -1262,6 +1262,19 @@ as we got rid of separate matching rules we check that, only partially, implicit
     trm_matchgadt e1 G ms --> trm_matchgadt e1' G ms
 where "e1 --> e2" := (red e1 e2).
 
+(* These are not used directly in the definitions but they are used in proofs. *)
+Definition subst_td (A : var) (U : typ) (d : typctx_elem) : typctx_elem :=
+  match d with
+  | tc_var A => tc_var A
+  | tc_eq (T1 ≡ T2) => tc_eq ((subst_tt A U T1) ≡ (subst_tt A U T2))
+  end.
+
+Fixpoint subst_td_many (Xs : list var) (Us : list typ) (d : typctx_elem) : typctx_elem :=
+  match (Xs, Us) with
+  | ((List.cons X Xt), (List.cons U Ut)) => subst_td_many Xt Ut (subst_td X U d)
+  | _ => d
+  end.
+
 (** * Statement of desired safety properties *)
 
 Definition progress := forall TT Σ e T,

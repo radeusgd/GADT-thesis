@@ -1,4 +1,5 @@
 Require Export Zip.
+Require Import Definitions.
 Require Export Definitions.
 Require Export TypInduction.
 Require Export TLC.LibTactics.
@@ -81,11 +82,6 @@ Ltac crush_compare :=
   | H: context [(?i ?= ?j)] |- _ => decide_compare i j; (try lia); eauto
   | |- context [(?i ?= ?j)] => decide_compare i j; (try lia); eauto
   end.
-
-Goal forall i j, i <> j -> (match compare i j with | Lt => 0 | Gt => 0 | Eq => 1 end) = 0.
-  intros.
-  crush_compare.
-Qed.
 
 Ltac decide_eq i j :=
   let CMP := fresh "CMP" in
@@ -631,4 +627,78 @@ Lemma equations_from_lists_are_equations : forall D Ts Us,
     cbn in Deq.
     inversions Deq.
     destruct Hin; subst; eauto.
+Qed.
+
+Open Scope list_scope.
+
+Ltac fold_delta :=
+  repeat match goal with
+  | [ H: context [List.map tc_var ?As] |- _ ] =>
+    fold (tc_vars As) in H
+  | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As) in H
+    end
+  | [ H: context [ (tc_eq ?eq) :: ?As] |- _ ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As) in H
+    end
+  | [ |- context [List.map tc_var ?As] ] =>
+    fold (tc_vars As)
+  | [ |- context [ (tc_var ?X) :: ?As] ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As)
+    end
+  | [ |- context [ (tc_eq ?eq) :: ?As] ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As)
+    end
+  end.
+
+Ltac destruct_in_app :=
+  match goal with
+  | [ H: List.In ?X (?A ++ ?B) |- _ ] =>
+    apply List.in_app_or in H;
+    destruct H
+  | [ H: is_var_defined (?A ++ ?B) ?X |- _ ] =>
+    unfold is_var_defined in H;
+    apply List.in_app_or in H;
+    destruct H
+  end.
+Close Scope list_scope.
+
+Lemma Forall2_eq_len : forall A P (l1 l2 : list A),
+    List.Forall2 P l1 l2 ->
+    List.length l1 = List.length l2.
+  induction l1; destruct l2;
+    introv H; cbn in *;
+      inversions H; auto.
+Qed.
+
+Lemma nth_error_map : forall A B (F : A -> B) l n d,
+    List.nth_error (List.map F l) n = Some d ->
+    exists e, List.nth_error l n = Some e /\ d = F e.
+Proof.
+  induction l; destruct n; introv EQ; cbn in *; try solve [false*].
+  - inversions EQ. eauto.
+  - eauto.
+Qed.
+
+Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
+    List.In (def, cl)
+            (zip Defs (map_clause_trm_trm F Clauses)) ->
+    exists (clA : nat) (clT : trm),
+      List.In (def, (clause clA clT)) (zip Defs Clauses) /\
+      cl = clause clA (F clT).
+  introv In.
+  lets [n [ND NC]]: Inzip_to_nth_error In.
+  unfold map_clause_trm_trm in NC.
+  lets [[clA clT] [? ?]]: nth_error_map NC.
+  exists clA clT.
+  split~.
+  apply* Inzip_from_nth_error.
 Qed.

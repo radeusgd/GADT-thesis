@@ -566,3 +566,61 @@ Lemma domDelta_app : forall D1 D2,
     rewrite IHD2.
     rewrite~ union_assoc.
 Qed.
+
+Lemma distinct_split1 : forall O1 O2,
+    DistinctList (List.map fst O1 |,| List.map fst O2) ->
+    substitution_sources O1 \n substitution_sources O2 = \{}.
+  induction O2 as [| [A U]]; cbn; introv D; fold_subst_src.
+  - apply inter_empty_r.
+  - inversions D.
+    lets SS: IHO2 H2.
+    rewrite inter_comm.
+    rewrite union_distributes.
+    rewrite inter_comm in SS.
+    rewrite SS.
+    rewrite union_empty_r.
+    apply~ fset_extens.
+    intros x HF.
+    false.
+    rewrite in_inter in HF. destruct HF as [HF1 HF2].
+    rewrite in_singleton in HF1. subst.
+    apply H1.
+    apply List.in_or_app. right.
+    gen HF2. clear. intro H.
+    induction O1 as [| [X V]]; cbn in *.
+    + apply* in_empty_inv.
+    + fold_subst_src.
+      rewrite in_union in H. destruct H as [H | H].
+      * left. rewrite~ in_singleton in H.
+      * right~.
+Qed.
+
+Lemma sources_list_fst : forall A O,
+  List.In A (List.map fst O) ->
+  A \in substitution_sources O.
+  induction O as [| [X V]]; cbn; introv In; fold_subst_src.
+  - false.
+  - destruct In; subst; rewrite in_union.
+    + left. apply in_singleton_self.
+    + right~.
+Qed.
+
+Lemma subst_td_alphas : forall Z P As,
+    List.map (subst_td Z P) (tc_vars As) =
+    tc_vars As.
+  induction As; cbn; auto.
+  rewrite List.map_map.
+  f_equal.
+Qed.
+
+Lemma domDelta_subst_td : forall Δ Z P,
+    domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [| []]]; eauto; introv; cbn.
+  f_equal. auto.
+Qed.
+
+Lemma notin_domDelta_subst_td : forall x Δ Z P,
+  x \notin domΔ Δ ->
+  x \notin domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [|[]]]; introv FR; cbn in *; auto.
+Qed.
