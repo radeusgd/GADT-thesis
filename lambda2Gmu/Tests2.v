@@ -26,10 +26,10 @@ Qed.
 
 Definition zero := trm_constructor [] (Nat, 0) trm_unit.
 
-Lemma zero_type : {natSigma, emptyΔ, empty} ⊢ zero ∈ typ_gadt [] Nat.
+Lemma zero_type : {natSigma, emptyΔ, empty} ⊢(Treg) zero ∈ typ_gadt [] Nat.
   cbv.
   lets: oknat.
-  autotyper1.
+  autotyper1. (* TODO fix autotyper to not use equations *)
 Qed.
 
 Require Import Psatz.

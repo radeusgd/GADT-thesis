@@ -473,17 +473,6 @@ Lemma equations_have_no_dom : forall Deqs,
     intros. auto.
 Qed.
 
-Lemma equations_from_lists_are_equations : forall D Ts Us,
-    D = equations_from_lists Ts Us ->
-    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
-  induction D; cbn; introv Deq Hin; auto.
-  + false.
-  + destruct Ts; destruct Us; cbn; try solve [false].
-    cbn in Deq.
-    inversions Deq.
-    destruct Hin; subst; eauto.
-Qed.
-
 Lemma subst_match_notin_srcs2 : forall O X U,
     List.In (X, U) O ->
     X \in substitution_sources O.

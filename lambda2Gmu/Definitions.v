@@ -38,15 +38,15 @@ Require Import Coq.Init.Nat.
 Require Import Zip.
 
 (* TODO: maybe try changing notation slightly *)
-Notation "[ ]" := nil (format "[ ]") : list_scope.
-Notation "[ x ]" := (cons x nil) : list_scope.
-Notation "[ x ; y ; .. ; z ]" :=  (cons z .. (cons y (cons x nil)) ..) : list_scope.
+Notation "[ ]*" := nil (format "[ ]*") : list_scope.
+Notation "[ x ]*" := (cons x nil) : list_scope.
+Notation "[ x ; y ; .. ; z ]*" :=  (cons z .. (cons y (cons x nil)) ..) : list_scope.
 Notation "A |,| B" := (B ++ A) (at level 32, left associativity).
 Notation "A |, b" := (b :: A) (at level 32).
 
 Inductive DistinctList : list var -> Prop :=
-| distinctive_empty : DistinctList []
-| distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (h :: t).
+| distinctive_empty : DistinctList []*
+| distinctive_cons : forall h t, (~ List.In h t) -> DistinctList t -> DistinctList (t |, h).
 
 (* GADTName is a separate syntactic category for identyfing GADT type names in opposition to variables and type variables. *)
 Definition GADTName : Set := var.
@@ -382,12 +382,12 @@ Fixpoint trm_size (e : trm) : nat :=
   match e with
   | trm_bvar i    => 1
   | trm_fvar x    => 1
-  | trm_constructor tparams C e1 => 1 + trm_size e1 (* TODO typs? *)
+  | trm_constructor tparams C e1 => 1 + trm_size e1
   | trm_unit => 1
   | trm_tuple e1 e2 => 1 + trm_size e1 + trm_size e2
   | trm_fst e1 => 1 + trm_size e1
   | trm_snd e1 => 1 + trm_size e1
-  | trm_abs T e1    => 1 + trm_size e1 (* TODO: typ? *)
+  | trm_abs T e1    => 1 + trm_size e1
   | trm_app e1 e2 => 1 + trm_size e1 + trm_size e2
   | trm_tabs e1 => 1 + trm_size e1
   | trm_tapp e1 T => 1 + trm_size e1
@@ -519,25 +519,14 @@ Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
 Fixpoint open_tt_many (args : list typ) (T : typ) :=
   match args with
   | ha :: ta => open_tt_many ta (open_tt T ha)
-  | [] => T
+  | []* => T
   end.
 
 Fixpoint open_te_many (args : list typ) (e : trm) :=
   match args with
   | ha :: ta => open_te_many ta (open_te e ha)
-  | [] => e
+  | []* => e
   end.
-(* Fixpoint open_tt_many (args : list typ) (T : typ) : typ := *)
-(*   match args with *)
-(*   | [] => T *)
-(*   | h :: t => open_tt (open_tt_many t T) h *)
-(*   end. *)
-
-(* Fixpoint open_te_many (args : list typ) (e : trm) : trm := *)
-(*   match args with *)
-(*   | [] => e *)
-(*   | h :: t => open_te (open_te_many t e) h *)
-(*   end. *)
 
 Definition open_tt_many_var (args : list var) (T : typ) := open_tt_many (map typ_fvar args) T.
 
@@ -862,17 +851,17 @@ Definition typctx := list typctx_elem.
 Definition is_var_defined (Δ : typctx) (X : var) : Prop := In (tc_var X) Δ.
 (* Definition add_var (Δ : typctx) (X : var) : typctx := tc_var X :: Δ. *)
 (* Definition add_eq (Δ : typctx) (eq : type_equation) : typctx := tc_eq eq :: Δ. *)
-Definition emptyΔ : typctx := [].
+Definition emptyΔ : typctx := []*.
 
 Fixpoint domΔ (Δ : typctx) : fset var :=
   match Δ with
-  | [] => \{}
+  | []* => \{}
   | tc_var A :: r => \{ A } \u domΔ r
   | tc_eq _ :: r => domΔ r
   end.
 Fixpoint fv_delta (Δ : typctx) : fset var :=
   match Δ with
-  | [] => \{}
+  | []* => \{}
   | tc_var A :: r => fv_delta r
   | tc_eq (T1 ≡ T2) :: r => fv_typ T1 \u fv_typ T2 \u fv_delta r
   end.
@@ -905,7 +894,7 @@ Inductive wft : GADTEnv -> typctx -> typ -> Prop :=
     wft Σ Δ (typ_tuple T1 T2)
 | wft_all : forall (L : fset var) Σ Δ T2,
     (forall X, X \notin L ->
-          wft Σ (Δ |,| [tc_var X]) (T2 open_tt_var X)) ->
+          wft Σ (Δ |,| [tc_var X]*) (T2 open_tt_var X)) ->
     wft Σ Δ (typ_all T2)
 | wft_gadt : forall Σ Δ Tparams Name Arity Defs,
     (forall T, In T Tparams -> wft Σ Δ T) ->
@@ -942,7 +931,7 @@ and that the codomain is types without free variables
 and that for each type equation, both sides are alpha equivalent after applying that substitution.
 *)
 Inductive subst_matches_typctx Σ : typctx -> substitution -> Prop :=
-| tc_empty : subst_matches_typctx Σ [] []
+| tc_empty : subst_matches_typctx Σ []* []*
 | tc_add_var : forall Θ Δ A T,
     wft Σ emptyΔ T ->
     subst_matches_typctx Σ Δ Θ ->
@@ -1032,7 +1021,7 @@ Definition okGadt (Σ : GADTEnv) : Prop :=
   ok Σ /\
   forall Name Arity Defs,
     binds Name (mkGADT Arity Defs) Σ ->
-    Defs <> [] /\
+    Defs <> []* /\
     (forall Def,
         In Def Defs ->
         okConstructorDef Σ Arity Def).
@@ -1101,7 +1090,7 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
     (forall X, X \notin L -> (* TODO consider splitting value and term as this case may be problematic ? *)
           value (e1 open_te_var X)) ->
     (forall X, X \notin L ->
-          {Σ, Δ |,| [tc_var X], E} ⊢(TT) (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
+          {Σ, Δ |,| [tc_var X]*, E} ⊢(TT) (e1 open_te_var X) ∈ (T1 open_tt_var X)) ->
     {Σ, Δ, E} ⊢(Treg) (trm_tabs e1) ∈ typ_all T1
 | typing_tapp : forall Σ Δ E e1 T1 T T' TT,
     {Σ, Δ, E} ⊢(TT) e1 ∈ typ_all T1 ->
@@ -1283,8 +1272,3 @@ Definition preservation := forall TT Σ e T e',
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     e --> e' ->
     {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.
-(*
-TODO:
-try proving uniqueness of reduction
-+ try proving prog+pres at once
-*)

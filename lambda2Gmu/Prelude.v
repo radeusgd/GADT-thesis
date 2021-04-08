@@ -288,7 +288,7 @@ Ltac add_notin x L :=
   assert (Fr: x \notin L); auto.
 
 Lemma in_right_inv : forall A (x a : A) l,
-    List.In x (l |,| [a]) ->
+    List.In x (l |,| [a]*) ->
     x = a \/ List.In x l.
   introv Hin.
   lets Hin2: List.in_app_or Hin.
@@ -297,100 +297,6 @@ Lemma in_right_inv : forall A (x a : A) l,
   inversion~ Hin2.
   contradiction.
 Qed.
-
-(* Lemma app_singleton_inv : forall A l1 l2 (a b : A), *)
-(*     l1 |,| [a] = l2 |,| [b] -> *)
-(*     l1 = l2 /\ a = b. *)
-(*   intros. cbn in *. inversions H. *)
-(*   auto. *)
-(*   induction l1; introv EQ. *)
-(*   - cbn in *. *)
-(*     destruct l2. *)
-(*     + cbn in *. inversion~ EQ. *)
-(*     + cbn in *. *)
-(*       inversion~ EQ. *)
-(*       false* List.app_cons_not_nil. *)
-(*   - destruct l2. *)
-(*     + inversion ~ EQ. *)
-(*       false* List.app_cons_not_nil. *)
-(*     + inversions EQ. *)
-(*       lets [? ?]: IHl1 H1; subst. *)
-(*       auto. *)
-(* Qed. *)
-
-(* Lemma subst_match_inv_var : forall Σ Δ A Θ, *)
-(*     subst_matches_typctx Σ (Δ |,| [tc_var A]) Θ -> *)
-(*     exists T Θ', Θ = (A, T) :: Θ' /\ *)
-(*             wft Σ emptyΔ T /\ *)
-(*             subst_matches_typctx Σ Δ Θ' /\ *)
-(*             A \notin substitution_sources Θ' /\ *)
-(*             A \notin domΔ Δ. *)
-(*   introv M. *)
-(*   inversions M. *)
-(*   - false* List.app_cons_not_nil. *)
-(*   - lets [? EQvar]: app_singleton_inv H; subst. *)
-(*     inversions EQvar. *)
-(*     exists T Θ0. splits~. *)
-(*   - lets [? EQvar]: app_singleton_inv H; subst. *)
-(*     inversion EQvar. *)
-(* Qed. *)
-
-(* Lemma subst_match_inv_eq : forall Σ Δ T1 T2 Θ, *)
-(*     subst_matches_typctx Σ (Δ |,| [tc_eq (T1 ≡ T2)]) Θ -> *)
-(*     subst_matches_typctx Σ Δ Θ /\ *)
-(*     (subst_tt' T1 Θ) = (subst_tt' T2 Θ). *)
-(*   introv M. *)
-(*   inversions M. *)
-(*   - false* List.app_cons_not_nil. *)
-(*   - lets [? EQ]: app_singleton_inv H; subst. *)
-(*     inversions EQ. *)
-(*   - lets [? EQ]: app_singleton_inv H; subst. *)
-(*     inversions EQ. *)
-(*     split~. *)
-(* Qed. *)
-
-(* Lemma subst_match_inv_empty : forall Σ Θ, *)
-(*     subst_matches_typctx Σ [] Θ -> *)
-(*     Θ = []. *)
-(*   introv H. *)
-(*   inversion~ H; *)
-(*     false* List.app_cons_not_nil. *)
-(* Qed. *)
-
-(* Ltac invert_subst_match_simple := *)
-(*   match goal with *)
-(*   | [ H: subst_matches_typctx ?Σ [] ?Θ  |- _ ] => *)
-(*     lets: subst_match_inv_empty H; subst *)
-(*   | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_var ?A]) ?Θ  |- _ ] => *)
-(*     let Hwft := fresh "SMwft" in *)
-(*     let Hmatch := fresh "SMmatch" in *)
-(*     let Asrc := fresh "SMAsrc" in *)
-(*     let Adom := fresh "SMAdom" in *)
-(*     let Th := fresh "Θ" in *)
-(*     let U := fresh "U" in *)
-(*     lets [U [Th [? [Hwft [Hmatch [Asrc Adom]]]]]]: subst_match_inv_var H; *)
-(*     subst *)
-(*   | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_eq (?T1 ≡ ?T2)]) ?Θ  |- _ ] => *)
-(*     let Hmatch := fresh "SMmatch" in *)
-(*     let Heq := fresh "SMeq" in *)
-(*     lets [Hmatch Heq]: subst_match_inv_eq H; *)
-(*     subst *)
-(*   end. *)
-
-(* Ltac invert_subst_match := *)
-(*   match goal with *)
-(*   | [ H: subst_matches_typctx ?Σ [] ?Θ  |- _ ] => *)
-(*     invert_subst_match_simple *)
-(*   | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_var ?A]) ?Θ  |- _ ] => *)
-(*     invert_subst_match_simple *)
-(*   | [ H: subst_matches_typctx ?Σ (?Δ |,| [tc_eq (?T1 ≡ ?T2)]) ?Θ  |- _ ] => *)
-(*     invert_subst_match_simple *)
-(*   | [ H: subst_matches_typctx ?Σ (?Δ |,| [?x]) ?Θ |- _ ] => *)
-(*     let A := fresh "A" in *)
-(*     let V1 := fresh "V1" in *)
-(*     let V2 := fresh "V2" in *)
-(*     destruct x as [A | [V1 V2]]; invert_subst_match_simple *)
-(*   end. *)
 
 Require Import TLC.LibFset TLC.LibList.
 (* different Fset impl? taken from repo: *)
@@ -556,17 +462,17 @@ Ltac clean_empty_Δ :=
            rewrite List.app_nil_r in H
          | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
            rewrite List.app_nil_l in H
-         | [ H: context [ [] |,| ?D ] |- _ ] =>
+         | [ H: context [ []* |,| ?D ] |- _ ] =>
            rewrite List.app_nil_r in H
-         | [ H: context [ ?D |,| [] ] |- _ ] =>
+         | [ H: context [ ?D |,| []* ] |- _ ] =>
            rewrite List.app_nil_l in H
          | [ |- context [ emptyΔ |,| ?D ] ] =>
            rewrite List.app_nil_r
          | [ |- context [ ?D |,| emptyΔ ] ] =>
            rewrite List.app_nil_l
-         | [ |- context [ [] |,| ?D ] ] =>
+         | [ |- context [ []* |,| ?D ] ] =>
            rewrite List.app_nil_r
-         | [ |- context [ ?D |,| [] ] ] =>
+         | [ |- context [ ?D |,| []* ] ] =>
            rewrite List.app_nil_l
          end.
 
@@ -714,4 +620,15 @@ Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
   destruct In as [In | In].
   - inversions~ In.
   - apply IHla with lb; auto.
+Qed.
+
+Lemma equations_from_lists_are_equations : forall D Ts Us,
+    D = equations_from_lists Ts Us ->
+    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
+  induction D; cbn; introv Deq Hin; auto.
+  + false.
+  + destruct Ts; destruct Us; cbn; try solve [false].
+    cbn in Deq.
+    inversions Deq.
+    destruct Hin; subst; eauto.
 Qed.

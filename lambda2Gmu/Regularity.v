@@ -12,25 +12,25 @@ Ltac fold_delta :=
     fold (tc_vars As) in H
   | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
     match As with
-    | [] => fail 1
-    | _ => fold ([tc_var X] ++ As) in H
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As) in H
     end
   | [ H: context [ (tc_eq ?eq) :: ?As] |- _ ] =>
     match As with
-    | [] => fail 1
-    | _ => fold ([tc_eq eq] ++ As) in H
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As) in H
     end
   | [ |- context [List.map tc_var ?As] ] =>
     fold (tc_vars As)
   | [ |- context [ (tc_var ?X) :: ?As] ] =>
     match As with
-    | [] => fail 1
-    | _ => fold ([tc_var X] ++ As)
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As)
     end
   | [ |- context [ (tc_eq ?eq) :: ?As] ] =>
     match As with
-    | [] => fail 1
-    | _ => fold ([tc_eq eq] ++ As)
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As)
     end
   end.
 
@@ -135,9 +135,9 @@ Qed.
 
 Lemma wft_strengthen_typ : forall Σ D1 D2 U T,
     U \notin fv_typ T ->
-    wft Σ (D1 |,| [tc_var U] |,| D2) T -> wft Σ (D1 |,| D2) T.
+    wft Σ (D1 |,| [tc_var U]* |,| D2) T -> wft Σ (D1 |,| D2) T.
 Proof.
-  introv Ufresh Hwft. gen_eq G: (D1 |,| [tc_var U] |,| D2). gen D2.
+  introv Ufresh Hwft. gen_eq G: (D1 |,| [tc_var U]* |,| D2). gen D2.
   induction Hwft; intros D2 EQ; cbn in Ufresh; subst; auto.
   - apply* wft_var.
     repeat destruct_in_app;
@@ -148,16 +148,16 @@ Proof.
     | H: forall X, X \notin L -> ?P3 -> forall F0, ?P1 -> ?P2 |- _ =>
       rename H into H_ctxEq_implies_wft end.
     apply_fresh* wft_all as Y.
-    lets* IH: H_ctxEq_implies_wft Y (D2 |,| [tc_var Y]).
+    lets* IH: H_ctxEq_implies_wft Y (D2 |, tc_var Y).
     + lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0;
         cbn in Hfv; unfold open_tt; rewrite Hfv; eauto.
   - econstructor; eauto.
 Qed.
 
 Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
-    wft Σ (D1 |,| [tc_eq ϵ] |,| D2) T ->
+    wft Σ (D1 |,| [tc_eq ϵ]* |,| D2) T ->
     wft Σ (D1 |,| D2) T.
-  introv Hwft. gen_eq G: (D1 |,| [tc_eq ϵ] |,| D2). gen D2.
+  introv Hwft. gen_eq G: (D1 |,| [tc_eq ϵ]* |,| D2). gen D2.
   induction Hwft; intros D2 EQ; subst; auto.
   - apply* wft_var.
     unfold is_var_defined in *.
@@ -167,7 +167,7 @@ Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
       * inversion H0; false*.
       * apply List.in_or_app; right~.
   - apply_fresh wft_all as X.
-    lets IH: H0 X (D2 |,| [tc_var X]); auto.
+    lets IH: H0 X (D2 |, tc_var X); auto.
   - econstructor; eauto.
 Qed.
 
@@ -281,7 +281,7 @@ Qed.
 Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
     X # E ->
     X \notin fv_env E ->
-    okt Σ (D1 |,| [tc_var X] |,| D2) E -> okt Σ (D1 |,| D2) E.
+    okt Σ (D1 |,| [tc_var X]* |,| D2) E -> okt Σ (D1 |,| D2) E.
   introv FXE FXTE O. induction E using env_ind.
   - constructor.
     lets*: okt_implies_okgadt.
@@ -307,12 +307,6 @@ Lemma okt_is_type : forall Σ Δ E x T,
   introv Hokt. apply okt_is_wft in Hokt. apply* type_from_wft.
 Qed.
 
-(* Ltac unsimpl_map_bind_typ Z P := *)
-(*   match goal with *)
-(*   | |- context [ bind_typ ] => *)
-(*     unsimpl (subst_tb Z P bind_typ) *)
-(*   end. *)
-
 Lemma wft_type : forall Σ Δ T,
     wft Σ Δ T -> type T.
 Proof.
@@ -330,8 +324,8 @@ Lemma wft_weaken : forall Σ D1 D2 D3 T,
       auto using List.in_or_app.
   - apply_fresh* wft_all as Y.
     assert (Yfr: Y \notin L); eauto.
-    lets: H0 Yfr (D3 |,| [tc_var Y]).
-    assert (Hassoc: ((D1 |,| D2) |,| (D3 |,| [tc_var Y])) = (((D1 |,| D2) |,| D3) |,| [tc_var Y]));
+    lets: H0 Yfr (D3 |, tc_var Y).
+    assert (Hassoc: ((D1 |,| D2) |,| (D3 |, tc_var Y)) = (((D1 |,| D2) |,| D3) |,| [tc_var Y]*));
       auto using List.app_assoc.
     rewrite <- Hassoc.
     apply H1. subst. auto using List.app_assoc.
@@ -345,11 +339,11 @@ Ltac destruct_app_list :=
   end.
 
 Lemma wft_subst_tb : forall Σ D1 D2 Z P T,
-  wft Σ (D1 |,| [tc_var Z] |,| D2) T ->
+  wft Σ (D1 |,| [tc_var Z]* |,| D2) T ->
   wft Σ D1 P ->
   wft Σ (D1 |,| D2) (subst_tt Z P T).
 Proof.
-  introv WT WP; gen_eq G: (D1 |,| [tc_var Z] |,| D2). gen D2.
+  introv WT WP; gen_eq G: (D1 |,| [tc_var Z]* |,| D2). gen D2.
   induction WT; intros; subst; simpl subst_tt; auto.
   - case_var*.
     + lets Hw: wft_weaken D1 D2 emptyΔ.
@@ -363,7 +357,7 @@ Proof.
   - apply_fresh* wft_all as Y.
     lets: wft_type.
     rewrite* subst_tt_open_tt_var.
-    lets* IH: H0 Y (D2 |,| [tc_var Y]).
+    lets* IH: H0 Y (D2 |, tc_var Y).
   - apply* wft_gadt.
     + introv Tin.
       apply List.in_map_iff in Tin.
@@ -371,41 +365,6 @@ Proof.
       apply* H0.
     + apply List.map_length.
 Qed.
-
-(* Lemma wft_subst_tb : forall Σ F E Z P T, *)
-(*   wft Σ (E & (withtyp Z) & F) T -> *)
-(*   wft Σ E P -> *)
-(*   ok (E & map (subst_tb Z P) F) -> *)
-(*   wft Σ (E & map (subst_tb Z P) F) (subst_tt Z P T). *)
-(* Proof. *)
-(*   introv WT WP. gen_eq G: (E & (withtyp Z) & F). gen F. *)
-(*   induction WT as [ | | | | ? ? ? ? ? IH | ]; intros F EQ Ok; subst; simpl subst_tt; auto. *)
-(*   - case_var*. *)
-(*     + expand_env_empty (E & map (subst_tb Z P) F). *)
-(*       apply* wft_weaken; fold_env_empty. *)
-(*     + destruct (binds_concat_inv H) as [?|[? ?]]. *)
-(*       * apply wft_var. *)
-(*         apply~ binds_concat_right. *)
-(*         unsimpl_map_bind_typ Z P. *)
-(*         apply~ binds_map. *)
-(*       * destruct (binds_push_inv H1) as [[? ?]|[? ?]]. *)
-(*         -- subst. false~. *)
-(*         -- applys wft_var. apply* binds_concat_left. *)
-(*   - apply_fresh* wft_all as Y. *)
-(*     unsimpl ((subst_tb Z P) bind_typ). *)
-(*     lets: wft_type. *)
-(*     rewrite* subst_tt_open_tt_var. *)
-(*     apply_ih_map_bind* IH. *)
-(*   - econstructor; eauto. *)
-(*     + introv Tin. *)
-(*       apply List.in_map_iff in Tin. *)
-(*       destruct Tin as [T' Tand]. *)
-(*       destruct Tand as [Teq Tin]. *)
-(*       rewrite <- Teq. *)
-(*       apply* H0. *)
-(*     + apply List.map_length. *)
-(* Qed. *)
-(* Hint Resolve wft_subst_tb. *)
 
 Lemma wft_open : forall Σ Δ U T1,
   wft Σ Δ (typ_all T1) ->
@@ -434,33 +393,6 @@ Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType Cre
   apply* List.nth_error_In.
 Qed.
 
-(* Lemma wft_open_gadt : forall , *)
-(*   forall T : typ, List.In T Ts -> wft Σ E T *)
-(*   Hokt : okt Σ E *)
-(*   Hterm : term e1 *)
-(*   Hwft : wft Σ E (open_tt_many CargType Ts) *)
-(*   HG : okGadt Σ *)
-(*        wft Σ (add_types empty Alphas) (open_tt_many_var retT Alphas) -> *)
-(*   wft Σ E (open_tt_many (typ_gadt CretTypes Name) Ts) *)
-
-(** ** More WFT Properties *)
-
-(* Most likely not needed anymore as wft_weaken already supports arbitrary middle *)
-(* Lemma wft_weaken_many : forall Σ As D1 D2 T, *)
-(*     wft Σ (D1 |,| D2) T -> *)
-(*     (* (forall A, List.In A As -> A \notin domΔ D1) -> *) *)
-(*     (* (forall A, List.In A As -> A \notin domΔ D2) -> *) *)
-(*     DistinctList As -> *)
-(*     wft Σ (D1 |,| tc_vars As |,| D2) T. *)
-(*   induction As as [| Ah Ats]; introv Hwft Hdist. *)
-(*   - cbn. clean_empty_Δ. auto. *)
-(*   - cbn. fold (tc_vars Ats). *)
-(*     fold_delta. *)
-(*     apply wft_weaken. *)
-(*     inversion Hdist. *)
-(*     apply~ IHAts; eauto with listin. *)
-(* Qed. *)
-
 Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ),
     length As = length Us ->
       wft Σ (Δ |,| tc_vars As) T ->
@@ -477,7 +409,7 @@ Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ)
   - cbn in *. inversions HD.
     apply IHAts; eauto with listin.
     fold (tc_vars Ats) in HwftT.
-    fold ((Δ |,| tc_vars Ats) |,| [tc_var Ah]) in HwftT.
+    fold ((Δ |,| tc_vars Ats) |,| [tc_var Ah]*) in HwftT.
     lets W: wft_subst_tb Σ (Δ |,| tc_vars Ats) emptyΔ.
     clean_empty_Δ.
     apply~ W.
@@ -569,9 +501,6 @@ Proof.
     copyTo IH IH1.
     assert (yL: y \notin L); eauto.
     lets~ [? [? ?]]: IH yL.
-    (* forwards* Hctx: okt_push_inv. *)
-    (* destruct Hctx as [? | Hctx]; try congruence. *)
-    (* destruct Hctx as [U HU]. inversions HU. *)
     splits*.
     + apply_folding E okt_strengthen.
     + econstructor.
@@ -605,8 +534,6 @@ Proof.
   - pick_fresh y.
     copyTo IH IH1.
     specializes IH1 y. destructs~ IH1.
-    (* destruct hp as [? | hex]; try congruence. *)
-    (* destruct hex as [u hu]. inversions hu. *)
     splits*.
     + apply_folding E okt_strengthen.
     + econstructor. apply* okt_is_type.
@@ -629,16 +556,14 @@ Proof.
       apply F2_from_zip in H4; eauto.
       lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd clin.
       cbn in HDef.
-      (* destruct HDef as [DTT HDef]. *)
       cbn in Hlen.
       lets Hlen2: H2 DefIn2.
       cbn in Hlen2.
       assert (Hlen3: length Alphas = Carity Def); try lia.
       lets~ HF: HDef Alphas x Hlen3 Hdist Afresh.
-      (* lets* [? IH]: HF xfresh xAlphas. *)
       lets~ [? [? ?]]: HF xfresh xAlphas.
       lets~ HT: H3 Def (clause clA clT) Alphas x.
-    + assert (ms <> []).
+    + assert (ms <> []*).
       * lets gadtOk: okt_implies_okgadt Hokt.
         inversion gadtOk as [? okDefs].
         lets [defNEmpty okDef]: okDefs H0.
@@ -646,7 +571,6 @@ Proof.
         destruct Defs; subst; eauto. cbn in H1. lia.
       * destruct ms as [ | cl1 rest]; [ contradiction | idtac ].
         apply F2_from_zip in H3; eauto.
-        (* lets* [Def [DefIn [DefIn2 [TTc HDef]]]]: forall2_from_snd cl1 H3; *)
         lets* [Def [DefIn [DefIn2 HDef]]]: forall2_from_snd cl1 H3;
           eauto with listin.
 
@@ -663,7 +587,6 @@ Proof.
 
         lets* HTyp: HDef A1 A2 Afresh xfresh xfreshA.
         lets~ [? [? Hwft2]]: H4 HTyp.
-        (* lets* [? [? Hwft2]]: HDef A1 A2 Afresh xfresh. *)
         apply wft_strengthen_typ_many with Alphas; auto.
         -- rewrite <- (List.app_nil_l (Δ |,| tc_vars Alphas)).
            eapply wft_strengthen_equations.
@@ -676,9 +599,6 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-  (* - destructs~ IHTyp. *)
-  (*   splits~. *)
-  (*   inversion~ Typ2. *)
 Qed.
 
 (** The value relation is restricted to well-formed objects. *)
@@ -720,3 +640,4 @@ Lemma Tgen_from_any : forall Σ Δ E TT e T,
   - apply teq_reflexivity.
   - lets* : typing_regular Typ.
 Qed.
+

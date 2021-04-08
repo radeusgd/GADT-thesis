@@ -16,21 +16,27 @@ InfrastructureFV.vos InfrastructureFV.vok InfrastructureFV.required_vos: Infrast
 InfrastructureOpen.vo InfrastructureOpen.glob InfrastructureOpen.v.beautified InfrastructureOpen.required_vo: InfrastructureOpen.v Prelude.vo InfrastructureFV.vo
 InfrastructureOpen.vio: InfrastructureOpen.v Prelude.vio InfrastructureFV.vio
 InfrastructureOpen.vos InfrastructureOpen.vok InfrastructureOpen.required_vos: InfrastructureOpen.v Prelude.vos InfrastructureFV.vos
+InfrastructureSubstPrim.vo InfrastructureSubstPrim.glob InfrastructureSubstPrim.v.beautified InfrastructureSubstPrim.required_vo: InfrastructureSubstPrim.v Prelude.vo InfrastructureFV.vo InfrastructureOpen.vo InfrastructureSubst.vo
+InfrastructureSubstPrim.vio: InfrastructureSubstPrim.v Prelude.vio InfrastructureFV.vio InfrastructureOpen.vio InfrastructureSubst.vio
+InfrastructureSubstPrim.vos InfrastructureSubstPrim.vok InfrastructureSubstPrim.required_vos: InfrastructureSubstPrim.v Prelude.vos InfrastructureFV.vos InfrastructureOpen.vos InfrastructureSubst.vos
 InfrastructureSubst.vo InfrastructureSubst.glob InfrastructureSubst.v.beautified InfrastructureSubst.required_vo: InfrastructureSubst.v Prelude.vo InfrastructureFV.vo InfrastructureOpen.vo
 InfrastructureSubst.vio: InfrastructureSubst.v Prelude.vio InfrastructureFV.vio InfrastructureOpen.vio
 InfrastructureSubst.vos InfrastructureSubst.vok InfrastructureSubst.required_vos: InfrastructureSubst.v Prelude.vos InfrastructureFV.vos InfrastructureOpen.vos
-Infrastructure.vo Infrastructure.glob Infrastructure.v.beautified Infrastructure.required_vo: Infrastructure.v InfrastructureFV.vo InfrastructureOpen.vo InfrastructureSubst.vo
-Infrastructure.vio: Infrastructure.v InfrastructureFV.vio InfrastructureOpen.vio InfrastructureSubst.vio
-Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructure.v InfrastructureFV.vos InfrastructureOpen.vos InfrastructureSubst.vos
+Infrastructure.vo Infrastructure.glob Infrastructure.v.beautified Infrastructure.required_vo: Infrastructure.v InfrastructureFV.vo InfrastructureOpen.vo InfrastructureSubst.vo InfrastructureSubstPrim.vo
+Infrastructure.vio: Infrastructure.v InfrastructureFV.vio InfrastructureOpen.vio InfrastructureSubst.vio InfrastructureSubstPrim.vio
+Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructure.v InfrastructureFV.vos InfrastructureOpen.vos InfrastructureSubst.vos InfrastructureSubstPrim.vos
 Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo TypInduction.vo
 Prelude.vio: Prelude.v Zip.vio Definitions.vio TypInduction.vio
 Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos TypInduction.vos
-Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo Equations.vo
-Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio Equations.vio
-Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos Equations.vos
+Preservation.vo Preservation.glob Preservation.v.beautified Preservation.required_vo: Preservation.v Prelude.vo Infrastructure.vo Regularity.vo Regularity2.vo Equations.vo
+Preservation.vio: Preservation.v Prelude.vio Infrastructure.vio Regularity.vio Regularity2.vio Equations.vio
+Preservation.vos Preservation.vok Preservation.required_vos: Preservation.v Prelude.vos Infrastructure.vos Regularity.vos Regularity2.vos Equations.vos
 Progress.vo Progress.glob Progress.v.beautified Progress.required_vo: Progress.v Prelude.vo Infrastructure.vo Regularity.vo CanonicalForms.vo Equations.vo
 Progress.vio: Progress.v Prelude.vio Infrastructure.vio Regularity.vio CanonicalForms.vio Equations.vio
 Progress.vos Progress.vok Progress.required_vos: Progress.v Prelude.vos Infrastructure.vos Regularity.vos CanonicalForms.vos Equations.vos
+Regularity2.vo Regularity2.glob Regularity2.v.beautified Regularity2.required_vo: Regularity2.v Prelude.vo Infrastructure.vo Equations.vo Regularity.vo
+Regularity2.vio: Regularity2.v Prelude.vio Infrastructure.vio Equations.vio Regularity.vio
+Regularity2.vos Regularity2.vok Regularity2.required_vos: Regularity2.v Prelude.vos Infrastructure.vos Equations.vos Regularity.vos
 Regularity.vo Regularity.glob Regularity.v.beautified Regularity.required_vo: Regularity.v Prelude.vo Infrastructure.vo Equations.vo
 Regularity.vio: Regularity.v Prelude.vio Infrastructure.vio Equations.vio
 Regularity.vos Regularity.vok Regularity.required_vos: Regularity.v Prelude.vos Infrastructure.vos Equations.vos
