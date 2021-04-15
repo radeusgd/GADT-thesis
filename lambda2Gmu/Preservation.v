@@ -1037,4 +1037,4 @@ Theorem preservation_thm : preservation.
         }
         -- rewrite~ List.map_length.
         -- apply EQ2.
-Qed.
+Defined.

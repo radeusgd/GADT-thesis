@@ -47,6 +47,8 @@ this will be an occassion to show how we handle contradictory branches:
 another showcase of GADT abilities will be a typesafe zip function that only allows to zip vectors of equal length
   zip : forall a b n, Vector a n -> Vector b n -> Vector (a * b) n
   def zip[A,B,N](va: Vector[A,N])(vb: Vector[B,N]): Vector[(A,B), N]
+
+  append (nat - plus)
 *)
 
 (* type level natural numbers *)

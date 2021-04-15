@@ -33,38 +33,75 @@ Qed.
 Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
 Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
   cbv.
-  econstructor.
-  - admit.
-  - econstructor.
-    + econstructor.
-      * intros.
-  cbv; autotyper1.
-  2: {
-    instantiate (1 := (@0 ==> @0)).
-    cbn. autotyper1. 
-  }
-  - autotyper1.
-  - autotyper1.
-Qed.
+  autotyper1.
+  instantiate (1 := (@0 ==> @0)).
+  auto.
+  autotyper1.
+  auto.
+Defined.
+
+Compute id_app_types.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
 
 Lemma id_app_evals : evals id_app trm_unit.
   crush_eval.
   Unshelve. fs. fs. fs. fs.
-Qed.
+Defined.
+
+Require Import Preservation.
+Lemma preservation_evals : forall Σ e T TT e',
+    {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
+    evals e e' ->
+    {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.
+  introv Typ Ev.
+  eapply Tgen_from_any in Typ.
+  induction Ev.
+  - apply* IHEv.
+    lets HP: preservation_thm.
+    unfold preservation in HP.
+    apply* HP.
+  - auto.
+Defined.
+
+Eval cbn in (preservation_evals _ _ _ _ _ id_app_types id_app_evals).
+
+(*
+
+trm
+trma - z adnotacjami
+trmp - pDOT
+
+typing
+typinga
+typingp
+
+funkcja: forget: trma -> trm
+lemat: forall t : trm, typing t -> exists t' : trma, forget t' = t /\ typinga t'.
+lemat P: forall t' : trma, typinga t' -> typing (forget t').
+TODO ten sam typ?
+
+translateT : typ -> typp
+
+funkcja: translate : trma -> trmp
+lemat Q: forall t : trm, typing t T -> exists tp : trmp, typing tp TP /\ TP = translateT T.
+
+lemat: forall ta : trma, typa : typinga ta, extract (Q (forget ta) (P ta typa)) = translate ta.
+
+*)
 
 Definition let_id_app := trm_let (id) (trm_app (trm_tapp (#0) typ_unit) trm_unit).
-Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢ let_id_app ∈ typ_unit.
+Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_unit.
   cbv.
   autotyper1.
   4: {
     instantiate (1 := (@0 ==> @0)).
-    cbn. auto.
+    cbn. autotyper1.
   }
   autotyper1.
   autotyper1.
   autotyper1.
+  auto.
 Qed.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
@@ -75,14 +112,14 @@ Qed.
 
 Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#1) (#0))).
 
-Lemma loop_type : {empty, emptyΔ, empty} ⊢ loop ∈ (typ_unit ==> typ_unit).
+Lemma loop_type : {empty, emptyΔ, empty} ⊢(Treg) loop ∈ (typ_unit ==> typ_unit).
   cbv.
   autotyper1.
 Qed.
 
 Definition divergent := trm_app loop trm_unit.
 
-Lemma divergent_type : {empty, emptyΔ, empty} ⊢ divergent ∈ typ_unit.
+Lemma divergent_type : {empty, emptyΔ, empty} ⊢(Treg) divergent ∈ typ_unit.
   cbv. autotyper1.
 Qed.
 
@@ -99,4 +136,3 @@ Lemma divergent_diverges : evals divergent divergent.
       Unshelve.
       fs. fs. fs. fs. fs. fs. fs.
 Qed.
-

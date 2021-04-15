@@ -52,9 +52,9 @@ TestList.vos TestList.vok TestList.required_vos: TestList.v Definitions.vos
 Tests2.vo Tests2.glob Tests2.v.beautified Tests2.required_vo: Tests2.v TestCommon.vo
 Tests2.vio: Tests2.v TestCommon.vio
 Tests2.vos Tests2.vok Tests2.required_vos: Tests2.v TestCommon.vos
-Tests.vo Tests.glob Tests.v.beautified Tests.required_vo: Tests.v TestCommon.vo Regularity.vo
-Tests.vio: Tests.v TestCommon.vio Regularity.vio
-Tests.vos Tests.vok Tests.required_vos: Tests.v TestCommon.vos Regularity.vos
+Tests.vo Tests.glob Tests.v.beautified Tests.required_vo: Tests.v TestCommon.vo Regularity.vo Preservation.vo
+Tests.vio: Tests.v TestCommon.vio Regularity.vio Preservation.vio
+Tests.vos Tests.vok Tests.required_vos: Tests.v TestCommon.vos Regularity.vos Preservation.vos
 TestVector.vo TestVector.glob TestVector.v.beautified TestVector.required_vo: TestVector.v TestCommon.vo
 TestVector.vio: TestVector.v TestCommon.vio
 TestVector.vos TestVector.vok TestVector.required_vos: TestVector.v TestCommon.vos
