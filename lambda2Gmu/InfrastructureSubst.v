@@ -18,7 +18,7 @@ Proof.
     handleforall.
     symmetry.
     apply* Hforall.
-Qed.
+Defined.
 
 (** Substitution distributes on the open operation. *)
 
@@ -36,14 +36,14 @@ Proof.
     handleforall.
     introv Lin.
     apply* Hforall.
-Qed.
+Defined.
 
 Lemma subst_tt_open_tt : forall T1 T2 X P, type P ->
   subst_tt X P (open_tt T1 T2) =
   open_tt (subst_tt X P T1) (subst_tt X P T2).
 Proof.
   unfold open_tt. autos* subst_tt_open_tt_rec.
-Qed.
+Defined.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -52,7 +52,7 @@ Lemma subst_tt_open_tt_var : forall X Y U T, Y <> X -> type U ->
 Proof.
   introv Neq Wu. rewrite* subst_tt_open_tt.
   simpl. case_var*.
-Qed.
+Defined.
 
 (** Opening up a body t with a type u is the same as opening
   up the abstraction with a fresh name x and then substituting u for x. *)
@@ -63,7 +63,7 @@ Lemma subst_tt_intro : forall X T2 U,
 Proof.
   introv Fr Wu. rewrite* subst_tt_open_tt.
   rewrite* subst_tt_fresh. simpl. case_var*.
-Qed.
+Defined.
 
 Lemma subst_commutes_with_unrelated_opens : forall Xs T V Y,
     (forall X, List.In X Xs -> X <> Y) ->
@@ -76,7 +76,7 @@ Lemma subst_commutes_with_unrelated_opens : forall Xs T V Y,
     fold (open_tt_many_var Xt (T open_tt_var Xh)).
     fold (open_tt_many_var Xt (subst_tt Y V T open_tt_var Xh)).
     rewrite* subst_tt_open_tt_var; eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_intro_commutes_opens : forall Xs T Y V,
     Y \notin fv_typ T ->
@@ -95,7 +95,7 @@ Lemma subst_intro_commutes_opens : forall Xs T Y V,
     + rewrite* <- subst_tt_intro.
     + apply* Hneq. cbn; eauto.
     + eauto with listin.
-Qed.
+Defined.
 
 Lemma sublist_tail_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
   (forall U : A, List.In U (Uh :: Ut) -> P U) ->
@@ -104,7 +104,7 @@ Lemma sublist_tail_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
   apply* Hbigger.
   cbn.
   eauto.
-Qed.
+Defined.
 
 Lemma sublist_head_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
   (forall U : A, List.In U (Uh :: Ut) -> P U) ->
@@ -113,7 +113,7 @@ Lemma sublist_head_prop : forall A (Uh : A) (Ut : list A) (P : A -> Prop),
   apply* Hbigger.
   cbn.
   eauto.
-Qed.
+Defined.
 
 Lemma subst_tt_intro_many : forall Xs T Us,
     length Xs = length Us ->
@@ -145,7 +145,7 @@ Lemma subst_tt_intro_many : forall Xs T Us,
       * inversions Hdistinct.
         introv XiXt.
         intro. subst. contradiction.
-Qed.
+Defined.
 
 
 (** Substitution for a fresh name is identity. *)
@@ -170,7 +170,7 @@ Proof.
     f_equal.
     apply* Heq.
     lets*: fv_fold_in_clause.
-Qed.
+Defined.
 
 (** Substitution distributes on the open operation. *)
 
@@ -196,7 +196,7 @@ Proof.
     destruct cl.
     f_equal.
     eauto.
-Qed.
+Defined.
 
 (** Substitution and open_var for distinct names commute. *)
 
@@ -205,7 +205,7 @@ Lemma subst_te_open_te_var : forall X Y U e, Y <> X -> type U ->
 Proof.
   introv Neq Wu. rewrite* subst_te_open_te.
   simpl. case_var*.
-Qed.
+Defined.
 
 (** Opening up a body t with a type u is the same as opening
   up the abstraction with a fresh name x and then substituting u for x. *)
@@ -216,7 +216,7 @@ Lemma subst_te_intro : forall X U e,
 Proof.
   introv Fr Wu. rewrite* subst_te_open_te.
   rewrite* subst_te_fresh. simpl. case_var*.
-Qed.
+Defined.
 
 
 (** Substitution for a fresh name is identity. *)
@@ -241,7 +241,7 @@ Proof.
     f_equal.
     apply Heq.
     apply* Hfv2.
-Qed.
+Defined.
 
 (** Substitution distributes on the open operation. *)
 Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
@@ -261,7 +261,7 @@ Proof.
     destruct cl.
     f_equal.
     eauto.
-Qed.
+Defined.
 
 (** Substitution and open_var for distinct names commute. *)
 Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
@@ -269,7 +269,7 @@ Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
 Proof.
   introv Neq Wu. rewrite* subst_ee_open_ee.
   simpl. case_var*.
-Qed.
+Defined.
 
 (** Opening up a body t with a type u is the same as opening
   up the abstraction with a fresh name x and then substituting u for x. *)
@@ -280,7 +280,7 @@ Lemma subst_ee_intro : forall x u e,
 Proof.
   introv Fr Wu. rewrite* subst_ee_open_ee.
   rewrite* subst_ee_fresh. simpl. case_var*.
-Qed.
+Defined.
 
 (** Interactions between type substitutions in terms and opening
   with term variables in terms. *)
@@ -300,7 +300,7 @@ Proof.
     destruct cl.
     f_equal.
     eauto.
-Qed.
+Defined.
 
 (** Interactions between term substitutions in terms and opening
   with type variables in terms. *)
@@ -320,7 +320,7 @@ Proof.
     destruct cl.
     f_equal.
     eauto.
-Qed.
+Defined.
 
 (** Substitutions preserve local closure. *)
 
@@ -336,7 +336,7 @@ Lemma subst_map_reverse_type : forall Tparams Z P,
   destruct Tand as [Teq Tin].
   rewrite <- Teq.
   apply* HTP.
-Qed.
+Defined.
 
 Lemma subst_tt_type : forall T Z P,
   type T -> type P -> type (subst_tt Z P T).
@@ -346,7 +346,7 @@ Proof.
   - apply_fresh* type_all as X. rewrite* subst_tt_open_tt_var.
   - econstructor.
     apply* subst_map_reverse_type.
-Qed.
+Defined.
 
 Lemma subst_commutes_with_unrelated_opens_te_te : forall Xs e V Y,
     (forall X, List.In X Xs -> X <> Y) ->
@@ -359,7 +359,7 @@ Lemma subst_commutes_with_unrelated_opens_te_te : forall Xs e V Y,
     fold (open_te_many_var Xt (e open_te_var Xh)).
     fold (open_te_many_var Xt (subst_te Y V e open_te_var Xh)).
     rewrite* subst_te_open_te_var; eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y,
     term v ->
@@ -371,7 +371,7 @@ Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y,
     fold (open_te_many_var Xt (e open_te_var Xh)).
     fold (open_te_many_var Xt (subst_ee y v e open_te_var Xh)).
     rewrite* subst_ee_open_te_var; eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_te_term : forall e Z P,
     term e -> type P -> term (subst_te Z P e)
@@ -431,7 +431,7 @@ Proof.
       * apply* value_is_term.
       * apply* subst_map_reverse_type.
         inversion* Hterm.
-Qed.
+Defined.
 
 Lemma subst_ee_term : forall e1 Z e2,
     term e1 -> term e2 -> term (subst_ee Z e2 e1)
@@ -475,7 +475,7 @@ Proof.
         -- apply* value_is_term.
         -- inversion* H.
       * apply* IHvalue.
-Qed.
+Defined.
 
 (* Lemma adding_free_is_ok : forall A E F, *)
 (*     ok (E & F) -> *)
@@ -494,7 +494,7 @@ Qed.
 (*       rewrite notin_union. *)
 (*       rewrite notin_union. *)
 (*       split*. *)
-(* Qed. *)
+(* Defined. *)
 
 (* Lemma adding_free_is_ok_many : forall As E F, *)
 (*     ok (E & F) -> *)
@@ -518,7 +518,7 @@ Qed.
 (*         inversions HD. *)
 (*         intro; subst. contradiction. *)
 (*       * eauto with listin. *)
-(* Qed. *)
+(* Defined. *)
 
 Lemma subst_idempotent : forall U Z P,
     Z \notin fv_typ P ->
@@ -542,7 +542,7 @@ Lemma subst_idempotent : forall U Z P,
     introv ain.
     rewrite List.Forall_forall in *.
     eauto.
-Qed.
+Defined.
 
 Lemma subst_idempotent_through_many_open : forall Tts Z U P,
     type P ->
@@ -558,7 +558,7 @@ Lemma subst_idempotent_through_many_open : forall Tts Z U P,
     repeat rewrite* subst_tt_open_tt.
     f_equal.
     apply* subst_idempotent.
-Qed.
+Defined.
 
 Lemma subst_removes_var : forall T U Z,
     Z \notin fv_typ U ->
@@ -568,7 +568,7 @@ Lemma subst_removes_var : forall T U Z,
   - rewrite list_fold_map.
     rewrite List.Forall_forall in *.
     apply* notin_fold.
-Qed.
+Defined.
 
 Lemma subst_commutes_open_tt_many : forall Ts Z P U,
     type P ->
@@ -590,7 +590,7 @@ Lemma subst_commutes_open_tt_many : forall Ts Z P U,
       apply notin_union; split*.
       apply* subst_removes_var.
     + rewrite* FO.
-Qed.
+Defined.
 
 (* Lemma add_types_map_subst_tb : forall As Z P, *)
 (*     map (subst_tb Z P) (add_types empty As) *)
@@ -599,7 +599,7 @@ Qed.
 (*   induction As as [| Ah Ats]; introv. *)
 (*   - cbn. autorewrite with rew_env_map. trivial. *)
 (*   - cbn. autorewrite with rew_env_map. cbn. rewrite IHAts. trivial. *)
-(* Qed. *)
+(* Defined. *)
 
 (* Lemma add_types_through_map : forall Z P E F As, *)
 (*     map (subst_tb Z P) (add_types E As & F) *)
@@ -614,7 +614,7 @@ Qed.
 (*   rewrite add_types_assoc. *)
 (*   f_equal. *)
 (*   apply add_types_map_subst_tb. *)
-(* Qed. *)
+(* Defined. *)
 
 
 Fixpoint subst_te_many (Xs : list var) (Us : list typ) (e : trm) :=
@@ -635,7 +635,7 @@ Lemma subst_commutes_with_unrelated_opens_te : forall Xs e V Y,
     fold (open_te_many_var Xt (e open_te_var Xh)).
     fold (open_te_many_var Xt (subst_te Y V e open_te_var Xh)).
     rewrite* subst_te_open_te_var; eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_intro_commutes_opens_te : forall Xs e Y V,
     Y \notin fv_trm e ->
@@ -654,7 +654,7 @@ Lemma subst_intro_commutes_opens_te : forall Xs e Y V,
     + rewrite* <- subst_te_intro.
     + apply* Hneq. cbn; eauto.
     + eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_te_intro_many : forall Xs e Us,
     length Xs = length Us ->
@@ -679,7 +679,7 @@ Lemma subst_te_intro_many : forall Xs e Us,
         intro; subst. contradiction.
       * introv Xin.
         apply fv_open_te; eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_tt_many_free : forall As Ts T,
     (forall A, List.In A As -> A \notin fv_typ T) ->
@@ -694,7 +694,7 @@ Lemma subst_tt_many_free : forall As Ts T,
       * intros.
         rewrite subst_tt_fresh;
           auto with listin.
-Qed.
+Defined.
 
 Lemma subst_te_many_commutes_open : forall As Ts e x,
     length As = length Ts ->
@@ -709,7 +709,7 @@ Lemma subst_te_many_commutes_open : forall As Ts e x,
     rewrite IHAts; auto with listin.
     f_equal.
     apply subst_te_open_ee_var.
-Qed.
+Defined.
 
 Lemma subst_tb_id_on_fresh : forall E Z P,
     Z \notin fv_env E ->
@@ -724,7 +724,7 @@ Lemma subst_tb_id_on_fresh : forall E Z P,
     + cbn.
       f_equal. f_equal.
       apply subst_tt_fresh. auto.
-Qed.
+Defined.
 
 Lemma subst_tt_many_id_on_fresh : forall T As Ps,
     (forall A, List.In A As -> A \notin fv_typ T) ->
@@ -734,7 +734,7 @@ Lemma subst_tt_many_id_on_fresh : forall T As Ps,
   rewrite subst_tt_fresh.
   - apply IHAs; auto with listin.
   - auto with listin.
-Qed.
+Defined.
 
 Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
     length As = length Ps ->
@@ -761,7 +761,7 @@ Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
     lets HA': H0 Ain.
     destruct B; destruct b; cbn in HA'. fold (fv_env E) in HA'.
     auto.
-Qed.
+Defined.
 
 Lemma subst_commute:
   forall (X : var) (U : typ) (A : var) (P T : typ),
@@ -782,4 +782,4 @@ Proof.
     apply List.map_ext_in.
     intros T Tin.
     apply~ H.
-Qed.
+Defined.

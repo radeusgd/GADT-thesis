@@ -88,7 +88,7 @@ Lemma oksigma : okGadt sigma.
       destruct_const_len_list;
       autotyper1;
       repeat rewrite union_empty_r; auto.
-Qed.
+Defined.
 
 Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
 Definition cons A N h t := trm_constructor [A; N] (Vector, 1) (trm_tuple h t).
@@ -97,7 +97,7 @@ Lemma nil_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (nil (@0))) ∈ typ_all (
   cbv.
   lets: oksigma.
   autotyper1.
-Qed.
+Defined.
 
 Ltac distinct22 :=
   lazymatch goal with
@@ -117,13 +117,13 @@ Lemma notin_eqv : forall A (x : A) L,
     (x \in L -> False) <-> x \notin L.
   introv.
   intuition.
-Qed.
+Defined.
 
 Lemma cons_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (trm_tabs (trm_abs (@1) (trm_abs (typ_gadt [@1; @0] Vector) (cons (@1) (@0) (#1) (#0)))))) ∈ typ_all (typ_all (typ_arrow (@1) (typ_arrow (typ_gadt [@1; @0] Vector) (typ_gadt [@1; typ_gadt [@0] Succ] Vector)))).
   cbv.
   lets: oksigma.
   autotyper1.
-Qed.
+Defined.
 
 Definition GZ := typ_gadt [] Zero.
 Definition GS (T : typ) := typ_gadt [T] Succ.
@@ -135,4 +135,4 @@ Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢ uvec2 ∈ typ_gadt [typ_unit; GS 
   lets: oksigma.
   lets [? [? ?]]: all_distinct.
   autotyper1.
-Qed.
+Defined.

@@ -15,7 +15,7 @@ Lemma CanonicalConstructorType : forall Σ Δ E Tparams Name Ctor e1 T,
   rewrite rewrite_open_tt_many_gadt.
   eexists.
   f_equal.
-Qed.
+Defined.
 
 Lemma CanonicalConstructorTypeGen : forall Σ Δ E Tparams Ctor e1 T,
     {Σ, Δ, E} ⊢(Treg) trm_constructor Tparams Ctor e1 ∈ T ->
@@ -26,7 +26,7 @@ Lemma CanonicalConstructorTypeGen : forall Σ Δ E Tparams Ctor e1 T,
   apply CanonicalConstructorType in H; auto.
   destruct H as [Typs Heq].
   eexists. eexists. eauto.
-Qed.
+Defined.
 
 Local Hint Resolve CanonicalConstructorTypeGen.
 
@@ -46,7 +46,7 @@ Lemma CanonicalFormTuple : forall Σ Δ E e T1 T2,
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
   contradictory_constructor_type.
-Qed.
+Defined.
 
 Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2,
     value e ->
@@ -55,7 +55,7 @@ Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2,
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
   contradictory_constructor_type.
-Qed.
+Defined.
 
 Lemma CanonicalFormTAbs : forall Σ Δ E e T,
     value e ->
@@ -64,7 +64,7 @@ Lemma CanonicalFormTAbs : forall Σ Δ E e T,
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
   contradictory_constructor_type.
-Qed.
+Defined.
 
 Lemma CanonicalFormUnit : forall Σ Δ E e,
     value e ->
@@ -73,7 +73,7 @@ Lemma CanonicalFormUnit : forall Σ Δ E e,
   introv Hv Ht.
   inversion Hv; inversion Ht; subst; eauto; try congruence.
   contradictory_constructor_type.
-Qed.
+Defined.
 
 Lemma CanonicalFormGadt : forall Σ Δ E e Ts N,
     value e ->
@@ -85,4 +85,4 @@ Lemma CanonicalFormGadt : forall Σ Δ E e Ts N,
   inversions H8.
   inversions H13.
   repeat eexists.
-Qed.
+Defined.

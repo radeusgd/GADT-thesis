@@ -18,7 +18,7 @@ Require Import List.
 
 Lemma value_is_term : forall e, value e -> term e.
   induction e; intro Hv; inversion Hv; eauto.
-Qed.
+Defined.
 
 
 (** Gathering free names already used in the proofs *)
@@ -103,7 +103,7 @@ Ltac crush_eq :=
 (* maybe move strong induction to separate file? *)
 Lemma strong_induction (P : nat -> Prop): (forall m, (forall k, k < m -> P k) -> P m) -> forall n, P n.
   apply Wf_nat.induction_ltof1.
-Qed.
+Defined.
 
 Lemma strong_induction_on_term_size_helper : forall (P : trm -> Prop),
     (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
@@ -116,7 +116,7 @@ Lemma strong_induction_on_term_size_helper : forall (P : trm -> Prop),
   apply IHm.
   intros.
   eapply IHk; eauto.
-Qed.
+Defined.
 
 Lemma strong_induction_on_term_size : forall (P : trm -> Prop),
     (forall n, (forall e, trm_size e < n -> P e) -> forall e, trm_size e = n -> P e) ->
@@ -124,7 +124,7 @@ Lemma strong_induction_on_term_size : forall (P : trm -> Prop),
   intros.
   pose (n := trm_size e).
   eapply strong_induction_on_term_size_helper; eauto.
-Qed.
+Defined.
 
 (* TODO DRY *)
 Lemma strong_induction_on_type_size_helper : forall (P : typ -> Prop),
@@ -138,7 +138,7 @@ Lemma strong_induction_on_type_size_helper : forall (P : typ -> Prop),
   apply IHm.
   intros.
   eapply IHk; eauto.
-Qed.
+Defined.
 
 Lemma strong_induction_on_typ_size : forall (P : typ -> Prop),
     (forall n, (forall T, typ_size T < n -> P T) -> forall T, typ_size T = n -> P T) ->
@@ -146,7 +146,7 @@ Lemma strong_induction_on_typ_size : forall (P : typ -> Prop),
   intros.
   pose (n := typ_size T).
   eapply strong_induction_on_type_size_helper; eauto.
-Qed.
+Defined.
 
 (* (** These tactics help applying a lemma which conclusion mentions *)
 (*   an environment (E & F) in the particular case when F is empty *) *)
@@ -182,14 +182,14 @@ Lemma map_id : forall (A : Type) (f : A -> A) (ls : list A),
         apply feq.
         apply* List.in_cons.
     + constructor*.
-Qed.
+Defined.
 
 (* adapted from a newer version of Coq stdlib:
 https://github.com/coq/coq/blob/master/theories/Lists/List.v
 *)
 Lemma ext_in_map :
   forall (A B : Type)(f g:A->B) l, List.map f l = List.map g l -> forall a, List.In a l -> f a = g a.
-Proof. induction l; intros [=] ? []; subst; auto. Qed.
+Proof. induction l; intros [=] ? []; subst; auto. Defined.
 
 Ltac crush_open :=
   (try unfold open_tt); (try unfold open_tt_rec); crush_compare.
@@ -209,7 +209,7 @@ Lemma union_distribute : forall T (A B C : fset T),
   rewrite union_comm.
   assert (CuA: C \u A = A \u C); try apply union_comm.
   rewrite* CuA.
-Qed.
+Defined.
 
 Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset var) (z' : fset var),
     List.fold_left (fun (a : fset var) (b : B) => a \u P b) ls (z \u z')
@@ -225,7 +225,7 @@ Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset v
       eauto.
     + rewrite Horder.
       apply* IHls.
-Qed.
+Defined.
 
 Ltac expand_env_empty E :=
   let HE := fresh "HE" in
@@ -283,7 +283,7 @@ Proof using.
   - rewrite in_union, in_singleton.
     intro HH.
     destruct HH; eauto.
-Qed.
+Defined.
 
 Lemma from_list_spec2 : forall A (x : A) L,
     List.In x L -> x \in from_list L.
@@ -293,7 +293,7 @@ Proof using.
   - rewrite in_union, in_singleton.
     intro HH.
     destruct HH; eauto.
-Qed.
+Defined.
 
 Lemma exist_alphas : forall L len,
     exists (Alphas : list var),
@@ -315,7 +315,7 @@ Lemma exist_alphas : forall L len,
       apply* from_list_spec2.
     + introv AiA.
       inversions AiA; eauto.
-Qed.
+Defined.
 
 Global Transparent fold_right.
 
@@ -325,7 +325,7 @@ Lemma length_equality : forall A (a : list A),
   rewrite <- IHa.
   rewrite length_cons.
   lia.
-Qed.
+Defined.
 
 (* stdlib lemma but in TLC version *)
 Lemma map_map : forall (A B C:Type)(f:A->B)(g:B->C) l,
@@ -334,7 +334,7 @@ Lemma map_map : forall (A B C:Type)(f:A->B)(g:B->C) l,
   repeat rewrite map_cons.
   f_equal.
   auto.
-Qed.
+Defined.
 
 Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
   lets: var_compare_eq x y.
@@ -342,13 +342,13 @@ Lemma eq_dec_var (x y : var) : x = y \/ x <> y.
   destruct (var_compare x y);
   rewrite isTrue_eq_if in H;
   case_if; auto.
-Qed.
+Defined.
 
 Lemma JMeq_from_eq : forall T (x y : T),
     x = y -> JMeq.JMeq x y.
   introv EQ.
   rewrite EQ. trivial.
-Qed.
+Defined.
 
 Lemma split_notin_subset_union : forall T (x : T) A B C,
     A \c B \u C ->
@@ -360,7 +360,7 @@ Lemma split_notin_subset_union : forall T (x : T) A B C,
   lets Hf: Hsub inA.
   rewrite in_union in Hf.
   destruct Hf; eauto.
-Qed.
+Defined.
 
 Lemma in_from_list : forall As (x : var),
     x \in from_list As ->
@@ -374,7 +374,7 @@ Lemma in_from_list : forall As (x : var),
     + rewrite in_singleton in xin. subst. eauto.
     + lets [A Ain]: IHAs xin.
       exists A. split*.
-Qed.
+Defined.
 
 Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : A -> C),
     (forall x, g (f x) = h x) ->
@@ -384,7 +384,7 @@ Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : 
   - lets IH: IHE f g h.
     rewrite IH; auto.
     rewrite Hcomp. trivial.
-Qed.
+Defined.
 
 Ltac clean_empty_Δ :=
   repeat match goal with
@@ -415,14 +415,14 @@ Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
   - lets* [[? ?] | [? ?]]: binds_push_inv b1;
       lets* [[? ?] | [? ?]]: binds_push_inv b2.
       subst; trivial.
-Qed.
+Defined.
 
 Lemma list_fold_map : forall (A B : Type) (ls : list A) (f : B -> A -> B) (g : A -> A) (z : B),
     List.fold_left (fun a b => f a b) (List.map g ls) z
     =
     List.fold_left (fun a b => f a (g b)) ls z.
   induction ls; introv; cbn; eauto.
-Qed.
+Defined.
 
 Lemma notin_inverse : forall A (x y : A),
     x \notin \{ y } ->
@@ -431,19 +431,19 @@ Lemma notin_inverse : forall A (x y : A),
   assert (x <> y).
   - intro. subst. apply H. apply in_singleton_self.
   - apply* notin_singleton.
-Qed.
+Defined.
 
 Lemma LibList_map : forall T U (l : list T) (f : T -> U),
     List.map f l = LibList.map f l.
   induction l; intros; cbn in *; auto.
   rewrite IHl.
   rewrite LibList.map_cons. auto.
-Qed.
+Defined.
 
 Lemma LibList_mem : forall A (x : A) L,
     LibList.mem x L -> List.In x L.
   induction L; introv Hin; cbn in *; inversion Hin; eauto.
-Qed.
+Defined.
 
 Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
     EnvOps.map (subst_tb_many (Ah :: Ats) (Ph :: Pts)) F
@@ -459,7 +459,7 @@ Lemma subst_tb_many_split : forall Ah Ats Ph Pts F,
   destruct a as [? [?]].
   cbn.
   f_equal.
-Qed.
+Defined.
 
 Ltac fresh_intros :=
     let envvars := gather_vars in
@@ -487,7 +487,7 @@ Lemma union_distributes : forall T (A B C : fset T),
     destruct H as [H | H]; rewrite in_inter in H; destruct H;
       rewrite in_inter;
       split~; rewrite~ in_union.
-Qed.
+Defined.
 
 Lemma union_empty : forall T (A B : fset T),
     A \u B = \{} ->
@@ -500,7 +500,7 @@ Lemma union_empty : forall T (A B : fset T),
           rewrite <- in_union in xAB;
           rewrite H in xAB; auto
         | false* in_empty_inv].
-Qed.
+Defined.
 
 Lemma empty_inter_implies_notin : forall T (x : T) A B,
     A \n B = \{} ->
@@ -511,7 +511,7 @@ Lemma empty_inter_implies_notin : forall T (x : T) A B,
   rewrite <- in_inter in AB.
   rewrite H in AB.
   apply* in_empty_inv.
-Qed.
+Defined.
 
 Ltac fold_subst_src :=
   repeat match goal with
@@ -530,7 +530,7 @@ Lemma subset_transitive : forall T (A B C : fset T),
   introv AB BC.
   intros x In.
   auto.
-Qed.
+Defined.
 
 Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
     List.map f la = List.map f lb ->
@@ -542,7 +542,7 @@ Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
   destruct In as [In | In].
   - inversions~ In.
   - apply IHla with lb; auto.
-Qed.
+Defined.
 
 Lemma equations_from_lists_are_equations : forall D Ts Us,
     D = equations_from_lists Ts Us ->
@@ -553,7 +553,7 @@ Lemma equations_from_lists_are_equations : forall D Ts Us,
     cbn in Deq.
     inversions Deq.
     destruct Hin; subst; eauto.
-Qed.
+Defined.
 
 Open Scope list_scope.
 
@@ -603,7 +603,7 @@ Lemma Forall2_eq_len : forall A P (l1 l2 : list A),
   induction l1; destruct l2;
     introv H; cbn in *;
       inversions H; auto.
-Qed.
+Defined.
 
 Lemma nth_error_map : forall A B (F : A -> B) l n d,
     List.nth_error (List.map F l) n = Some d ->
@@ -612,7 +612,7 @@ Proof.
   induction l; destruct n; introv EQ; cbn in *; try solve [false*].
   - inversions EQ. eauto.
   - eauto.
-Qed.
+Defined.
 
 Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
     List.In (def, cl)
@@ -627,4 +627,4 @@ Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
   exists clA clT.
   split~.
   apply* Inzip_from_nth_error.
-Qed.
+Defined.

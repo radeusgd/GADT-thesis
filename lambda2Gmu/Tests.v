@@ -10,14 +10,14 @@ Ltac crush_simple_type := repeat (cbv; (try case_if); econstructor; eauto).
 
 Lemma well_typed_id : {empty, emptyΔ, empty} ⊢(Treg) id ∈ id_typ.
   cbv; autotyper1.
-Qed.
+Defined.
 
 Lemma well_formed_id :
   term id
   /\ type id_typ
   /\ wft empty emptyΔ id_typ.
   destruct* (typing_regular well_typed_id).
-Qed.
+Defined.
 
 (* Ltac tst := *)
 (*   match goal with *)
@@ -39,8 +39,6 @@ Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
   autotyper1.
   auto.
 Defined.
-
-Compute id_app_types.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
 
@@ -102,26 +100,26 @@ Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_un
   autotyper1.
   autotyper1.
   auto.
-Qed.
+Defined.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
   crush_eval.
   Unshelve.
   fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
-Qed.
+Defined.
 
 Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#1) (#0))).
 
 Lemma loop_type : {empty, emptyΔ, empty} ⊢(Treg) loop ∈ (typ_unit ==> typ_unit).
   cbv.
   autotyper1.
-Qed.
+Defined.
 
 Definition divergent := trm_app loop trm_unit.
 
 Lemma divergent_type : {empty, emptyΔ, empty} ⊢(Treg) divergent ∈ typ_unit.
   cbv. autotyper1.
-Qed.
+Defined.
 
 Lemma divergent_diverges : evals divergent divergent.
   cbv.
@@ -135,4 +133,4 @@ Lemma divergent_diverges : evals divergent divergent.
 
       Unshelve.
       fs. fs. fs. fs. fs. fs. fs.
-Qed.
+Defined.

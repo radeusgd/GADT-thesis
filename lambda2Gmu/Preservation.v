@@ -32,7 +32,7 @@ Proof.
   - econstructor; eauto.
     + destruct eq. apply~ equation_weaken_eq.
     + apply~ wft_weaken.
-Qed.
+Defined.
 
 Lemma typing_weakening_delta:
   forall (u : trm) (Σ : GADTEnv) (D1 D2 : list typctx_elem) (E : env bind) (U : typ) (Y : var) TT,
@@ -131,7 +131,7 @@ Proof.
     + apply~ equation_weaken_var.
     + apply wft_weaken.
       lets~ [? [? ?]]: typing_regular Typ2.
-Qed.
+Defined.
 
 Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
@@ -151,7 +151,7 @@ Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     intros eq1 ?. lets Hin: EQs eq1.
     destruct Hin; eauto.
     cbn. auto.
-Qed.
+Defined.
 
 Lemma typing_weakening_delta_many : forall Σ Δ E As u U TT,
     (forall A, List.In A As -> A # E) ->
@@ -172,7 +172,7 @@ Lemma typing_weakening_delta_many : forall Σ Δ E As u U TT,
       apply from_list_spec in HF.
       apply LibList_mem in HF.
       auto.
-Qed.
+Defined.
 
 Lemma typing_weakening : forall Σ Δ E F G e T TT,
     {Σ, Δ, E & G} ⊢(TT) e ∈ T ->
@@ -249,7 +249,7 @@ Proof.
       * split~.
         apply notin_dom_tc_vars. auto.
       * rewrite equations_have_no_dom; eauto using equations_from_lists_are_equations.
-Qed.
+Defined.
 
 Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~: U) & F} ⊢(TT1) e ∈ T ->
@@ -340,7 +340,7 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
         -- rewrite* <- Horder.
-Qed.
+Defined.
 
 Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z]* |,| Δ2, E} ⊢(TT) e ∈ T ->
@@ -519,7 +519,7 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
   - econstructor; eauto.
     + apply* entails_through_subst.
     + apply* wft_subst_tb_3.
-Qed.
+Defined.
 
 Lemma typing_through_subst_te_3 :
   forall Σ Δ E Z e P T TT,
@@ -535,7 +535,7 @@ Lemma typing_through_subst_te_3 :
   lets HT: typing_through_subst_te_gen Typ WFT ZP ZD ZE1.
   cbn in HT.
   rewrite~ subst_tb_id_on_fresh in HT.
-Qed.
+Defined.
 
 Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
     {Σ, (Δ |,| tc_vars As |,| Δ2), E & F} ⊢(TT) e ∈ T ->
@@ -586,7 +586,7 @@ Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
     + introv Ain.
       apply~ fv_env_subst; auto with listin.
     + auto with listin.
-Qed.
+Defined.
 
 Ltac generalize_typings :=
   match goal with
@@ -683,7 +683,7 @@ Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
           inversions H
       end.
       auto.
-Qed.
+Defined.
 
 Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
     {Σ, Δ, E & x ~: T1} ⊢( TT) e ∈ U ->
@@ -694,7 +694,7 @@ Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
   rewrite <- (concat_empty_r (E & x ~: T2)).
   apply* typing_replace_typ_gen.
   fold_env_empty.
-Qed.
+Defined.
 
 Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
     {Σ, Δ1 |,| [tc_eq (U1 ≡ U2)]* |,| Δ2, E} ⊢(TT) e ∈ T ->
@@ -719,7 +719,7 @@ Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
     apply* IH.
   - lets: equation_strengthen H1 Sem.
     econstructor; eauto.
-Qed.
+Defined.
 
 Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
     {Σ, Δ |,| equations_from_lists Ts Us, E} ⊢(TT) e ∈ V ->
@@ -734,7 +734,7 @@ Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
     forwards~ H2: remove_true_equation H.
     forwards* H3: equations_weaken_match (@nil var) Ts Us.
     apply* Forall2_eq_len.
-Qed.
+Defined.
 
 Lemma helper_equations_commute : forall Ts As Us Vs,
     List.length As = List.length Us ->
@@ -772,7 +772,7 @@ Lemma helper_equations_commute : forall Ts As Us Vs,
     induction As as [| A As]; introv Len; destruct Us as [| U Us]; auto.
     cbn.
     rewrite~ IHAs.
-Qed.
+Defined.
 
 Theorem preservation_thm : preservation.
   Ltac find_hopen :=

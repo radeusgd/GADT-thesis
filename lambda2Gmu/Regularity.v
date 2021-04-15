@@ -19,7 +19,7 @@ Lemma type_from_wft : forall Σ E T,
   wft Σ E T -> type T.
 Proof.
   induction 1; eauto.
-Qed.
+Defined.
 
 #[export] Hint Resolve type_from_wft.
 
@@ -51,7 +51,7 @@ Lemma values_decidable : forall t,
     econstructor; eauto.
   - left; econstructor.
     econstructor; eauto.
-Qed.
+Defined.
 
 Ltac IHap IH := eapply IH; eauto;
                 try (unfold open_ee; rewrite <- open_ee_var_preserves_size);
@@ -69,7 +69,7 @@ Ltac IHap IH := eapply IH; eauto;
 (*   - (* case: all *) *)
 (*     apply_fresh* wft_all as X. apply_ih_bind* H0. *)
 (*   - econstructor; eauto. *)
-(* Qed. *)
+(* Defined. *)
 
 #[export] Hint Resolve subst_tt_type subst_te_term subst_ee_term.
 #[export] Hint Resolve subst_te_value subst_ee_value.
@@ -77,7 +77,7 @@ Ltac IHap IH := eapply IH; eauto;
 Lemma okt_is_ok : forall Σ Δ E, okt Σ Δ E -> ok E.
   introv. intro Hokt.
   induction Hokt; eauto.
-Qed.
+Defined.
 #[export] Hint Extern 1 (ok _) => apply okt_is_ok.
 
 
@@ -92,7 +92,7 @@ Proof.
     lets [[? HT] | [? HB]]: binds_push_inv B.
     + inversion* HT.
     + apply* IHE.
-Qed.
+Defined.
 
 Lemma wft_strengthen_typ : forall Σ D1 D2 U T,
     U \notin fv_typ T ->
@@ -113,7 +113,7 @@ Proof.
     + lets [Hfv | Hfv]: fv_open T2 (typ_fvar Y) 0;
         cbn in Hfv; unfold open_tt; rewrite Hfv; eauto.
   - econstructor; eauto.
-Qed.
+Defined.
 
 Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
     wft Σ (D1 |,| [tc_eq ϵ]* |,| D2) T ->
@@ -130,7 +130,7 @@ Lemma wft_strengthen_equation : forall Σ D1 D2 ϵ T,
   - apply_fresh wft_all as X.
     lets IH: H0 X (D2 |, tc_var X); auto.
   - econstructor; eauto.
-Qed.
+Defined.
 
 Lemma wft_strengthen_equations : forall Σ D1 Deqs D2 T,
     wft Σ (D1 |,| Deqs |,| D2) T ->
@@ -149,7 +149,7 @@ Lemma wft_strengthen_equations : forall Σ D1 Deqs D2 T,
         lets Hl: Heqs eq1.
         apply Hl.
         cbn. right~.
-Qed.
+Defined.
 
 Lemma wft_strengthen_typ_many : forall Σ As Δ T,
     wft Σ (Δ |,| tc_vars As) T ->
@@ -163,7 +163,7 @@ Lemma wft_strengthen_typ_many : forall Σ As Δ T,
     lets W: wft_strengthen_typ Σ (Δ |,| tc_vars Ats) emptyΔ.
     clean_empty_Δ.
     apply~ W.
-Qed.
+Defined.
 (* Lemma wft_strengthen : forall Σ Δ E F x U T, *)
 (*  wft Σ Δ (E & (x ~: U) & F) T -> wft Σ (E & F) T. *)
 (* Proof. *)
@@ -185,11 +185,11 @@ Qed.
 (*       rename H into H_ctxEq_implies_wft end. *)
 (*     apply_fresh* wft_all as Y. apply_ih_bind* H_ctxEq_implies_wft. *)
 (*   - econstructor; eauto. *)
-(* Qed. *)
+(* Defined. *)
 
 Lemma okt_implies_okgadt : forall Σ Δ E, okt Σ Δ E -> okGadt Σ.
   induction 1; auto.
-Qed.
+Defined.
 
 Ltac find_ctxeq :=
   match goal with
@@ -203,7 +203,7 @@ Proof.
   introv O; inverts O.
   - false* empty_push_inv.
   - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M.
-Qed.
+Defined.
 
 Lemma okt_is_wft : forall Σ Δ E x T,
     okt Σ Δ (E & x ~: T) -> wft Σ Δ T.
@@ -213,7 +213,7 @@ Lemma okt_is_wft : forall Σ Δ E x T,
   (* - lets (?&?&?): eq_push_inv H. false*. *)
   - lets (?&?&?): eq_push_inv H. subst.
     match goal with Heq: bind_var ?T1 = bind_var ?T2 |- _ => inversions* Heq end.
-Qed.
+Defined.
 
 Lemma okt_strengthen : forall Σ Δ E x U F,
     okt Σ Δ (E & (x ~: U) & F) -> okt Σ Δ (E & F).
@@ -237,7 +237,7 @@ Lemma okt_strengthen : forall Σ Δ E x U F,
       | [ H: bind_var ?T = bind_var ?t |- _ ] => inversions H
       end.
       applys~ okt_typ.
-Qed.
+Defined.
 
 Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
     X # E ->
@@ -261,18 +261,18 @@ Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
         destruct H5.
         apply notin_domΔ_eq in H5.
         intuition.
-Qed.
+Defined.
 
 Lemma okt_is_type : forall Σ Δ E x T,
     okt Σ Δ (E & x ~: T) -> type T.
   introv Hokt. apply okt_is_wft in Hokt. apply* type_from_wft.
-Qed.
+Defined.
 
 Lemma wft_type : forall Σ Δ T,
     wft Σ Δ T -> type T.
 Proof.
   induction 1; eauto.
-Qed.
+Defined.
 
 Lemma wft_weaken : forall Σ D1 D2 D3 T,
     wft Σ (D1 |,| D3) T ->
@@ -291,7 +291,7 @@ Lemma wft_weaken : forall Σ D1 D2 D3 T,
     rewrite <- Hassoc.
     apply H1. subst. auto using List.app_assoc.
   - apply* wft_gadt.
-Qed.
+Defined.
 
 Ltac destruct_app_list :=
   match goal with
@@ -325,7 +325,7 @@ Proof.
       destruct Tin as [U [? Tin]]; subst.
       apply* H0.
     + apply List.map_length.
-Qed.
+Defined.
 
 Lemma wft_open : forall Σ Δ U T1,
   wft Σ Δ (typ_all T1) ->
@@ -337,7 +337,7 @@ Proof.
   lets K: (@wft_subst_tb Σ Δ emptyΔ X).
   clean_empty_Δ.
   apply* K.
-Qed.
+Defined.
 
 (** ** GADT environment properties *)
 
@@ -352,7 +352,7 @@ Lemma gadt_constructor_ok : forall Σ Name Tarity Ctors Ctor Carity CargType Cre
   inversion HokG as [Hok HokG'].
   apply* HokG'.
   apply* List.nth_error_In.
-Qed.
+Defined.
 
 Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ),
     length As = length Us ->
@@ -376,7 +376,7 @@ Lemma wft_subst_tb_many : forall Σ (As : list var) (Us : list typ) Δ (T : typ)
     apply~ W.
     rewrite <- (List.app_nil_l (Δ |,| tc_vars Ats)).
     apply~ wft_weaken.
-Qed.
+Defined.
 
 Lemma wft_open_many : forall Δ Σ Alphas Ts U,
     length Alphas = length Ts ->
@@ -392,7 +392,7 @@ Lemma wft_open_many : forall Δ Σ Alphas Ts U,
   - lets Htb: (@wft_subst_tb_many Σ Alphas Ts).
     specializes_vars Htb.
     apply* Htb.
-Qed.
+Defined.
 
 Hint Rewrite in_union : fsets.
 
@@ -416,7 +416,7 @@ Proof.
     + destruct Hex as [T [Tin fvT]].
       lets* Hf: H0 T Tin.
     + apply* in_empty_inv.
-Qed.
+Defined.
 
 Lemma typing_regular : forall Σ Δ E e T TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T ->
@@ -560,7 +560,7 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-Qed.
+Defined.
 
 (** The value relation is restricted to well-formed objects. *)
 
@@ -568,7 +568,7 @@ Lemma value_regular : forall t,
   value t -> term t.
 Proof.
   induction 1; autos*.
-Qed.
+Defined.
 
 (** The reduction relation is restricted to well-formed objects. *)
 
@@ -583,7 +583,7 @@ Qed.
 (*   - inversions H. auto. *)
 (*   - inversions H. auto. *)
 (*   - inversions IHred. econstructor. *)
-(* Qed. *)
+(* Defined. *)
 
 
 Lemma typing_implies_term : forall Σ Δ E e T TT,
@@ -591,7 +591,7 @@ Lemma typing_implies_term : forall Σ Δ E e T TT,
     term e.
   introv Typ.
   lets* TR: typing_regular Typ.
-Qed.
+Defined.
 
 Lemma Tgen_from_any : forall Σ Δ E TT e T,
     {Σ, Δ, E} ⊢(TT) e ∈ T ->
@@ -600,5 +600,5 @@ Lemma Tgen_from_any : forall Σ Δ E TT e T,
   applys~ typing_eq T TT.
   - apply teq_reflexivity.
   - lets* : typing_regular Typ.
-Qed.
+Defined.
 

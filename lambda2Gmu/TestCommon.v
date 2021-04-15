@@ -76,7 +76,7 @@ Lemma is_var_defined_split : forall A B c, (is_var_defined A c \/ is_var_defined
   intros.
   apply List.in_or_app. 
   destruct H; auto.
-Qed.
+Defined.
 
 Ltac autotyper1 :=
   repeat progress (

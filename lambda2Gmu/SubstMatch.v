@@ -13,7 +13,7 @@ Lemma subst_sources_from_match : forall Σ D Θ,
   fold (from_list (List.map fst Θ)).
   fold (substitution_sources Θ).
   rewrite~ IHsubst_matches_typctx.
-Qed.
+Defined.
 
 Lemma subst_match_remove_eq : forall Σ Θ D1 D2 T1 T2,
     subst_matches_typctx Σ (D1 |,| [tc_eq (T1 ≡ T2)]* |,| D2) Θ ->
@@ -33,7 +33,7 @@ Lemma subst_match_remove_eq : forall Σ Θ D1 D2 T1 T2,
   - destruct D2; inversions EQ.
     + cbn. auto.
     + constructor; auto.
-Qed.
+Defined.
 
 Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
     subst_matches_typctx Σ ((D1 |,| [tc_var Y]*) |,| D2) Θ ->
@@ -57,7 +57,7 @@ Lemma subst_match_decompose_var : forall Σ D1 D2 Y Θ,
     + lets [O1 [O2 [U [EQ [M2 [S1 [S2 D]]]]]]]: IHD2 H1. subst.
       exists O1 O2 U.
       split~.
-Qed.
+Defined.
 
 Lemma subst_match_notin_srcs : forall Σ D O1 X U,
     subst_matches_typctx Σ D (O1 |, (X, U)) ->
@@ -67,7 +67,7 @@ Lemma subst_match_notin_srcs : forall Σ D O1 X U,
   induction M; introv EQ; subst; auto.
   - inversion EQ.
   - inversions EQ. auto.
-Qed.
+Defined.
 
 Lemma subst_match_remove_right_var : forall Σ D1 X D2 O1 U O2 Y V,
     subst_matches_typctx Σ ((D1 |,| [tc_var X]*) |,| D2) ((O1 |,| [(X, U)]*) |,| (O2 |, (Y, V))) ->
@@ -91,7 +91,7 @@ Lemma subst_match_remove_right_var : forall Σ D1 X D2 O1 U O2 Y V,
     exists D3 (D4 |, tc_eq (V1 ≡ V2)).
     cbn.
     splits~.
-Qed.
+Defined.
 
 Lemma subst_match_remove_right_var2 : forall Σ D1 X D2 O1 U,
     subst_matches_typctx Σ ((D1 |,| [tc_var X]*) |,| D2) (O1 |, (X, U)) ->
@@ -110,7 +110,7 @@ Lemma subst_match_remove_right_var2 : forall Σ D1 X D2 O1 U,
     false* notin_same.
   - inversions M.
     lets~ IH: IHD2 H3.
-Qed.
+Defined.
 
 Lemma equation_weaken_eq:
   forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (T1 T2 U1 U2 : typ),
@@ -122,7 +122,7 @@ Proof.
   introv M.
   apply H.
   apply subst_match_remove_eq with U1 U2. auto.
-Qed.
+Defined.
 
 Lemma subst_eq_strengthen : forall Θ T1 T2 Y T,
     Y \notin substitution_sources Θ ->
@@ -140,7 +140,7 @@ Lemma subst_eq_strengthen : forall Θ T1 T2 Y T,
       rewrite (subst_commute U); auto.
       apply~ IHΘ.
       eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_eq_strengthen_gen : forall Θ1 Θ2 X U Σ D1 D2 T1 T2,
     subst_tt' T1 (Θ1 |,| Θ2) = subst_tt' T2 (Θ1 |,| Θ2) ->
@@ -156,7 +156,7 @@ Lemma subst_eq_strengthen_gen : forall Θ1 Θ2 X U Σ D1 D2 T1 T2,
   - cbn.
     lets [D3 [D4 [EQ2 M2]]]: subst_match_remove_right_var M.
     apply* IHΘ2.
-Qed.
+Defined.
 
 Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
     subst_tt' T1 ((Θ1 |,| [(X, U)]*) |,| Θ2) = subst_tt' T2 ((Θ1 |,| [(X, U)]*) |,| Θ2) ->
@@ -174,7 +174,7 @@ Lemma subst_eq_weaken : forall Θ1 Θ2 T1 T2 X U,
       * rewrite notin_union in *.
         split; apply~ fv_subst_tt.
       * introv Ain. eauto with listin.
-Qed.
+Defined.
 
 Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
     subst_matches_typctx Σ (D1 |,| [tc_var X]* |,| D2) (Θ1 |,| [(X, T)]* |,| Θ2) ->
@@ -219,7 +219,7 @@ Lemma subst_match_remove_unused_var : forall Σ Θ1 Θ2 D1 D2 X T,
       introv Ain.
       eapply FM.
       apply List.in_or_app; left. apply Ain.
-Qed.
+Defined.
 
 Lemma equation_weaken_var:
   forall (Σ : GADTEnv) (D1 D2 : list typctx_elem) (Y : var) (T1 T2 : typ),
@@ -235,7 +235,7 @@ Proof.
   lets EQ: Sem M2.
   fold_delta.
   apply* subst_eq_strengthen_gen.
-Qed.
+Defined.
 
 Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     subst_matches_typctx Σ D (O |, (X, U)) ->
@@ -248,7 +248,7 @@ Lemma subst_match_remove_right_var3 : forall Σ D O X U,
     eauto.
   - inversions M.
     lets~ IH: IHD H3.
-Qed.
+Defined.
 
 Lemma is_var_defined_dom : forall D X,
     is_var_defined D X <-> X \in domΔ D.
@@ -266,7 +266,7 @@ Lemma is_var_defined_dom : forall D X,
     + inversion H.
     + apply~ IHD.
   - right. apply~ IHD.
-Qed.
+Defined.
 
 Lemma subst_tt_prime_reduce_typ_fvar_defined : forall Σ O Δ X,
   subst_matches_typctx Σ Δ O ->
@@ -297,7 +297,7 @@ Lemma subst_tt_prime_reduce_typ_fvar_defined : forall Σ O Δ X,
       rewrite in_union in Def.
       destruct~ Def as [H|H].
       rewrite in_singleton in H. false.
-Qed.
+Defined.
 
 Lemma subst_tt_prime_reduce_typ_fvar_undefined : forall O X,
   X \notin substitution_sources O ->
@@ -307,7 +307,7 @@ Lemma subst_tt_prime_reduce_typ_fvar_undefined : forall O X,
   introv XFr.
   case_var.
   rewrite~ IHO.
-Qed.
+Defined.
 
 Lemma is_var_defined_split : forall A B c,
     is_var_defined (B |,| A) c ->
@@ -315,7 +315,7 @@ Lemma is_var_defined_split : forall A B c,
   unfold is_var_defined.
   intros.
   apply~ List.in_app_or.
-Qed.
+Defined.
 
 Lemma subst_has_wft : forall Σ O Δ,
   subst_matches_typctx Σ Δ O ->
@@ -328,7 +328,7 @@ Lemma subst_has_wft : forall Σ O Δ,
     destruct Hin; subst.
     + inversions H1. auto.
     + apply* IHO.
-Qed.
+Defined.
 
 Lemma subst_has_closed : forall Σ O Δ,
   subst_matches_typctx Σ Δ O ->
@@ -336,7 +336,7 @@ Lemma subst_has_closed : forall Σ O Δ,
   introv M Hin.
   lets: subst_has_wft M Hin.
   apply* type_from_wft.
-Qed.
+Defined.
 
 Lemma wft_subst_matching_gen : forall Σ T O Δ D2,
   subst_matches_typctx Σ Δ O ->
@@ -407,7 +407,7 @@ Lemma wft_subst_matching_gen : forall Σ T O Δ D2,
       repeat rewrite List.app_nil_r in *.
       auto.
     + rewrite~ List.map_length.
-Qed.
+Defined.
 
 Lemma wft_subst_matching : forall Σ T O Δ,
   subst_matches_typctx Σ Δ O ->
@@ -418,7 +418,7 @@ Lemma wft_subst_matching : forall Σ T O Δ,
   apply* wft_subst_matching_gen.
   cbn.
   apply inter_empty_r.
-Qed.
+Defined.
 
 Lemma subst_idempotent_simple : forall Σ Δ O T,
     wft Σ Δ T ->
@@ -433,7 +433,7 @@ Lemma subst_idempotent_simple : forall Σ Δ O T,
   assert (FV: fv_typ (subst_tt' T O) = \{}).
   - apply* fset_extens.
   - rewrite FV. apply inter_empty_r.
-Qed.
+Defined.
 
 Lemma subst_eq_reorder1_2 : forall Σ Δ1 U O1 X V1 V2,
     wft Σ Δ1 U ->
@@ -452,12 +452,12 @@ Lemma subst_eq_reorder1_2 : forall Σ Δ1 U O1 X V1 V2,
   - repeat rewrite~ subst_tt_inside.
     rewrite~ (@subst_idempotent_simple Σ Δ1).
     repeat rewrite~ <- subst_tt_inside.
-Qed.
+Defined.
 
 Lemma subst_tt_split : forall O1 O2 T,
     subst_tt' T (O1 |,| O2) = subst_tt' (subst_tt' T O2) O1.
   induction O2 as [| [A U]]; cbn; auto.
-Qed.
+Defined.
 
 Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
     wft Σ Δ1 U ->
@@ -498,7 +498,7 @@ Lemma subst_eq_reorder1 : forall Σ Δ1 U O1 O2 X V1 V2,
   apply subst_eq_reorder1_2 with Σ Δ1; auto.
   - introv In. rewrite~ (F X0).
     apply~ List.in_or_app.
-Qed.
+Defined.
 
 (* TODO these may not need as strong assumptions *)
 Lemma subst_eq_reorder2_2 : forall Σ Δ1 U O1 X V1 V2,
@@ -518,7 +518,7 @@ Lemma subst_eq_reorder2_2 : forall Σ Δ1 U O1 X V1 V2,
   - rewrite~ subst_tt_inside in EQ.
     rewrite~ subst_tt_inside in EQ.
     rewrite~ (@subst_idempotent_simple Σ Δ1) in EQ.
-Qed.
+Defined.
 
 Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
     wft Σ Δ1 U ->
@@ -556,7 +556,7 @@ Lemma subst_eq_reorder2 : forall Σ Δ1 U O1 O2 X V1 V2,
   - rewrite subst_src_app in S.
     rewrite~ notin_union in S.
     destruct~ S.
-Qed.
+Defined.
 
 Lemma sources_distinct : forall Σ O Δ,
     subst_matches_typctx Σ Δ O ->
@@ -569,7 +569,7 @@ Lemma sources_distinct : forall Σ O Δ,
     intro HF.
     apply S2.
     apply~ sources_list_fst.
-Qed.
+Defined.
 
 Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
     subst_matches_typctx Σ (Δ1 |,| List.map (subst_td X U ) Δ2) (O1 |,| O2) ->
@@ -636,7 +636,7 @@ Lemma subst_remove_used_var : forall Σ Δ1 Δ2 O1 O2 X U,
       apply distinct_split1.
       rewrite <- List.map_app.
       apply* sources_distinct.
-Qed.
+Defined.
 
 Lemma subst_match_split : forall Σ Δ1 Δ2 O,
     subst_matches_typctx Σ (Δ1 |,| Δ2) O ->
@@ -649,7 +649,7 @@ Lemma subst_match_split : forall Σ Δ1 Δ2 O,
       auto.
     + apply IHΔ2.
       auto.
-Qed.
+Defined.
 
 Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
     entails_semantic Σ (Δ1 |,| [tc_var Z]* |,| Δ2) (T1 ≡ T2) ->
@@ -683,7 +683,7 @@ Lemma entails_through_subst : forall Σ Δ1 Δ2 Z P T1 T2,
   apply distinct_split1.
   rewrite <- List.map_app.
   apply* sources_distinct.
-Qed.
+Defined.
 
 Opaque entails_semantic.
 Lemma equations_weaken_match : forall Σ Δ As Ts Us T1 T2,
@@ -710,7 +710,7 @@ Lemma equations_weaken_match : forall Σ Δ As Ts Us T1 T2,
       apply equation_weaken_eq.
       rewrite List.app_nil_l.
       apply* IHTs.
-Qed.
+Defined.
 Transparent entails_semantic.
 
 Lemma teq_open : forall Σ Δ T1 T2 T,
@@ -723,7 +723,7 @@ Lemma teq_open : forall Σ Δ T1 T2 T,
   repeat rewrite~ subst_ttprim_open_tt.
   f_equal.
   apply~ Sem.
-Qed.
+Defined.
 
 Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
     subst_matches_typctx E D (O1 |,| O2) ->
@@ -744,7 +744,7 @@ Lemma subst_eq_weaken2 : forall O1 O2 T1 T2 E D,
     repeat rewrite* subst_tt_inside.
     f_equal.
     auto.
-Qed.
+Defined.
 
 Lemma subst_match_inv_missing_var : forall Σ D1 O D2 A T,
   subst_matches_typctx Σ D1 (O |, (A, T)) ->
@@ -763,7 +763,7 @@ Lemma subst_match_inv_missing_var : forall Σ D1 O D2 A T,
   rewrite <- S1.
   rewrite in_union. left.
   apply in_singleton_self.
-Qed.
+Defined.
 
 Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
     subst_matches_typctx Σ Δ1 O1 ->
@@ -784,7 +784,7 @@ Lemma subst_strengthen_true_eq : forall Σ Δ1 Δ2 O1 O2 U1 U2,
                             cbn; auto.
   - inversions M2.
     econstructor; eauto.
-Qed.
+Defined.
 
 Lemma equation_strengthen : forall Σ Δ1 Δ2 U1 U2 T1 T2,
     entails_semantic Σ (Δ1 |,| [tc_eq (U1 ≡ U2)]* |,| Δ2) (T1 ≡ T2) ->
@@ -798,4 +798,4 @@ Lemma equation_strengthen : forall Σ Δ1 Δ2 U1 U2 T1 T2,
   lets EQ: SemU M2.
   apply SemT.
   apply~ subst_strengthen_true_eq.
-Qed.
+Defined.

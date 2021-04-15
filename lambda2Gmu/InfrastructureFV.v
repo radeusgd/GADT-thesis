@@ -12,20 +12,20 @@ Lemma fv_fold_general : forall A x (ls : list A) (P : A -> fset var) base,
     assert (x \notin base \u P a).
     + apply* IHls.
     + auto.
-Qed.
+Defined.
 
 Lemma fv_fold_base : forall x ls base,
     x \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
     x \notin base.
   lets*: fv_fold_general.
-Qed.
+Defined.
 
 Lemma fv_fold_base_clause : forall Z ls base,
     Z \notin List.fold_left (fun (fv : fset var) (cl : Clause) => fv \u fv_trm (clauseTerm cl)) ls base ->
     Z \notin base.
   intros.
   lets*: fv_fold_general (fun cl => fv_trm (clauseTerm cl)).
-Qed.
+Defined.
 
 Lemma fv_fold_in_general : forall A Z (e : A) (P : A -> fset var) ls base,
     Z \notin List.fold_left (fun (fv : fset var) (e' : A) => fv \u P e') ls base ->
@@ -38,7 +38,7 @@ Lemma fv_fold_in_general : forall A Z (e : A) (P : A -> fset var) ls base,
     + cbn in ZIL.
       apply fv_fold_general in ZIL. subst. auto.
     + apply* IHls.
-Qed.
+Defined.
 
 Lemma fv_fold_in_clause : forall Z cl ls base,
     Z \notin List.fold_left (fun (fv : fset var) (cl : Clause) => fv \u fv_trm (clauseTerm cl)) ls base ->
@@ -46,14 +46,14 @@ Lemma fv_fold_in_clause : forall Z cl ls base,
     Z \notin fv_trm (clauseTerm cl).
   intros.
   lets*: fv_fold_in_general (fun cl => fv_trm (clauseTerm cl)) ls.
-Qed.
+Defined.
 
 Lemma fv_fold_in : forall Z x ls base,
     Z \notin List.fold_left (fun (fv : fset var) (T : typ) => fv \u fv_typ T) ls base ->
     List.In x ls ->
     Z \notin fv_typ x.
   lets*: fv_fold_in_general.
-Qed.
+Defined.
 
 Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
     (forall e, List.In e ls -> x \notin P e) ->
@@ -64,7 +64,7 @@ Lemma notin_fold : forall A B (ls : list A) z x (P : A -> fset B),
   - eauto with listin.
   - rewrite notin_union; split*.
     eauto with listin.
-Qed.
+Defined.
 
 #[export] Hint Resolve fv_fold_base fv_fold_in fv_fold_general fv_fold_in_general.
 
@@ -145,14 +145,14 @@ Lemma fv_open : forall T U k,
               cbn.
               repeat rewrite union_fold_detach.
               f_equal; eauto.
-Qed.
+Defined.
 
 Lemma fv_smaller : forall T U k,
     fv_typ (open_tt_rec k U T) \c (fv_typ T \u fv_typ U).
   introv.
   lets* characterized: fv_open T U k.
   destruct characterized as [Hc | Hc]; rewrite Hc; eauto.
-Qed.
+Defined.
 
 Lemma fv_typs_notin : forall Ts T X,
     List.In T Ts ->
@@ -170,7 +170,7 @@ Lemma fv_typs_notin : forall Ts T X,
       * contradiction.
       * apply* IHTt.
         cbn in Hall. eauto.
-Qed.
+Defined.
 
 Lemma notin_fv_tt_open : forall Y X T,
     X \notin fv_typ (T open_tt_var Y) ->
@@ -180,7 +180,7 @@ Proof.
   introv FO.
   lets* characterized: fv_open T (typ_fvar Y) 0.
   destruct characterized as [Hc | Hc]; rewrite Hc in FO; eauto.
-Qed.
+Defined.
 
 Lemma fv_smaller_many : forall As T,
     fv_typ (open_tt_many_var As T) \c (fv_typ T \u from_list As).
@@ -200,7 +200,7 @@ Lemma fv_smaller_many : forall As T,
       lets Hf: Hs Hin. cbn in Hf.
       rewrite* in_union.
     + rewrite* in_union.
-Qed.
+Defined.
 
 Lemma fv_open_tt : forall x T1 T2 k,
     x \notin fv_typ T1 ->
@@ -209,7 +209,7 @@ Lemma fv_open_tt : forall x T1 T2 k,
   introv f1 f2.
   unfold open_tt.
   lets [Ho | Ho]: fv_open T2 T1 k; rewrite Ho; eauto.
-Qed.
+Defined.
 
 Lemma fv_open_te : forall e k x T,
     x \notin fv_trm e ->
@@ -248,7 +248,7 @@ Lemma fv_open_te : forall e k x T,
       apply* fv_fold_in_clause.
     + apply* IHe.
       apply* fv_fold_base_clause.
-Qed.
+Defined.
 
 Lemma fv_open_te_many : forall Ts e x,
     (forall T, List.In T Ts -> x \notin fv_typ T) ->
@@ -260,7 +260,7 @@ Lemma fv_open_te_many : forall Ts e x,
     + introv Tin. eauto with listin.
     + unfold open_te.
       apply fv_open_te; eauto with listin.
-Qed.
+Defined.
 
 Lemma fv_env_extend : forall E x T,
     fv_env (E & x ~: T) = fv_typ T \u fv_env E.
@@ -270,7 +270,7 @@ Lemma fv_env_extend : forall E x T,
   cbn.
   fold (fv_env E).
   trivial.
-Qed.
+Defined.
 
 Lemma notin_env_inv : forall E X x T,
     X \notin fv_env (E & x ~: T) ->
@@ -278,7 +278,7 @@ Lemma notin_env_inv : forall E X x T,
   introv Fr.
   rewrite fv_env_extend in Fr.
   rewrite* notin_union in Fr.
-Qed.
+Defined.
 
 Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ (D1 |,| D2) <->
@@ -289,7 +289,7 @@ Lemma notin_domΔ_eq : forall D1 D2 X,
         repeat rewrite notin_union in *;
         destruct (IHD2 X) as [IH1 IH2];
         intuition.
-Qed.
+Defined.
 
 Lemma in_domΔ_eq : forall D1 D2 X,
     X \in domΔ (D1 |,| D2) <->
@@ -306,7 +306,7 @@ Lemma in_domΔ_eq : forall D1 D2 X,
   destruct H.
   - cbn. auto.
   - cbn in H. false* in_empty_inv.
-Qed.
+Defined.
 
 Lemma fold_empty : forall Ts,
     (forall T : typ, List.In T Ts -> fv_typ T = \{}) ->
@@ -316,7 +316,7 @@ Lemma fold_empty : forall Ts,
   rewrite Hempty; eauto with listin.
   rewrite union_empty_r.
   eauto with listin.
-Qed.
+Defined.
 
 Lemma in_fold_exists : forall TV TT P ls Z X,
     X \in List.fold_left (fun (fv : fset TV) (T : TT) => fv \u P T) ls Z ->
@@ -331,7 +331,7 @@ Lemma in_fold_exists : forall TV TT P ls Z X,
       left. exists T. eauto with listin.
     + rewrite in_union in IH.
       destruct IH as [IH | IH]; eauto with listin.
-Qed.
+Defined.
 
 Lemma fv_subst_tt : forall X Z P T,
     X \notin fv_typ T ->
@@ -346,7 +346,7 @@ Lemma fv_subst_tt : forall X Z P T,
       rewrite List.Forall_forall in H.
       apply* H.
     + auto.
-Qed.
+Defined.
 
 Lemma fv_env_subst : forall X Z P E,
     X \notin fv_env E ->
@@ -364,7 +364,7 @@ Lemma fv_env_subst : forall X Z P E,
     split.
     + apply* fv_subst_tt.
     + apply* IHE.
-Qed.
+Defined.
 
 Lemma notin_dom_tc_vars : forall As x,
     x \notin from_list As ->
@@ -375,7 +375,7 @@ Lemma notin_dom_tc_vars : forall As x,
   apply IHAs.
   fold (from_list As) in Hin.
   auto.
-Qed.
+Defined.
 
 Lemma notin_env_binds:
   forall (Z : var) (E : env bind) (x : var) (T : typ),
@@ -386,7 +386,7 @@ Proof.
   - false* binds_empty_inv.
   - lets [[? ?] | [? ?]]: binds_push_inv Hbind; subst;
       try destruct v; lets* [? ?]: notin_env_inv FE.
-Qed.
+Defined.
 
 Lemma domDelta_in:
   forall (Δ : typctx) (X : var), List.In (tc_var X) Δ -> \{ X} \c domΔ Δ.
@@ -407,7 +407,7 @@ Proof.
         repeat rewrite in_union.
         repeat right.
         apply* IHΔ.
-Qed.
+Defined.
 
 Lemma subset_fold : forall T U P Xs E C,
     (forall x : T, List.In x Xs -> P x \c C) ->
@@ -421,7 +421,7 @@ Lemma subset_fold : forall T U P Xs E C,
     lets Hsu: subset_union_2 E (P a) C C.
     apply~ Hsu.
     auto with listin.
-Qed.
+Defined.
 
 Lemma wft_gives_fv : forall Σ Δ T,
     wft Σ Δ T ->
@@ -461,7 +461,7 @@ Lemma wft_gives_fv : forall Σ Δ T,
       rewrite in_singleton in Hd.
       false.
   - apply~ subset_fold.
-Qed.
+Defined.
 
 Lemma equations_have_no_dom : forall Deqs,
     (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
@@ -471,7 +471,7 @@ Lemma equations_have_no_dom : forall Deqs,
     false~ HF.
   - apply IHDeqs.
     intros. auto.
-Qed.
+Defined.
 
 Lemma subst_match_notin_srcs2 : forall O X U,
     List.In (X, U) O ->
@@ -484,7 +484,7 @@ Lemma subst_match_notin_srcs2 : forall O X U,
     + cbn.
       rewrite in_union. right. fold_subst_src.
       apply* IHO.
-Qed.
+Defined.
 
 Lemma subst_src_app : forall O1 O2,
     substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
@@ -495,7 +495,7 @@ Lemma subst_src_app : forall O1 O2,
     rewrite IHO2.
     repeat rewrite union_assoc.
     rewrite~ (union_comm \{ fst a}).
-Qed.
+Defined.
 
 Lemma substitution_sources_from_in : forall O A T,
     List.In (A, T) O ->
@@ -508,7 +508,7 @@ Lemma substitution_sources_from_in : forall O A T,
     + subst. cbn.
       left. apply in_singleton_self.
     + right. apply* IHO.
-Qed.
+Defined.
 
 Lemma fv_delta_app : forall D1 D2,
     fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
@@ -520,12 +520,12 @@ Lemma fv_delta_app : forall D1 D2,
   rewrite union_comm.
   repeat rewrite union_assoc.
   auto.
-Qed.
+Defined.
 
 Lemma fv_delta_alphas : forall As,
     fv_delta (tc_vars As) = \{}.
   induction As; cbn; auto.
-Qed.
+Defined.
 
 Lemma fv_delta_equations : forall A Ts Us,
     (forall T, List.In T Ts -> A \notin fv_typ T) ->
@@ -535,14 +535,14 @@ Lemma fv_delta_equations : forall A Ts Us,
   destruct Us as [| U Us]; cbn; auto.
   repeat rewrite notin_union.
   split; auto with listin.
-Qed.
+Defined.
 
 Lemma fold_left_subset_base : forall T U P As B,
     B \c List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) As B.
   induction As; introv; cbn; auto.
   lets IH: IHAs (B \u P a).
   apply subset_transitive with (B \u P a); auto.
-Qed.
+Defined.
 
 Lemma fold_left_subset : forall T A P As B,
     List.In A As ->
@@ -555,7 +555,7 @@ Lemma fold_left_subset : forall T A P As B,
         auto using fold_left_subset_base.
     + cbn.
       apply~ IHAs.
-Qed.
+Defined.
 
 Lemma domDelta_app : forall D1 D2,
     domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
@@ -565,7 +565,7 @@ Lemma domDelta_app : forall D1 D2,
     rewrite (union_comm (\{A})).
     rewrite IHD2.
     rewrite~ union_assoc.
-Qed.
+Defined.
 
 Lemma distinct_split1 : forall O1 O2,
     DistinctList (List.map fst O1 |,| List.map fst O2) ->
@@ -593,7 +593,7 @@ Lemma distinct_split1 : forall O1 O2,
       rewrite in_union in H. destruct H as [H | H].
       * left. rewrite~ in_singleton in H.
       * right~.
-Qed.
+Defined.
 
 Lemma sources_list_fst : forall A O,
   List.In A (List.map fst O) ->
@@ -603,7 +603,7 @@ Lemma sources_list_fst : forall A O,
   - destruct In; subst; rewrite in_union.
     + left. apply in_singleton_self.
     + right~.
-Qed.
+Defined.
 
 Lemma subst_td_alphas : forall Z P As,
     List.map (subst_td Z P) (tc_vars As) =
@@ -611,16 +611,16 @@ Lemma subst_td_alphas : forall Z P As,
   induction As; cbn; auto.
   rewrite List.map_map.
   f_equal.
-Qed.
+Defined.
 
 Lemma domDelta_subst_td : forall Δ Z P,
     domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
   induction Δ as [| [| []]]; eauto; introv; cbn.
   f_equal. auto.
-Qed.
+Defined.
 
 Lemma notin_domDelta_subst_td : forall x Δ Z P,
   x \notin domΔ Δ ->
   x \notin domΔ (List.map (subst_td Z P) Δ).
   induction Δ as [| [|[]]]; introv FR; cbn in *; auto.
-Qed.
+Defined.
