@@ -4,6 +4,8 @@ Require Import TLC.LibLN.
 Require Import TLC.LibEnv.
 Require Import Infrastructure.
 Require Export Notations.
+Require Export Regularity.
+Require Export Regularity2.
 
 Ltac fs := exact \{}.
 

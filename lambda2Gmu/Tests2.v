@@ -78,19 +78,14 @@ Lemma const_test_evals : evals const_test one.
 Qed.
 
 Definition plus :=
-  trm_fix
-    ((typ_gadt []* Nat) ==> ((typ_gadt []* Nat) ==> (typ_gadt []* Nat)))
-    (trm_abs
-       (typ_gadt []* Nat)
-       (trm_abs
-          (typ_gadt []* Nat)
-          (trm_matchgadt
-             (#1)
-             Nat
-             [
-               clause 0 (trm_app (trm_app (#3) (#0)) (trm_constructor []* (Nat, 1) (#1)));
-             clause 0 (#1)
-             ]*
+  fixs ((γ() Nat) ==> ((γ() Nat) ==> (γ() Nat))) =>
+    (λ γ() Nat =>
+       (λ γ() Nat =>
+        (case #1 as Nat of
+                        {
+                          bind 0 in #1 |
+                          bind 0 in ((#3 <| #0) <| (new (Nat, 1) [| |] (#1)))
+                        }
     ))).
 
 
@@ -124,7 +119,7 @@ Ltac fresh_intros := let free := gather_vars in
   intros x' xiL; intros;
     try instantiate (1 := free) in xiL.
 
-Lemma plus_types : {natSigma, emptyΔ, empty} ⊢(Treg) plus ∈ ((typ_gadt []* Nat) ==> ((typ_gadt []* Nat) ==> (typ_gadt []* Nat))).
+Lemma plus_types : {natSigma, emptyΔ, empty} ⊢(Treg) plus ∈ ((γ() Nat) ==> ((γ() Nat) ==> (γ() Nat))).
   cbv.
   lets: oknat.
   econstructor.
@@ -161,8 +156,8 @@ Ltac destruct_clauses :=
            destruct H
          end.
 
-Definition two := trm_constructor []* (Nat, 1) one.
-Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
+Definition two := new (Nat, 1) [| |] (one).
+Lemma plus_evals : evals (plus <| one <| one) two.
   cbv.
   crush_eval;
     repeat (
