@@ -122,4 +122,4 @@ Require Import List.
 (*     lets [TTc IH]: H3 H4. *)
 (*     exists TTc. *)
 (*     eauto. *)
-(* Defined. *)
+(* Qed. *)

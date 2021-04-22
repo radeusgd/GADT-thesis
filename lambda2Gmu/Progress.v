@@ -41,7 +41,7 @@ Lemma empty_eq_is_equivalent : forall Σ T1 T2,
   lets M: Sem (@nil (var * typ)).
   forwards * : M.
   constructor.
-Defined.
+Qed.
 
 #[export] Hint Constructors value red.
 Theorem progress_thm : progress.
@@ -131,4 +131,4 @@ Theorem progress_thm : progress.
     * subst.
       eexists.
       eauto.
-Defined.
+Qed.

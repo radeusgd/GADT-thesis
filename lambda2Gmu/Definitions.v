@@ -572,7 +572,7 @@ Lemma fv_typs_migration : forall Ts Z,
     rewrite <- union_assoc.
     rewrite (union_comm (fv_typ a) Z).
     auto.
-Defined.
+Qed.
 
 Fixpoint fv_trm (e : trm) {struct e} : vars :=
   match e with

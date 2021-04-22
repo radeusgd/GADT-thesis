@@ -13,7 +13,7 @@ Section SimpleEquationProperties.
     cbn.
     intros.
     auto.
-  Defined.
+  Qed.
 
   Lemma teq_symmetry : forall Δ T U,
       entails_semantic Σ Δ (T ≡ U) ->
@@ -21,7 +21,7 @@ Section SimpleEquationProperties.
     cbn. intros.
     symmetry.
     auto.
-  Defined.
+  Qed.
 
   Lemma teq_transitivity : forall Δ T U V,
       entails_semantic Σ Δ (T ≡ U) ->
@@ -29,7 +29,7 @@ Section SimpleEquationProperties.
       entails_semantic Σ Δ (T ≡ V).
     cbn. intros.
     transitivity (subst_tt' U Θ); auto.
-  Defined.
+  Qed.
 
   Lemma subst_has_no_fv : forall Σ Δ Θ,
       subst_matches_typctx Σ Δ Θ ->
@@ -44,7 +44,7 @@ Section SimpleEquationProperties.
         apply~ fset_extens.
       + apply* IHsubst_matches_typctx.
     - apply* IHsubst_matches_typctx.
-  Defined.
+  Qed.
 
   Lemma teq_axiom : forall Δ T U,
       List.In (tc_eq (T ≡ U)) Δ ->
@@ -69,7 +69,7 @@ Section SimpleEquationProperties.
           lets Fr: subst_has_no_fv Uin.
           -- eauto.
           -- rewrite Fr. apply notin_empty.
-  Defined.
+  Qed.
 
 End SimpleEquationProperties.
 
@@ -89,7 +89,7 @@ Lemma notin_from_list : forall As (A : var),
   lets [A' [Hin Heq]]: in_from_list HF.
   subst.
   auto.
-Defined.
+Qed.
 
 Lemma spawn_unit_subst : forall Σ As,
     DistinctList As ->
@@ -117,7 +117,7 @@ Lemma spawn_unit_subst : forall Σ As,
       fold (substitution_sources LT).
       rewrite Src.
       trivial.
-Defined.
+Qed.
 
 Lemma only_vars_is_tc_vars : forall Δ,
     (forall tc, List.In tc Δ -> exists A, tc = tc_var A) ->
@@ -132,7 +132,7 @@ Lemma only_vars_is_tc_vars : forall Δ,
     auto.
   - cbn. intro Hin.
     false~ Hin. congruence.
-Defined.
+Qed.
 
 Lemma contradictory_env_test_0 : forall Σ Δ,
     entails_semantic Σ Δ (typ_unit ≡ (typ_unit ** typ_unit)) ->
@@ -151,20 +151,20 @@ Lemma contradictory_env_test_0 : forall Σ Δ,
       rewrite~ inter_empty_r.
   - cbn.
     rewrite~ inter_empty_r.
-Defined.
+Qed.
 
 Lemma subst_ttΘ_into_abs : forall Θ A B,
     subst_tt' (A ==> B) Θ
     =
     (subst_tt' A Θ) ==> (subst_tt' B Θ).
   induction Θ as [| [X T] Θ]; cbn in *; trivial.
-Defined.
+Qed.
 Lemma subst_ttΘ_into_tuple : forall Θ A B,
     subst_tt' (A ** B) Θ
     =
     (subst_tt' A Θ) ** (subst_tt' B Θ).
   induction Θ as [| [X T] Θ]; cbn in *; trivial.
-Defined.
+Qed.
 
 Lemma contradictory_env_test : forall Σ Δ A B C D,
     entails_semantic Σ Δ ((A ==> B) ≡ (C ** D)) ->
@@ -179,7 +179,7 @@ Lemma contradictory_env_test : forall Σ Δ A B C D,
   rewrite subst_ttΘ_into_abs in HF.
   rewrite subst_ttΘ_into_tuple in HF.
   congruence.
-Defined.
+Qed.
 
 Lemma empty_is_not_contradictory : forall Σ,
     ~ (contradictory_bounds Σ emptyΔ).
@@ -191,7 +191,7 @@ Lemma empty_is_not_contradictory : forall Σ,
   lets F: HF typ_unit (typ_unit ** typ_unit) (@nil (var * typ)) M.
   cbn in F.
   false.
-Defined.
+Qed.
 
 Lemma typing_exfalso : forall Σ Δ E e T1 T2 TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T1 ->
@@ -200,7 +200,7 @@ Lemma typing_exfalso : forall Σ Δ E e T1 T2 TT,
     {Σ, Δ, E} ⊢(Tgen) e ∈ T2.
   introv Typ Bounds.
   eapply typing_eq; eauto.
-Defined.
+Qed.
 
 Lemma inversion_typing_eq : forall Σ Δ E e T TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T ->
@@ -217,7 +217,7 @@ Lemma inversion_typing_eq : forall Σ Δ E e T TT,
   exists T'.
   split~.
   eauto using teq_symmetry, teq_transitivity.
-Defined.
+Qed.
 
 Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
     subst_matches_typctx Σ Δ Θ ->
@@ -226,7 +226,7 @@ Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
   lets EQ: subst_has_no_fv M Hin.
   rewrite EQ.
   auto.
-Defined.
+Qed.
 
 Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
     entails_semantic Σ Δ ((TA1 ==> TB1) ≡ (TA2 ==> TB2)) ->
@@ -238,7 +238,7 @@ Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
     lets EQ: Sem M;
     repeat rewrite subst_tt_prime_reduce_arrow in EQ;
     inversion~ EQ.
-Defined.
+Qed.
 
 Lemma inversion_eq_tuple : forall Σ Δ TA1 TB1 TA2 TB2,
     entails_semantic Σ Δ ((TA1 ** TB1) ≡ (TA2 ** TB2)) ->
@@ -250,7 +250,7 @@ Lemma inversion_eq_tuple : forall Σ Δ TA1 TB1 TA2 TB2,
     lets EQ: Sem M;
     repeat rewrite subst_tt_prime_reduce_tuple in EQ;
     inversion~ EQ.
-Defined.
+Qed.
 
 Lemma inversion_eq_typ_all : forall Σ Δ T U,
     entails_semantic Σ Δ (typ_all T ≡ typ_all U) ->
@@ -260,7 +260,7 @@ Lemma inversion_eq_typ_all : forall Σ Δ T U,
     lets EQ: Sem M;
     repeat rewrite subst_tt_prime_reduce_typ_all in EQ;
     inversion~ EQ.
-Defined.
+Qed.
 
 Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
     List.length Ts = List.length Us ->
@@ -276,7 +276,7 @@ Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
   repeat rewrite subst_tt_prime_reduce_typ_gadt in EQ.
   inversion EQ as [EQ2].
   lets~ : lists_map_eq EQ2 In.
-Defined.
+Qed.
 
 Lemma equations_from_lists_map : forall F F1 F2 Ts Us,
     List.length Ts = List.length Us ->
@@ -295,4 +295,4 @@ Lemma equations_from_lists_map : forall F F1 F2 Ts Us,
   - apply* IHTs.
     introv In.
     apply EQ. cbn. auto.
-Defined.
+Qed.

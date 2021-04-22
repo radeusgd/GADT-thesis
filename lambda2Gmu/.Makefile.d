@@ -25,6 +25,9 @@ InfrastructureSubst.vos InfrastructureSubst.vok InfrastructureSubst.required_vos
 Infrastructure.vo Infrastructure.glob Infrastructure.v.beautified Infrastructure.required_vo: Infrastructure.v InfrastructureFV.vo InfrastructureOpen.vo InfrastructureSubst.vo InfrastructureSubstPrim.vo
 Infrastructure.vio: Infrastructure.v InfrastructureFV.vio InfrastructureOpen.vio InfrastructureSubst.vio InfrastructureSubstPrim.vio
 Infrastructure.vos Infrastructure.vok Infrastructure.required_vos: Infrastructure.v InfrastructureFV.vos InfrastructureOpen.vos InfrastructureSubst.vos InfrastructureSubstPrim.vos
+Notations.vo Notations.glob Notations.v.beautified Notations.required_vo: Notations.v Definitions.vo
+Notations.vio: Notations.v Definitions.vio
+Notations.vos Notations.vok Notations.required_vos: Notations.v Definitions.vos
 Prelude.vo Prelude.glob Prelude.v.beautified Prelude.required_vo: Prelude.v Zip.vo Definitions.vo TypInduction.vo
 Prelude.vio: Prelude.v Zip.vio Definitions.vio TypInduction.vio
 Prelude.vos Prelude.vok Prelude.required_vos: Prelude.v Zip.vos Definitions.vos TypInduction.vos
@@ -43,9 +46,9 @@ Regularity.vos Regularity.vok Regularity.required_vos: Regularity.v Prelude.vos 
 SubstMatch.vo SubstMatch.glob SubstMatch.v.beautified SubstMatch.required_vo: SubstMatch.v Prelude.vo Infrastructure.vo Regularity.vo Regularity2.vo Equations.vo
 SubstMatch.vio: SubstMatch.v Prelude.vio Infrastructure.vio Regularity.vio Regularity2.vio Equations.vio
 SubstMatch.vos SubstMatch.vok SubstMatch.required_vos: SubstMatch.v Prelude.vos Infrastructure.vos Regularity.vos Regularity2.vos Equations.vos
-TestCommon.vo TestCommon.glob TestCommon.v.beautified TestCommon.required_vo: TestCommon.v Prelude.vo Infrastructure.vo
-TestCommon.vio: TestCommon.v Prelude.vio Infrastructure.vio
-TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos Infrastructure.vos
+TestCommon.vo TestCommon.glob TestCommon.v.beautified TestCommon.required_vo: TestCommon.v Prelude.vo Infrastructure.vo Notations.vo
+TestCommon.vio: TestCommon.v Prelude.vio Infrastructure.vio Notations.vio
+TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos Infrastructure.vos Notations.vos
 TestList.vo TestList.glob TestList.v.beautified TestList.required_vo: TestList.v Definitions.vo
 TestList.vio: TestList.v Definitions.vio
 TestList.vos TestList.vok TestList.required_vos: TestList.v Definitions.vos

@@ -72,7 +72,7 @@ Lemma oklist : okGadt listSigma.
         repeat ininv.
         econstructor. cbn. eauto.
         Unshelve. fs. fs.
-Defined.
+Qed.
 
 Definition nil T := trm_constructor [T] (List, 0) trm_unit.
 Definition cons T h t := trm_constructor [T] (List, 1) (trm_tuple h t).

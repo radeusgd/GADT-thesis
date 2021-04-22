@@ -10,14 +10,14 @@ Ltac crush_simple_type := repeat (cbv; (try case_if); econstructor; eauto).
 
 Lemma well_typed_id : {empty, emptyΔ, empty} ⊢(Treg) id ∈ id_typ.
   cbv; autotyper1.
-Defined.
+Qed.
 
 Lemma well_formed_id :
   term id
   /\ type id_typ
   /\ wft empty emptyΔ id_typ.
   destruct* (typing_regular well_typed_id).
-Defined.
+Qed.
 
 (* Ltac tst := *)
 (*   match goal with *)
@@ -38,14 +38,14 @@ Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
   auto.
   autotyper1.
   auto.
-Defined.
+Qed.
 
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
 
 Lemma id_app_evals : evals id_app trm_unit.
   crush_eval.
   Unshelve. fs. fs. fs. fs.
-Defined.
+Qed.
 
 Require Import Preservation.
 Lemma preservation_evals : forall Σ e T TT e',
@@ -60,7 +60,7 @@ Lemma preservation_evals : forall Σ e T TT e',
     unfold preservation in HP.
     apply* HP.
   - auto.
-Defined.
+Qed.
 
 Eval cbn in (preservation_evals _ _ _ _ _ id_app_types id_app_evals).
 
@@ -100,26 +100,28 @@ Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_un
   autotyper1.
   autotyper1.
   auto.
-Defined.
+Qed.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
   crush_eval.
   Unshelve.
   fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
-Defined.
+Qed.
 
 Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#1) (#0))).
 
 Lemma loop_type : {empty, emptyΔ, empty} ⊢(Treg) loop ∈ (typ_unit ==> typ_unit).
   cbv.
   autotyper1.
-Defined.
+Qed.
 
 Definition divergent := trm_app loop trm_unit.
 
 Lemma divergent_type : {empty, emptyΔ, empty} ⊢(Treg) divergent ∈ typ_unit.
   cbv. autotyper1.
-Defined.
+Qed.
+
+Compute divergent_type.
 
 Lemma divergent_diverges : evals divergent divergent.
   cbv.
@@ -133,4 +135,4 @@ Lemma divergent_diverges : evals divergent divergent.
 
       Unshelve.
       fs. fs. fs. fs. fs. fs. fs.
-Defined.
+Qed.

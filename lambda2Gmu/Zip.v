@@ -25,7 +25,7 @@ Section Zip.
     induction la; intros; cbn; auto.
     destruct lb; auto.
     cbn. f_equal. auto.
-  Defined.
+  Qed.
 
   Lemma F2_iff_In_zip : forall la lb,
     Forall2 R la lb <-> (length la = length lb /\ forall a b, In (a,b) (zip la lb) -> R a b).
@@ -49,7 +49,7 @@ Section Zip.
              ++ intros.
                 apply HzipR.
                 cbn. eauto.
-  Defined.
+  Qed.
 
   Lemma F2_from_zip : forall la lb,
       length la = length lb ->
@@ -58,7 +58,7 @@ Section Zip.
     intros.
     apply F2_iff_In_zip.
     eauto.
-  Defined.
+  Qed.
 
 End Zip.
 
@@ -85,7 +85,7 @@ Lemma forall2_from_snd : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) (Bs 
       exists A. splits*.
       * eauto with listin.
       * cbn. right*.
-Defined.
+Qed.
 
 Lemma forall2_from_snd_zip : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) (Bs : list T2) (B : T2),
     length As = length Bs ->
@@ -95,7 +95,7 @@ Lemma forall2_from_snd_zip : forall T1 T2 (P : T1 -> T2 -> Prop) (As : list T1) 
   intros.
   eapply forall2_from_snd; eauto.
   apply F2_iff_In_zip. eauto.
-Defined.
+Qed.
 
 Lemma nth_error_implies_zip : forall AT BT (As : list AT) (Bs : list BT) i A,
     List.nth_error As i = Some A ->
@@ -118,7 +118,7 @@ Lemma nth_error_implies_zip : forall AT BT (As : list AT) (Bs : list BT) i A,
       exists B.
       split*.
       cbn. right*.
-Defined.
+Qed.
 
 Lemma zip_swap : forall AT BT As Bs (A : AT) (B : BT),
     List.In (A,B) (zip As Bs) ->
@@ -127,7 +127,7 @@ Lemma zip_swap : forall AT BT As Bs (A : AT) (B : BT),
   destruct H.
   - inversions H. left*.
   - right*.
-Defined.
+Qed.
 
 Lemma nth_error_implies_zip_swap : forall AT BT (As : list AT) (Bs : list BT) i B,
     List.nth_error Bs i = Some B ->
@@ -137,7 +137,7 @@ Lemma nth_error_implies_zip_swap : forall AT BT (As : list AT) (Bs : list BT) i 
   lets [A ?]: nth_error_implies_zip As H.
   - symmetry. trivial.
   - exists A. split*. apply* zip_swap.
-Defined.
+Qed.
 
 Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
     List.nth_error (zip As Bs) i = Some (A, B) ->
@@ -146,7 +146,7 @@ Lemma nth_error_zip_split : forall i AT BT (As : list AT) (Bs : list BT) A B,
   - cbn in *. inversions H; eauto.
   - cbn in *.
     lets* IH: IHi H.
-Defined.
+Qed.
 
 Lemma nth_error_zip_merge : forall i AT BT (As : list AT) (Bs : list BT) A B,
     List.nth_error As i = Some A /\ List.nth_error Bs i = Some B ->
@@ -154,7 +154,7 @@ Lemma nth_error_zip_merge : forall i AT BT (As : list AT) (Bs : list BT) A B,
   induction i; destruct As; destruct Bs; introv [Ha Hb]; try (inversions Ha; inversions Hb; cbn in *; congruence).
   cbn in *.
   apply* IHi.
-Defined.
+Qed.
 
 Lemma Inzip_to_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B,
     List.In (A, B) (zip As Bs) ->
@@ -162,7 +162,7 @@ Lemma Inzip_to_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B,
   introv inzip.
   lets* [i Hin]: List.In_nth_error inzip.
   lets*: nth_error_zip_split Hin.
-Defined.
+Qed.
 
 Lemma Inzip_from_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B i,
     List.nth_error As i = Some A ->
@@ -171,7 +171,7 @@ Lemma Inzip_from_nth_error : forall AT BT (As : list AT) (Bs : list BT) A B i,
   introv HA HB.
   apply List.nth_error_In with i.
   apply* nth_error_zip_merge.
-Defined.
+Qed.
 
 Lemma nth_error_map : forall i A B (F : A -> B) (ls : list A) (b : B),
     List.nth_error (List.map F ls) i = Some b ->
@@ -181,7 +181,7 @@ Lemma nth_error_map : forall i A B (F : A -> B) (ls : list A) (b : B),
     inversions Hnth_map. exists a. eauto.
   - cbn in *.
     eauto.
-Defined.
+Qed.
 
 Lemma fst_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
     In (A,B) (zip As Bs) ->
@@ -189,7 +189,7 @@ Lemma fst_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
   induction As as [| Ah Ats]; destruct Bs as [| Bh Bts]; introv Inz; try contradiction.
   cbn in *.
   destruct Inz as [Heq | Hin]; try inversion Heq; eauto.
-Defined.
+Qed.
 
 Lemma snd_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
     In (A,B) (zip As Bs) ->
@@ -197,4 +197,4 @@ Lemma snd_from_zip : forall AT BT (A : AT) (B : BT) As Bs,
   induction As as [| Ah Ats]; destruct Bs as [| Bh Bts]; introv Inz; try contradiction.
   cbn in *.
   destruct Inz as [Heq | Hin]; try inversion Heq; eauto.
-Defined.
+Qed.

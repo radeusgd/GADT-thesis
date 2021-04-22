@@ -16,7 +16,7 @@ Lemma okt_strengthen_simple : forall Σ D E F,
     inversion O.
     + false* empty_push_inv.
     + lets [? [? ?]]: eq_push_inv H; subst. auto.
-Defined.
+Qed.
 
 #[export] Hint Resolve okt_strengthen_simple.
 
@@ -27,7 +27,7 @@ Lemma wft_weaken_simple : forall Σ D1 D2 E,
   rewrite <- (List.app_nil_l (D1 |,| D2)).
   apply wft_weaken.
   clean_empty_Δ. auto.
-Defined.
+Qed.
 
 Lemma okt_weakening_delta : forall Σ D1 D2 E X,
     okt Σ (D1 |,| D2) E ->
@@ -45,7 +45,7 @@ Lemma okt_weakening_delta : forall Σ D1 D2 E X,
   rewrite notin_union; split; auto.
   apply notin_inverse.
   rewrite dom_concat in FE. rewrite dom_single in FE. auto.
-Defined.
+Qed.
 
 Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
     okt Σ (D1 |,| D2) E ->
@@ -55,7 +55,7 @@ Lemma okt_weakening_delta_eq : forall Σ D1 D2 E eq,
   repeat rewrite notin_domΔ_eq in *. destruct H1.
   destruct eq; cbn.
   split~.
-Defined.
+Qed.
 
 Lemma okt_weakening_delta_many_eq : forall Σ D1 D2 Deqs E,
     okt Σ (D1 |,| D2) E ->
@@ -71,7 +71,7 @@ Lemma okt_weakening_delta_many_eq : forall Σ D1 D2 Deqs E,
       apply IHDeqs; auto.
       intros eq1 ?. lets Hin: Heq eq1.
       apply Hin. cbn. auto.
-Defined.
+Qed.
 
 Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
     (forall A, List.In A As -> A # E) ->
@@ -91,7 +91,7 @@ Lemma okt_weakening_delta_many : forall Σ D1 D2 As E,
     apply from_list_spec in HF.
     apply LibList_mem in HF.
     auto.
-Defined.
+Qed.
 
 (* TODO try merging with others *)
 Lemma wft_subst_tb_2 : forall Σ D1 D2 Z P T,
@@ -122,7 +122,7 @@ Proof.
       destruct Tin as [U [? Tin]]; subst.
       apply* H0.
     + apply List.map_length.
-                    Defined.
+                    Qed.
 
 Lemma wft_subst_tb_3 : forall Σ D1 D2 Z P T,
   wft Σ (D1 |,| [tc_var Z]* |,| D2) T ->
@@ -158,7 +158,7 @@ Proof.
       destruct Tin as [U [? Tin]]; subst.
       apply* H0.
     + apply List.map_length.
-Defined.
+Qed.
 
 Lemma okt_push_fresh : forall Σ Δ E x T,
     okt Σ Δ (E & x ~: T) ->
@@ -173,7 +173,7 @@ Lemma okt_push_fresh : forall Σ Δ E x T,
     + false* empty_push_inv.
     + lets [? [EQ ?]]: eq_push_inv H; inversions EQ.
       split~.
-Defined.
+Qed.
 
 (* TODO maybe merge with the origl one *)
 Lemma okt_is_wft_2 : forall Σ Δ E F x T,
@@ -186,7 +186,7 @@ Lemma okt_is_wft_2 : forall Σ Δ E F x T,
     + false* empty_push_inv.
     + lets (?&?&?): eq_push_inv H. subst.
       apply* IHF.
-Defined.
+Qed.
 
 Lemma subst_td_eqs : forall Z P Ts Us,
     (forall U, List.In U Us -> Z \notin fv_typ U) ->
@@ -200,7 +200,7 @@ Lemma subst_td_eqs : forall Z P Ts Us,
     auto with listin.
   - apply IHTs.
     auto with listin.
-Defined.
+Qed.
 
 Lemma okt_through_subst_tdtb : forall Σ D1 D2 E Z P,
     okt Σ (D1 |,| [tc_var Z]* |,| D2) E ->
@@ -221,7 +221,7 @@ Lemma okt_through_subst_tdtb : forall Σ D1 D2 E Z P,
       destruct H0 as [[? ?] ?].
       split~.
       apply~ notin_domDelta_subst_td.
-Defined.
+Qed.
 
 Lemma okt_replace_typ : forall Σ Δ E F x T1 T2,
   okt Σ Δ (E & x ~: T1 & F) ->
@@ -242,7 +242,7 @@ Lemma okt_replace_typ : forall Σ Δ E F x T1 T2,
       destruct H as [? [HS ?]]. inversions HS.
       constructor; auto.
       apply* IHF.
-Defined.
+Qed.
 
 Lemma okt_strengthen_delta_eq : forall Σ D1 D2 E eq,
     okt Σ (D1 |,| [tc_eq eq]* |,| D2) E -> okt Σ (D1 |,| D2) E.
@@ -260,4 +260,4 @@ Lemma okt_strengthen_delta_eq : forall Σ D1 D2 E eq,
       constructor; auto.
       * apply* wft_strengthen_equation.
       * rewrite notin_domΔ_eq in *; auto.
-Defined.
+Qed.

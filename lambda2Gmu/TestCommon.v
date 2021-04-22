@@ -3,9 +3,8 @@ Require Import Psatz.
 Require Import TLC.LibLN.
 Require Import TLC.LibEnv.
 Require Import Infrastructure.
+Require Export Notations.
 
-Notation "@ n" := (typ_bvar n) (at level 42).
-Notation "# n" := (trm_bvar n) (at level 42).
 Ltac fs := exact \{}.
 
 Ltac ininv :=
@@ -76,7 +75,7 @@ Lemma is_var_defined_split : forall A B c, (is_var_defined A c \/ is_var_defined
   intros.
   apply List.in_or_app. 
   destruct H; auto.
-Defined.
+Qed.
 
 Ltac autotyper1 :=
   repeat progress (

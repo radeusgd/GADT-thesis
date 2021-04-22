@@ -23,7 +23,7 @@ Lemma open_ee_var_preserves_size : forall e x n,
     destruct cl.
     unfold clauseTerm.
     apply* Heq.
-Defined.
+Qed.
 
 Lemma open_te_var_preserves_size : forall e x n,
     trm_size e = trm_size (open_te_rec n (typ_fvar x) e).
@@ -41,7 +41,7 @@ Lemma open_te_var_preserves_size : forall e x n,
     destruct cl.
     unfold clauseTerm.
     apply* Heq.
-Defined.
+Qed.
 
 Lemma open_tt_var_preserves_size : forall T X n,
     typ_size T = typ_size (open_tt_rec n (typ_fvar X) T).
@@ -54,7 +54,7 @@ Lemma open_tt_var_preserves_size : forall T X n,
       rewrite List.Forall_forall in H.
       intros. apply* H.
     + rewrite Hmapeq. auto.
-Defined.
+Qed.
 
 (** ** Properties of type substitution in type *)
 
@@ -103,7 +103,7 @@ Lemma opening_adds_one : forall T X k n,
     apply* IH.
     apply* H2.
     apply* List.in_map.
-Defined.
+Qed.
 
 Lemma type_closed : forall T,
     type T -> typ_closed_in_surroundings 0 T.
@@ -112,7 +112,7 @@ Lemma type_closed : forall T,
     lets* Hoao: opening_adds_one T2 X 0 0.
   - rewrite List.Forall_forall.
     auto.
-Defined.
+Qed.
 
 Lemma closed_id : forall T U n k,
     typ_closed_in_surroundings n T ->
@@ -138,7 +138,7 @@ Lemma closed_id : forall T U n k,
     apply List.map_ext_in.
     intros T Hin.
     lets* IH: H Hin.
-Defined.
+Qed.
 
 Lemma open_tt_rec_type : forall T U,
   type T -> forall k, T = open_tt_rec k U T.
@@ -148,7 +148,7 @@ Proof.
   apply Hc.
   - apply* type_closed.
   - lia.
-Defined.
+Qed.
 
 (* this one describes terms being closed in relation to type-variables, not term-varaibles*)
 Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
@@ -217,7 +217,7 @@ Lemma te_opening_te_adds_one : forall e X k n,
     apply* IHcl2.
     apply* List.in_map_iff.
     exists (clause clArity clTerm). eauto.
-Defined.
+Qed.
 
 Lemma te_opening_ee_preserves : forall e x k n,
     te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
@@ -235,7 +235,7 @@ Lemma te_opening_ee_preserves : forall e x k n,
     apply Hcl.
     apply* List.in_map_iff.
     exists (clause clA clT). eauto.
-Defined.
+Qed.
 
 Lemma te_opening_te_many_adds : forall As N n e,
     te_closed_in_surroundings n (open_te_many_var As e) ->
@@ -252,7 +252,7 @@ Lemma te_opening_te_many_adds : forall As N n e,
     apply te_opening_te_adds_one with Ah.
     fold (e open_te_var Ah).
     apply* IH.
-Defined.
+Qed.
 
 Lemma term_te_closed : forall e,
     term e -> te_closed_in_surroundings 0 e.
@@ -290,7 +290,7 @@ Lemma term_te_closed : forall e,
     assert (Hneutral: forall n, n + 0 = n); try (intro; lia).
     rewrite Hneutral in hmm4.
     apply* hmm4.
-Defined.
+Qed.
 
 Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
@@ -320,7 +320,7 @@ Lemma te_closed_id : forall e T n k,
     apply* IH.
     + lets* Hcl: H5 (clause clA clT).
     + lia.
-Defined.
+Qed.
 
 Lemma open_te_rec_term : forall e U,
   term e -> forall k, e = open_te_rec k U e.
@@ -330,7 +330,7 @@ Proof.
   apply Hc.
   - apply* term_te_closed.
   - lia.
-Defined.
+Qed.
 
 Lemma open_ee_rec_term_core : forall e j v u i, i <> j ->
   open_ee_rec j v e = open_ee_rec i u (open_ee_rec j v e) ->
@@ -348,7 +348,7 @@ Proof.
     inversion* Hcleq.
     f_equal.
     lets* IH: H clin (S j) (S i).
-Defined.
+Qed.
 
 Lemma open_ee_rec_type_core : forall e j V u i,
   open_te_rec j V e = open_ee_rec i u (open_te_rec j V e) ->
@@ -365,7 +365,7 @@ Proof.
     inversion* Hcleq.
     f_equal.
     lets* IH: H clin (j + clArity) (S i).
-Defined.
+Qed.
 
 Lemma open_ee_rec_type_many : forall As k u e,
   open_te_many_var As e =
@@ -377,7 +377,7 @@ Lemma open_ee_rec_type_many : forall As k u e,
     fold (open_te_many_var Ats (e open_te_var Ah)) in Heq.
     lets* IH: IHAts k u (e open_te_var Ah) Heq.
     apply* open_ee_rec_type_core.
-Defined.
+Qed.
 
 Lemma open_ee_rec_term : forall u e,
   term e -> forall k, e = open_ee_rec k u e.
@@ -421,7 +421,7 @@ Proof.
       }
       lia.
     + apply* open_ee_rec_type_many.
-Defined.
+Qed.
 
 Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
     open_tt_many OTs (typ_gadt GTs N) =
@@ -434,7 +434,7 @@ Lemma rewrite_open_tt_many_gadt : forall OTs GTs N,
       apply* List.map_ext.
     + rewrite H.
       apply IHOTt.
-Defined.
+Qed.
 
 Lemma open_tt_many_closed : forall As T,
     type T ->
@@ -443,4 +443,4 @@ Lemma open_tt_many_closed : forall As T,
   - cbn. trivial.
   - cbn. unfold open_tt.
     rewrite* <- open_tt_rec_type.
-Defined.
+Qed.

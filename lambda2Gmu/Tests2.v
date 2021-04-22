@@ -1,16 +1,18 @@
 Require Import TestCommon.
 
+Open Scope L2GMu.
 Axiom Nat : var.
-(* important to note that constructors order on this list is reversed *)
-Definition NatDef := mkGADT 0 [
-                            mkGADTconstructor 0 (typ_gadt []* Nat) []*;
-                            mkGADTconstructor 0 typ_unit []*
-                          ]*.
+Definition NatDef :=
+  enum 0 {{
+             mkGADTconstructor 0 typ_unit []*
+             |
+             mkGADTconstructor 0 (γ() Nat) []*
+         }}.
 
 Definition natSigma := (empty & Nat ~ NatDef).
 Lemma all_distinct : True.
   trivial.
-Defined.
+Qed.
 
 Lemma oknat : okGadt natSigma.
   unfold natSigma.
@@ -21,48 +23,47 @@ Lemma oknat : okGadt natSigma.
     try econstructor; autotyper1;
       destruct_const_len_list;
       autotyper1.
-Defined.
+Qed.
 
 #[export] Hint Immediate oknat.
 
-Definition zero := trm_constructor []* (Nat, 0) trm_unit.
+Definition zero := new (Nat, 0) [| |] (trm_unit).
 
-Lemma zero_type : {natSigma, emptyΔ, empty} ⊢(Treg) zero ∈ typ_gadt []* Nat.
+Lemma zero_type : {natSigma, emptyΔ, empty} ⊢(Treg) zero ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
-Defined.
+Qed.
 
 Require Import Psatz.
-Definition one := trm_constructor []* (Nat, 1) zero.
-Lemma one_type : {natSigma, emptyΔ, empty} ⊢(Treg) one ∈ typ_gadt []* Nat.
+Definition one := new (Nat, 1) [| |] (zero).
+Lemma one_type : {natSigma, emptyΔ, empty} ⊢(Treg) one ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
-Defined.
+Qed.
 
-Definition succ := trm_abs (typ_gadt []* Nat) (trm_constructor []* (Nat, 1) (#0)).
+Definition succ := λ γ() Nat => (new (Nat, 1) [| |] (#0)).
 
-Lemma succ_type : {natSigma, emptyΔ, empty} ⊢(Treg) succ ∈ (typ_gadt []* Nat) ==> (typ_gadt []* Nat).
+Lemma succ_type : {natSigma, emptyΔ, empty} ⊢(Treg) succ ∈ (γ() Nat) ==> (γ() Nat).
   cbv.
   lets: oknat.
   autotyper1.
-Defined.
+Qed.
 
-Definition NAT := (typ_gadt []* Nat).
-Definition const := trm_abs NAT (trm_abs NAT (#1)).
-Lemma const_types : {natSigma, emptyΔ, empty} ⊢(Treg) const ∈ (NAT ==> NAT ==> NAT).
+Definition const := λ γ() Nat => (λ γ() Nat => #1).
+Lemma const_types : {natSigma, emptyΔ, empty} ⊢(Treg) const ∈ (γ() Nat ==> γ() Nat ==> γ() Nat).
   cbv.
   lets: oknat.
   autotyper1.
-Defined.
+Qed.
 
-Definition const_test := (trm_app (trm_app const one) zero).
-Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢(Treg) const_test ∈ NAT.
+Definition const_test := const <| one <| zero.
+Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢(Treg) const_test ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
-Defined.
+Qed.
 
 
 Ltac simpl_op := cbn; try case_if; auto.
@@ -74,7 +75,7 @@ Ltac crush_eval := repeat (try (apply eval_finish; eauto);
 Lemma const_test_evals : evals const_test one.
   cbv.
   crush_eval.
-Defined.
+Qed.
 
 Definition plus :=
   trm_fix
@@ -152,7 +153,7 @@ Lemma plus_types : {natSigma, emptyΔ, empty} ⊢(Treg) plus ∈ ((typ_gadt []* 
     + cbn in *. false.
     Unshelve.
     fs.
-Defined.
+Qed.
 
 Ltac destruct_clauses :=
   repeat match goal with
@@ -185,4 +186,4 @@ Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
   fs.
   fs.
   fs.
-Defined.
+Qed.
