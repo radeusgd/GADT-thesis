@@ -56,25 +56,27 @@ Axiom Zero : var.
 Axiom Succ : var.
 Axiom Vector : var.
 
+Open Scope L2GMu.
 Axiom all_distinct :
   (Zero <> Succ) /\ (Succ <> Vector) /\ (Zero <> Vector).
 Definition VectorDef := (* Vector a len *)
-  mkGADT 2 [
+  enum 2 {{
          (* empty : () -> Vector a Zero *)
-         mkGADTconstructor 1 typ_unit [@0; typ_gadt [] Zero];
-         (* cons : (a * Vector a n) -> Vector a (Succ n) *)
-         mkGADTconstructor 2 (@0 ** typ_gadt [@0; @1] Vector) [@0; typ_gadt [@1] Succ]
-       ].
+         mkGADTconstructor 1 typ_unit [##0; γ() Zero]* |
+         (* cons : forall a n, (a * Vector a n) -> Vector a (Succ n) *)
+         mkGADTconstructor 2 (##1 ** γ(##1, ##0) Vector) [##1; γ(##0) Succ]*
+         }}
+       .
 
 Definition sigma :=
   empty
     (* Zero and Succ are phantom types, but we add them constructors as at least one constructor is required for consistency *)
-  & Zero ~ mkGADT 0 [
-           mkGADTconstructor 0 typ_unit []
-         ]
-  & Succ ~ mkGADT 1 [
-           mkGADTconstructor 1 typ_unit [@0]
-         ]
+  & Zero ~ enum 0 {{
+           mkGADTconstructor 0 typ_unit []*
+         }}
+  & Succ ~ enum 1 {{
+           mkGADTconstructor 1 typ_unit [##0]*
+         }}
   & Vector ~ VectorDef.
 
 Lemma oksigma : okGadt sigma.
@@ -90,10 +92,10 @@ Lemma oksigma : okGadt sigma.
       repeat rewrite union_empty_r; auto.
 Qed.
 
-Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
-Definition cons A N h t := trm_constructor [A; N] (Vector, 1) (trm_tuple h t).
+Definition nil A := new (Vector, 0) [| A |] (trm_unit).
+Definition cons A N h t := new (Vector, 1) [|A, N|]  (trm_tuple h t).
 
-Lemma nil_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (nil (@0))) ∈ typ_all (typ_gadt [@0; typ_gadt [] Zero] Vector).
+Lemma nil_type : {sigma, emptyΔ, empty} ⊢(Treg) (Λ => nil (##0)) ∈ typ_all (γ(##0, γ() Zero) Vector).
   cbv.
   lets: oksigma.
   autotyper1.
@@ -119,18 +121,26 @@ Lemma notin_eqv : forall A (x : A) L,
   intuition.
 Qed.
 
-Lemma cons_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (trm_tabs (trm_abs (@1) (trm_abs (typ_gadt [@1; @0] Vector) (cons (@1) (@0) (#1) (#0)))))) ∈ typ_all (typ_all (typ_arrow (@1) (typ_arrow (typ_gadt [@1; @0] Vector) (typ_gadt [@1; typ_gadt [@0] Succ] Vector)))).
+Lemma cons_type :
+  {sigma, emptyΔ, empty} ⊢(Treg)
+                         (Λ => Λ =>
+                          (λ ##1 => λ γ(##1, ##0) Vector =>
+                           cons (##1) (##0) (#1) (#0)
+                         ))
+                         ∈
+                         ∀ ∀ (##1 ==> (γ(##1, ##0) Vector) ==> (γ(##1, γ(##0) Succ) Vector)).
   cbv.
   lets: oksigma.
   autotyper1.
 Qed.
 
-Definition GZ := typ_gadt [] Zero.
-Definition GS (T : typ) := typ_gadt [T] Succ.
+Definition GZ := γ() Zero.
+Definition GS (T : typ) := γ(T) Succ.
 
 Definition uvec2 := cons typ_unit (GS GZ) trm_unit (cons typ_unit GZ trm_unit (nil typ_unit)).
 
-Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢ uvec2 ∈ typ_gadt [typ_unit; GS (GS GZ)] Vector.
+Definition two := GS (GS GZ).
+Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢(Treg) uvec2 ∈ γ(typ_unit, two) Vector.
   cbv.
   lets: oksigma.
   lets [? [? ?]]: all_distinct.
