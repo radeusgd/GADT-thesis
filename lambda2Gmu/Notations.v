@@ -5,7 +5,7 @@ Declare Scope L2GMu.
 Bind Scope L2GMu with typ.
 Bind Scope L2GMu with trm.
 
-Notation "## n" := (typ_bvar n) (at level 42) : L2GMu.
+Notation "## n" := (typ_bvar n) (at level 29) : L2GMu.
 Coercion typ_fvar : var >-> typ.
 Notation "T1 ** T2" := (typ_tuple T1 T2) (at level 49) : L2GMu.
 Notation "T1 ==> T2" := (typ_arrow T1 T2) (at level 49, right associativity) : L2GMu .
@@ -14,10 +14,10 @@ Notation "'γ()' N" := (typ_gadt nil N) (at level 42) : L2GMu.
 Notation "'γ(' x ) N" :=  (typ_gadt (cons x nil) N) (at level 42) : L2GMu.
 Notation "'γ(' x , y , .. , z ) N" :=  (typ_gadt (cons z .. (cons y (cons x nil)) ..) N) (at level 42) : L2GMu.
 
-Notation "# n" := (trm_bvar n) (at level 42) : L2GMu.
+Notation "# n" := (trm_bvar n) (at level 29) : L2GMu.
 Coercion trm_fvar : var >-> trm.
 Notation "<.>" := trm_unit : L2GMu.
-Notation "< a , b >" := (trm_tuple a b) : L2GMu.
+Notation "< a , b >" := (trm_tuple a b) (at level 42, a at level 30, b at level 30) : L2GMu.
 Notation "fst( a )" := (trm_fst a) : L2GMu.
 Notation "snd( a )" := (trm_snd a) : L2GMu.
 
