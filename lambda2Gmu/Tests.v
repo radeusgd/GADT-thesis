@@ -1,8 +1,9 @@
 Require Import TestCommon.
 Require Import Regularity.
 
-Definition id := trm_tabs (trm_abs (@0) (#0)).
-Definition id_typ := typ_all (@0 ==> @0).
+Open Scope L2GMu.
+Definition id := Λ => (λ (##0) => (#0)).
+Definition id_typ := ∀ (##0 ==> ##0).
 
 Ltac simpl_op := cbn; try case_if; auto.
 (* Ltac solve_simple_type := repeat ((* let L := gather_vars in try apply typing_abs with L; *) intros; econstructor; eauto; cbn; try case_if; eauto). *)
@@ -30,11 +31,11 @@ Qed.
 (*   end. *)
 
 
-Definition id_app := (trm_app (trm_tapp id typ_unit) trm_unit).
+Definition id_app := (id <|| typ_unit <| trm_unit).
 Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
   cbv.
   autotyper1.
-  instantiate (1 := (@0 ==> @0)).
+  instantiate (1 := (##0 ==> ##0)).
   auto.
   autotyper1.
   auto.
@@ -88,12 +89,12 @@ lemat: forall ta : trma, typa : typinga ta, extract (Q (forget ta) (P ta typa)) 
 
 *)
 
-Definition let_id_app := trm_let (id) (trm_app (trm_tapp (#0) typ_unit) trm_unit).
+Definition let_id_app := trm_let (id) (#0 <|| typ_unit <| trm_unit).
 Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_unit.
   cbv.
   autotyper1.
   4: {
-    instantiate (1 := (@0 ==> @0)).
+    instantiate (1 := (##0 ==> ##0)).
     cbn. autotyper1.
   }
   autotyper1.
@@ -108,14 +109,14 @@ Lemma let_id_app_evals : evals let_id_app trm_unit.
   fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
 Qed.
 
-Definition loop := trm_fix (typ_unit ==> typ_unit) (trm_abs typ_unit (trm_app (#1) (#0))).
+Definition loop := fixs (typ_unit ==> typ_unit) => λ typ_unit => (#1 <| #0).
 
 Lemma loop_type : {empty, emptyΔ, empty} ⊢(Treg) loop ∈ (typ_unit ==> typ_unit).
   cbv.
   autotyper1.
 Qed.
 
-Definition divergent := trm_app loop trm_unit.
+Definition divergent := loop <| trm_unit.
 
 Lemma divergent_type : {empty, emptyΔ, empty} ⊢(Treg) divergent ∈ typ_unit.
   cbv. autotyper1.
