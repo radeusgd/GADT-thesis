@@ -58,9 +58,9 @@ Tests2.vos Tests2.vok Tests2.required_vos: Tests2.v TestCommon.vos
 Tests.vo Tests.glob Tests.v.beautified Tests.required_vo: Tests.v TestCommon.vo Regularity.vo Preservation.vo
 Tests.vio: Tests.v TestCommon.vio Regularity.vio Preservation.vio
 Tests.vos Tests.vok Tests.required_vos: Tests.v TestCommon.vos Regularity.vos Preservation.vos
-TestVector.vo TestVector.glob TestVector.v.beautified TestVector.required_vo: TestVector.v TestCommon.vo
-TestVector.vio: TestVector.v TestCommon.vio
-TestVector.vos TestVector.vok TestVector.required_vos: TestVector.v TestCommon.vos
+TestVector.vo TestVector.glob TestVector.v.beautified TestVector.required_vo: TestVector.v TestCommon.vo Equations.vo
+TestVector.vio: TestVector.v TestCommon.vio Equations.vio
+TestVector.vos TestVector.vok TestVector.required_vos: TestVector.v TestCommon.vos Equations.vos
 TypInduction.vo TypInduction.glob TypInduction.v.beautified TypInduction.required_vo: TypInduction.v Definitions.vo Zip.vo
 TypInduction.vio: TypInduction.v Definitions.vio Zip.vio
 TypInduction.vos TypInduction.vok TypInduction.required_vos: TypInduction.v Definitions.vos Zip.vos

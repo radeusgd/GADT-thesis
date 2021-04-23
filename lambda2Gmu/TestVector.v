@@ -61,12 +61,12 @@ Axiom all_distinct :
 (* De Bruijn indices for arguments are in 'reverse' order, that is the last arg on the list is treated as 'closest' and referred to as ##0 *)
 Definition VectorDef := (* Vector a len *)
   enum 2 {{
-         (* empty : () -> Vector a Zero *)
+         (* empty : forall a, () -> Vector a Zero *)
          mkGADTconstructor 1 typ_unit [##0; γ() Zero]* |
          (* cons : forall a n, (a * Vector a n) -> Vector a (Succ n) *)
          mkGADTconstructor 2 (##1 ** γ(##1, ##0) Vector) [##1; γ(##0) Succ]*
          }}
-       .
+.
 
 Definition sigma :=
   empty
@@ -155,12 +155,12 @@ Qed.
  *)
 Definition map :=
   fixs ∀ ∀ ∀ ((##2 ==> ##1) ==> γ(##2, ##0) Vector ==> γ(##1, ##0) Vector) =>
-  Λ => Λ => Λ =>
-  λ (##2 ==> ##1) =>
-  λ γ(##2, ##0) Vector =>
+  Λ (* a *) => Λ (* b *) => Λ (* n *) =>
+  λ (* f *) (##2 ==> ##1) =>
+  λ (* v *) γ(##2, ##0) Vector =>
   case #0 as Vector of {
-                      bind 1 in new Nil [| ##2 |] ( <.> ) |
-                      bind 2 in new Cons [| ##3, ##0 |] (
+                      (* a' *) 1 => new Nil [| ##2 |] ( <.> ) |
+                      (* a', n'; elem *) 2 => new Cons [| ##3, ##0 |] (
                                       trm_tuple
                                         (#2 <| fst(#0))
                                         (#3 <|| ##4 <|| ##3 <|| ##0 <| #2 <| snd(#0))
@@ -213,6 +213,7 @@ Ltac autotyper2 :=
            | [ |- ok ?A ] => econstructor
            | [ |- okt ?A ?B ?C ] => econstructor
            | [ |- binds ?A ?B ?C ] => solve_bind
+           (* TODO try instantiating L in eapply *)
            | [ |- typing ?TT ?A ?B ?C (trm_unit) ?E ] => eapply typing_unit
            | [ |- typing ?TT ?A ?B ?C (trm_fvar ?X) ?E ] => eapply typing_var
            | [ |- typing ?TT ?A ?B ?C (trm_constructor ?Ts ?N ?e) ?E ] => eapply typing_cons
@@ -304,7 +305,7 @@ autotyper3;
   - instantiate (1:=\{x} \u \{ x0 } \u \{ x1 } \u \{ x2 } \u \{ x3 } \u \{ x4 }) in H7.
     rename v into C.
     forwards~ : H6 C.
-    apply typing_eq with (γ(typ_fvar B, γ() Zero) Vector) Treg.
+    eapply typing_eq with (T1:=γ(typ_fvar B, γ() Zero) Vector).
     + autotyper4.
     + apply eq_typ_gadt.
       apply F2_iff_In_zip.

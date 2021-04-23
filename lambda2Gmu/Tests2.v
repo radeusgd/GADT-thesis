@@ -83,11 +83,10 @@ Definition plus :=
        (λ γ() Nat =>
         (case #1 as Nat of
                         {
-                          bind 0 in #1 |
-                          bind 0 in ((#3 <| #0) <| (new (Nat, 1) [| |] (#1)))
+                          0 => #1 |
+                          0 => (#3 <| #0 <| (new (Nat, 1) [| |] (#1)))
                         }
     ))).
-
 
 Ltac autodestruct :=
   match goal with
@@ -165,6 +164,41 @@ Lemma plus_evals : evals (plus <| one <| one) two.
         destruct_const_len_list;
         autotyper1).
   Unshelve.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+Qed.
+
+Definition four := new (Nat, 1) [| |] (new (Nat, 1) [| |] (two)).
+Lemma plus_evals4 : evals (plus <| two <| two) four.
+  cbv.
+  crush_eval;
+    repeat (
+        cbn in *;
+        destruct_const_len_list;
+        autotyper1).
+  Unshelve.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
   fs.
   fs.
   fs.
