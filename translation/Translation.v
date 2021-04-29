@@ -16,7 +16,13 @@ Axiom Tuple : typ_label.
 Axiom GenT : typ_label.
 Axiom Ai : nat -> typ_label.
 Axiom Bi : nat -> typ_label.
+Axiom T1 : typ_label.
+Axiom T2 : typ_label.
+Axiom fst : trm_label.
+Axiom snd : trm_label.
 Axiom GN : Source.GADTName -> typ_label.
+Axiom mkTuple : trm_label.
+Axiom mkUnit : trm_label.
 
 Definition refLibTyp (name : typ_label) (offset : nat) : Target.typ.
   apply typ_path.
@@ -29,11 +35,65 @@ Defined.
 Definition UnitT (offset : nat) : Target.typ :=
   refLibTyp Unit offset.
 
+Definition ref (offset : nat) : path :=
+  p_sel (avar_b offset) nil.
+
+Definition tupleTyp : Target.typ :=
+  μ (
+      typ_rcd { T1 >: ⊥ <: ⊤ }
+      ∧
+      typ_rcd { T2 >: ⊥ <: ⊤ }
+      ∧
+      typ_rcd { fst ⦂ typ_path (ref 0) T1 }
+      ∧
+      typ_rcd { snd ⦂ typ_path (ref 0) T2 }
+    ).
+
 Definition TupleT (offset : nat) (T1 T2 : Target.typ) : Target.typ.
 Admitted.
 
 Definition GenArgT : Target.typ :=
   typ_rcd { GenT >: ⊥ <: ⊤ }.
+
+Notation "'{' A '==' T '}'" := (dec_typ A T T).
+Coercion typ_rcd : dec >-> Target.typ.
+Notation "'{(' a , .. , c ')}'" := (defs_cons (.. (defs_cons defs_nil c) ..) a).
+Coercion trm_val  : val >-> trm.
+(* TODO not sure if this is not too many coercions... *)
+Coercion defp : path >-> def_rhs.
+Coercion defv : val >-> def_rhs.
+
+Definition libPreType : Target.typ :=
+      typ_rcd { Unit >: ⊥ <: ⊤ }
+      ∧
+      typ_rcd { Tuple >: tupleTyp <: tupleTyp }
+      ∧
+      typ_rcd { mkUnit ⦂ UnitT 0 }
+      ∧
+      typ_rcd { mkTuple ⦂
+                        ∀ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
+                            ∀ ((ref 0) ↓ T1)
+                                ∀ ((ref 1) ↓ T1)
+                                  ((ref 3) ↓ Tuple ∧ { T1 == (ref 2) ↓ T1 } ∧ { T2 == (ref 2) ↓ T2 })
+              }.
+
+Definition libType : Target.typ :=
+  μ libPreType.
+
+Definition libTrm : Target.trm :=
+  ν(libPreType) {(
+                 { Unit ⦂= { Unit >: ⊥ <: ⊤ } }, (* TODO maybe diff name... *)
+                 { Tuple ⦂= tupleTyp },
+                 { mkUnit := ν({ Unit >: ⊥ <: ⊤ }) {( {Unit ⦂= ⊤} )} },
+                 { mkTuple := ν({ Unit >: ⊥ <: ⊤ }) {( {Unit ⦂= ⊤} )} }
+             )}.
+
+Lemma libTypes : forall G, G ⊢ libTrm : libType.
+  intros.
+  unfold libTrm. unfold libType.
+  apply_fresh ty_new_intro as z.
+  cbn. repeat case_if.
+Admitted.
 
 Fixpoint translateType (T : Source.typ) (offset : nat) : Target.typ.
   destruct T as []eqn:H.
