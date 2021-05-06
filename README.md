@@ -11,6 +11,8 @@ This is my private repo where I put Work In Progress works on my master's thesis
   - [Progress](./lambda2Gmu/Progress.v) proves the progress theorem
   - [Preservation](./lambda2Gmu/Preservation.v) proves the preservation theorem
 - [Source calculus differences](./notes/source-calculus-differences.md) explains differences between the paper version of the calculus and the formalization.
+- translation
+  - [Translation.v](./translation/Translation.v) - currently most of the stuff is in a single file, it is soon to be reorganized
 
 > It is a good idea to install an extension rendering TeX markers ([for example](https://chrome.google.com/webstore/detail/tex-all-the-things/cbimabofgmfdkicghcadidpemeenbffn?hl=en)) when browsing Markdown documents on GitHub in this repository.
 
