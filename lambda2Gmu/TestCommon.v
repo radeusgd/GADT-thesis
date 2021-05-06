@@ -109,3 +109,129 @@ Ltac autotyper1 :=
            | _ => intros; auto
            end;
            cbn; subst).
+
+(* TODO merge with autotyper1 *)
+Ltac autotyper0 :=
+  repeat progress (
+           cbn;
+           match goal with
+           | [ H: False |- _ ] => false*
+           | [ |- ok ?A ] => econstructor
+           | [ |- okt ?A ?B ?C ] => econstructor
+           | [ |- binds ?A ?B ?C ] => solve_bind
+           | [ |- ?A \notin ?B ] => simpl_dom; notin_solve; try (apply notin_singleton)
+           | [ |- forall x, x \notin ?L -> ?P ] =>
+             let free := gather_vars in
+             let x' := fresh "x" in
+             let xiL := fresh "xiL" in
+             intros x' xiL; intros;
+             try instantiate (1 := free) in xiL
+           | [ |- okGadt empty ] => econstructor
+           | [ |- wft ?A ?B ?C ] => econstructor
+           | [ |- value ?A ] => econstructor
+           | [ |- term ?A ] => econstructor
+           | [ |- type ?A ] => econstructor
+           | [ H: binds ?A ?B ?C |- _ ] => binds_inv
+           | [ |- ?A /\ ?B ] => split
+           | [ H: {| Tarity := ?A; Tconstructors := ?B |} = ?C |- _ ] =>
+             inversions H
+           | [ H: ?A \/ ?B |- _ ] => destruct H
+           | [ |- is_var_defined (?A |,| ?B) ?c ] => apply is_var_defined_split
+           | _ => intros; auto
+           end;
+           cbn; subst).
+
+Lemma neq_from_notin : forall (A : Type) (x y : A), x \notin \{ y } -> x <> y.
+  intros.
+  intro HF.
+  subst.
+  apply* notin_same.
+Qed.
+
+Ltac autotyper2 :=
+  repeat progress (
+           cbn;
+           let free := gather_vars in
+           let x' := fresh "x" in
+           let xiL := fresh "xiL" in
+           match goal with
+           | [ H: False |- _ ] => false*
+           | [ |- ok ?A ] => econstructor
+           | [ |- okt ?A ?B ?C ] => econstructor
+           | [ |- binds ?A ?B ?C ] => solve_bind
+           (* TODO try instantiating L in eapply *)
+           | [ |- typing ?TT ?A ?B ?C (trm_unit) ?E ] => eapply typing_unit
+           | [ |- typing ?TT ?A ?B ?C (trm_fvar ?X) ?E ] => eapply typing_var
+           | [ |- typing ?TT ?A ?B ?C (trm_constructor ?Ts ?N ?e) ?E ] => eapply typing_cons
+           | [ |- typing ?TT ?A ?B ?C (trm_abs ?T ?e) ?E ] => eapply typing_abs with (L:=free)
+           | [ |- typing ?TT ?A ?B ?C (trm_tabs ?e) ?E ] => eapply typing_tabs with (L:=free)
+           | [ |- typing ?TT ?A ?B ?C (trm_app ?e1 ?e2) ?E ] => eapply typing_app
+           | [ |- typing ?TT ?A ?B ?C (trm_tapp ?e1 ?T) ?E ] => eapply typing_tapp
+           | [ |- typing ?TT ?A ?B ?C (trm_tuple ?e1 ?e2) ?E ] => eapply typing_tuple
+           | [ |- typing ?TT ?A ?B ?C (trm_fst ?e1) ?E ] => eapply typing_fst
+           | [ |- typing ?TT ?A ?B ?C (trm_snd ?e1) ?E ] => eapply typing_snd
+           | [ |- typing ?TT ?A ?B ?C (trm_fix ?T ?e) ?E ] => eapply typing_fix with (L:=free)
+           | [ |- typing ?TT ?A ?B ?C (trm_let ?e1 ?e2) ?E ] => eapply typing_let with (L:=free)
+           | [ |- typing ?TT ?A ?B ?C (trm_matchgadt ?e1 ?N ?ms) ?E ] => eapply typing_case with (L:=free)
+           | [ |- ?A \notin ?B ] => simpl_dom; notin_solve; try (apply notin_singleton)
+           | [ |- forall x, x \notin ?L -> ?P ] =>
+             let free := gather_vars in
+             let x' := fresh "x" in
+             let xiL := fresh "xiL" in
+             intros x' xiL; intros;
+             try instantiate (1 := free) in xiL
+           | [ |- okGadt empty ] => econstructor
+           | [ |- wft ?A ?B ?C ] => econstructor
+           | [ |- value ?A ] => econstructor
+           | [ |- term ?A ] => econstructor
+           | [ |- type ?A ] => econstructor
+           | [ H: binds ?A ?B ?C |- _ ] => binds_inv
+           | [ |- ?A /\ ?B ] => split
+           | [ H: {| Tarity := ?A; Tconstructors := ?B |} = ?C |- _ ] =>
+             inversions H
+           | [ H: ?A \/ ?B |- _ ] => destruct H
+           | [ H: ?C = (?A, ?B) |- _ ] => inversions H
+           | [ H: (?A, ?B) = ?C |- _ ] => inversions H
+           | [ |- is_var_defined (?A |,| ?B) ?c ] => apply is_var_defined_split
+           | _ => intros; auto
+           end;
+           cbn; subst).
+
+Ltac autotyper3 :=
+  autotyper2; cbn in *;
+  destruct_const_len_list; cbn; autotyper2.
+
+Ltac autotyper4 :=
+  autotyper3;
+  try solve [left~ | repeat right~].
+
+Lemma Forall2_eq : forall A B (f : A -> B) Ts Us,
+    List.length Ts = List.length Us ->
+    (forall T U, List.In (T, U) (zip Ts Us) -> f T = f U) ->
+    List.map f Ts =
+    List.map f Us.
+  induction Ts as [ | T Ts]; destruct Us as [ | U Us]; intros Len F; cbn in *; inversion Len.
+  - auto.
+  - f_equal; auto.
+Qed.
+
+Lemma eq_typ_gadt : forall Σ Δ Ts Us N,
+    List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us ->
+    entails_semantic Σ Δ (typ_gadt Ts N ≡ typ_gadt Us N).
+  introv FF.
+  cbn in *.
+  apply F2_iff_In_zip in FF.
+  destruct FF.
+  intros O M.
+  repeat rewrite subst_tt_prime_reduce_typ_gadt.
+  f_equal.
+  apply~ Forall2_eq.
+Qed.
+
+Ltac ininv2 :=
+  match goal with
+  | H: List.In _ _ |- _ =>
+    inversions H
+  | [ H: ?C = (?A, ?B) |- _ ] => inversions H
+  | [ H: (?A, ?B) = ?C |- _ ] => inversions H
+  end.

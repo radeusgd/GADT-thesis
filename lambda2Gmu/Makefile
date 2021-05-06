@@ -44,7 +44,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.conf: 
-	coq_makefile -R . GMu CanonicalForms.v DefinitionsTests.v Definitions.v Equations.v InfrastructureFV.v InfrastructureOpen.v InfrastructureSubstPrim.v InfrastructureSubst.v Infrastructure.v Notations.v Prelude.v Preservation.v Progress.v Regularity2.v Regularity.v SubstMatch.v TestCommon.v TestList.v Tests2.v Tests.v TestVector.v TypInduction.v Zip.v -o Makefile
+	coq_makefile -R . GMu CanonicalForms.v DefinitionsTests.v Definitions.v Equations.v InfrastructureFV.v InfrastructureOpen.v InfrastructureSubstPrim.v InfrastructureSubst.v Infrastructure.v Notations.v Prelude.v Preservation.v Progress.v Regularity2.v Regularity.v SubstMatch.v TestCommon.v TestEquality.v TestList.v Tests2.v Tests.v TestVector.v TypInduction.v Zip.v -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need

@@ -49,6 +49,9 @@ SubstMatch.vos SubstMatch.vok SubstMatch.required_vos: SubstMatch.v Prelude.vos 
 TestCommon.vo TestCommon.glob TestCommon.v.beautified TestCommon.required_vo: TestCommon.v Prelude.vo Infrastructure.vo Notations.vo Regularity.vo Regularity2.vo
 TestCommon.vio: TestCommon.v Prelude.vio Infrastructure.vio Notations.vio Regularity.vio Regularity2.vio
 TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos Infrastructure.vos Notations.vos Regularity.vos Regularity2.vos
+TestEquality.vo TestEquality.glob TestEquality.v.beautified TestEquality.required_vo: TestEquality.v TestCommon.vo Equations.vo
+TestEquality.vio: TestEquality.v TestCommon.vio Equations.vio
+TestEquality.vos TestEquality.vok TestEquality.required_vos: TestEquality.v TestCommon.vos Equations.vos
 TestList.vo TestList.glob TestList.v.beautified TestList.required_vo: TestList.v Definitions.vo
 TestList.vio: TestList.v Definitions.vio
 TestList.vos TestList.vok TestList.required_vos: TestList.v Definitions.vos
