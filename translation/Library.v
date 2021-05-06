@@ -12,6 +12,7 @@ Parameter T2 : typ_label.
 Parameter fst_v : trm_label.
 Parameter snd_v : trm_label.
 Parameter GN : Source.GADTName -> typ_label.
+Parameter data : trm_label.
 Parameter mkTuple : trm_label.
 Parameter mkUnit : trm_label.
 Axiom diff : Unit <> Tuple

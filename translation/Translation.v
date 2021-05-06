@@ -6,24 +6,35 @@ Require Import Library.
     (found Definitions.v in ../lambda2Gmu and ../../dot-calculus/src/extensions/paths; used the latter)
  *)
 
-Fixpoint translateType (T : Source.typ) (offset : nat) : Target.typ :=
+Definition id_map : nat -> nat := fun x => x.
+Definition skip1 : (nat -> nat) -> (nat -> nat) :=
+  fun f x => 1 + f x.
+Definition open1 : (nat -> nat) -> (nat -> nat) :=
+  fun f x => x. (* TODO *)
+
+Fixpoint translateType
+         (T : Source.typ)
+         (offset : nat)
+         (ix_map : nat -> nat)
+         {struct T}
+  : Target.typ :=
   match T with
   | typ_bvar J =>
-    typ_path (p_sel (avar_b J) nil) GenT
+    typ_path (p_sel (avar_b (ix_map J)) nil) GenT
   | typ_fvar X =>
     typ_path (pvar X) GenT
   | typ_unit =>
-    UnitT offset
+    UnitT (1+offset)
   | T1 ** T2 =>
-    let T1' := translateType T1 offset in
-    let T2' := translateType T2 offset in
-    TupleT offset T1' T2'
+    let T1' := translateType T1 offset ix_map in
+    let T2' := translateType T2 offset ix_map in
+    TupleT (1+offset) T1' T2'
   | T1 ==> T2 =>
-    let T1' := translateType T1 offset in
-    let T2' := translateType T2 (1+offset) in
+    let T1' := translateType T1 offset ix_map in
+    let T2' := translateType T2 (1+offset) (skip1 ix_map) in
     typ_all T1' T2'
   | Source.typ_all T =>
-    let T1 := translateType T (1+offset) in
+    let T1 := translateType T (1+offset) (open1 ix_map) in
     typ_all GenArgT T1
   | typ_gadt Ts g =>
     let Ts' := List.map (fun t => translateType t offset) Ts in
