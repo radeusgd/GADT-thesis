@@ -6,46 +6,55 @@ Require Import Library.
     (found Definitions.v in ../lambda2Gmu and ../../dot-calculus/src/extensions/paths; used the latter)
  *)
 
-Definition id_map : nat -> nat := fun x => x.
-Definition skip1 : (nat -> nat) -> (nat -> nat) :=
-  fun f x => 1 + f x.
-Definition open1 : (nat -> nat) -> (nat -> nat) :=
-  fun f x => x. (* TODO *)
+Definition type_map := nat -> nat * typ_label.
+Definition empty_map : type_map := fun x => (x, GenT).
+Definition skip1 : type_map -> type_map :=
+  fun f x =>
+    let (n, l) := f x in
+    (1 + n, l).
+Definition open1 : type_map -> typ_label -> type_map :=
+  fun f l x =>
+    match x with
+    | 0 => (0, l)
+    | S n =>
+      let (n', l') := f n in
+      (n' + 1, l')
+    end.
 
 Fixpoint translateType
          (T : Source.typ)
-         (offset : nat)
-         (ix_map : nat -> nat)
+         (ty_map : type_map)
          {struct T}
   : Target.typ :=
   match T with
   | typ_bvar J =>
-    typ_path (p_sel (avar_b (ix_map J)) nil) GenT
+    let (n, l) := ty_map J in
+    (ref n) ↓ l
   | typ_fvar X =>
     typ_path (pvar X) GenT
   | typ_unit =>
-    UnitT (1+offset)
+    (pvar lib) ↓ Unit
   | T1 ** T2 =>
-    let T1' := translateType T1 offset ix_map in
-    let T2' := translateType T2 offset ix_map in
-    TupleT (1+offset) T1' T2'
+    let T1' := translateType T1 ty_map in
+    let T2' := translateType T2 ty_map in
+    TupleT T1' T2'
   | T1 ==> T2 =>
-    let T1' := translateType T1 offset ix_map in
-    let T2' := translateType T2 (1+offset) (skip1 ix_map) in
+    let T1' := translateType T1 ty_map in
+    let T2' := translateType T2 (skip1 ty_map) in
     typ_all T1' T2'
   | Source.typ_all T =>
-    let T1 := translateType T (1+offset) (open1 ix_map) in
+    let T1 := translateType T (open1 ty_map GenT) in
     typ_all GenArgT T1
   | typ_gadt Ts g =>
-    let Ts' := List.map (fun t => translateType t offset) Ts in
-    let base := typ_path (p_sel (avar_b offset) nil) (GN g) in
+    let Ts' := List.map (fun t => translateType t ty_map) Ts in
+    let base := pvar env ↓ (GN g) in
     let res :=
         List.fold_left
           (fun acc T => match acc with
                      | (i, rest) =>
                        (
                          1+i,
-                         (rest ∧ typ_rcd { Ai i >: ⊥ <: ⊤ })
+                         (rest ∧ typ_rcd { Ai i == T })
                        )
                      end)
           Ts'
@@ -53,7 +62,7 @@ Fixpoint translateType
     snd res
   end.
 
-Definition translateTyp0 (T : Source.typ) : Target.typ := translateType T 0.
+Definition translateTyp0 (T : Source.typ) : Target.typ := translateType T empty_map.
 
 Definition translateEnv (Σ : Source.GADTEnv) : Target.trm.
 Admitted.

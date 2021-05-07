@@ -23,7 +23,10 @@ Definition env_typ : typ :=
 Definition env_trm : trm.
 Admitted.
 
-Lemma env_types : forall G, G ⊢ trm_let libTrm env_trm : env_typ.
+Lemma env_types : forall G,
+    G ⊢ trm_let libTrm env_trm : env_typ ->
+                                 G ⊢ trm_let libTrm env_trm : env_typ.
+  intros.
 Admitted.
 
 (* lib and env cannot escape, but then we cannot really type the outer program... *)
@@ -37,34 +40,32 @@ Definition coerce_trm : trm :=
                    (* a' *) 1 (* _: unit *) => #1 (* x *)
                 }.
  *)
-
-Compute p_coerce_typ.
+Eval cbv in p_coerce_typ.
 (*
-     = ∀ ({GenT >: ⊥ <: ⊤}) (∀ ({GenT >: ⊥ <: ⊤}) (∀ (((ssuper ↓ GN Eq)
-                                                       ∧ {Ai 1 >: ⊥ <: ⊤})
-                                                      ∧ {Ai 2 >: ⊥ <: ⊤})
-                                                   (∀ (super ↓ GenT)
-                                                    (this ↓ GenT))))
+     = ∀ ({GenT >: ⊥ <: ⊤}) (∀ ({GenT >: ⊥ <: ⊤}) (
+         ∀ (((pvar env ↓ GN Eq) ∧ {Ai 1 == this ↓ GenT}) ∧ {Ai 2 == super ↓ GenT})
+           (∀ (ssuper ↓ GenT) (ssuper ↓ GenT))))
      : typ
-*)
+ *)
 
 (* TODO: issue DeBruijn is not shared in L2GMu but is shared in pDOT! *)
 Definition p_coerce_trm : trm :=
   λ ({GenT >: ⊥ <: ⊤}) λ ({GenT >: ⊥ <: ⊤})
     λ (((ssuper ↓ GN Eq) ∧ {Ai 1 >: ⊥ <: ⊤}) ∧ {Ai 2 >: ⊥ <: ⊤})
-    λ (super ↓ GenT)
-    let_trm (trm_path this).
+    λ (super ↓ GenT) trm_path this.
 
-Lemma p_coerce_types : forall G lib env,
-    G & lib ~ libType & env ~ env_typ ⊢
-                            open_trm_p (pvar lib) (open_trm_p (pvar env) p_coerce_trm) :
-      open_typ_p (pvar lib) (open_typ_p (pvar env) p_coerce_typ).
+Lemma p_coerce_types :
+    empty & lib ~ libType & env ~ env_typ ⊢
+                            p_coerce_trm : p_coerce_typ.
   intros.
   cbv.
   crush.
   apply_fresh ty_all_intro as A; crush.
   apply_fresh ty_all_intro as B; crush.
-  apply_fresh ty_all_intro as eq; crush.
-  apply_fresh ty_all_intro as x; crush.
+  (* apply_fresh ty_all_intro as eq; crush. *)
+  (* apply_fresh ty_all_intro as x; crush. *)
 Admitted.
 
+Definition p_transitivity_typ := translateTyp0 transitivity_typ.
+
+Eval cbv in p_transitivity_typ.

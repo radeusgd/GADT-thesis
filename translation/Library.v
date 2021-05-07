@@ -11,6 +11,7 @@ Parameter T1 : typ_label.
 Parameter T2 : typ_label.
 Parameter fst_v : trm_label.
 Parameter snd_v : trm_label.
+(* TODO  consider switching GADTName from var to a separate type, since they are unrelated *)
 Parameter GN : Source.GADTName -> typ_label.
 Parameter data : trm_label.
 Parameter mkTuple : trm_label.
@@ -20,16 +21,17 @@ Axiom diff : Unit <> Tuple
              /\ T1 <> T2
              /\ fst_v <> snd_v.
 
-Definition refLibTyp (name : typ_label) (offset : nat) : Target.typ.
-  apply typ_path.
-  - constructor.
-    + apply avar_b. exact offset.
-    + apply nil.
-  - exact name.
-Defined.
-
-Definition UnitT (offset : nat) : Target.typ :=
-  refLibTyp Unit offset.
+Definition lib : var := proj1_sig (var_fresh \{}).
+Local Definition envHlp := var_fresh \{lib}.
+Definition env : var := proj1_sig envHlp.
+Lemma neq_lib_env : lib <> env.
+  unfold env.
+  destruct envHlp.
+  cbn.
+  auto.
+Qed.
+#[global] Opaque lib.
+#[global] Opaque env.
 
 Definition ref (offset : nat) : path :=
   p_sel (avar_b offset) nil.
@@ -38,12 +40,9 @@ Definition tupleTyp : Target.typ :=
   μ (
       { T1 >: ⊥ <: ⊤ } ∧
       { T2 >: ⊥ <: ⊤ } ∧
-      { fst_v ⦂ typ_path (ref 0) T1 } ∧
-      { snd_v ⦂ typ_path (ref 0) T2 }
+      { fst_v ⦂ this ↓ T1 } ∧
+      { snd_v ⦂ this ↓ T2 }
     ).
-
-Definition TupleT (offset : nat) (TT1 TT2 : Target.typ) : Target.typ :=
-  (ref offset ↓ Tuple) ∧ { T1 == TT1 } ∧ { T2 == TT2 }.
 
 Definition GenArgT : Target.typ :=
   typ_rcd { GenT >: ⊥ <: ⊤ }.
@@ -51,7 +50,7 @@ Definition GenArgT : Target.typ :=
 Definition libPreTypeHelp (unitDec : dec) : typ :=
   typ_rcd unitDec ∧
   typ_rcd { Tuple == tupleTyp } ∧
-  typ_rcd { mkUnit ⦂ UnitT 0 } ∧
+  typ_rcd { mkUnit ⦂ this ↓ Unit } ∧
   typ_rcd { mkTuple ⦂
                     ∀ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
                         ∀ ((ref 0) ↓ T1)
@@ -352,3 +351,6 @@ Lemma libTypes : forall G, G ⊢ libTrm : libType.
       ++ apply~ ty_rec_elim.
       ++ crush.
 Qed.
+
+Definition TupleT (TT1 TT2 : Target.typ) : Target.typ :=
+  (pvar lib ↓ Tuple) ∧ { T1 == TT1 } ∧ { T2 == TT2 }.

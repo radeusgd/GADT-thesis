@@ -7,7 +7,7 @@ Open Scope L2GMu.
 Axiom all_distinct : True.
 
 (* De Bruijn indices for arguments are in 'reverse' order, that is the last arg on the list is treated as 'closest' and referred to as ##0 *)
-Definition EqDef := (* Vector a len *)
+Definition EqDef :=
   enum 2 {{
          (* refl : forall a, () -> Eq a a *)
          mkGADTconstructor 1 typ_unit [##0; ##0]*
@@ -39,7 +39,7 @@ Definition coerce_trm : trm :=
   λ (* eq: Eq A B *) γ(##1, ##0) Eq =>
   λ (* x : A *) ##1 =>
   case #1 (* eq *) as Eq of {
-                   (* a' *) 1 (* _: unit *) => #1 (* x *)
+                   (* α *) 1 (* _: unit *) => #1 (* x *)
                 }.
 
 Lemma coerce_types : {sigma, emptyΔ, empty} ⊢(Tgen) coerce_trm ∈ coerce_typ.
@@ -78,6 +78,25 @@ Definition transitivity_trm : trm :=
                                 }
                 }
   .
+
+(*
+  Possible ideas:
+- congruence / custom tactic for solving typing equalities
+- constructing terms of given type usng tactics, example below
+*)
+
+(* Lemma foo : { t:trm | {sigma, emptyΔ, empty} ⊢(Tgen) t ∈ transitivity_typ}. *)
+(*   eapply exist. *)
+(*   cbv. *)
+(*   eapply Tgen_from_any. *)
+(*   eapply typing_tabs. *)
+(*   2: { *)
+(*     cbn. *)
+(*     instantiate (1:= Λ => _); cbn. *)
+(*     intros. *)
+(*     eapply typing_tabs. *)
+
+(*   } *)
 
 Lemma transitivity_types : {sigma, emptyΔ, empty} ⊢(Tgen) transitivity_trm ∈ transitivity_typ.
   cbv.
