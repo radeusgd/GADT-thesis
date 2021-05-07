@@ -13,9 +13,11 @@ Parameter fst_v : trm_label.
 Parameter snd_v : trm_label.
 (* TODO  consider switching GADTName from var to a separate type, since they are unrelated *)
 Parameter GN : Source.GADTName -> typ_label.
+Parameter GC : Source.GADTName -> nat -> typ_label.
 Parameter data : trm_label.
 Parameter mkTuple : trm_label.
 Parameter mkUnit : trm_label.
+Parameter pmatch : trm_label.
 Axiom diff : Unit <> Tuple
              /\ mkUnit <> mkTuple
              /\ T1 <> T2
