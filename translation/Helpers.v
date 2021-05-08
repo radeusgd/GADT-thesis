@@ -6,7 +6,7 @@ Require Export Definitions.
 
 
 Require Export Lists.List.
-Import ListNotations.
+Export ListNotations.
 Require Export ExampleTactics.
 
 Notation "'{' A '==' T '}'" := (dec_typ A T T).
