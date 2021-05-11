@@ -10,8 +10,7 @@ Definition p_coerce_typ : typ :=
 
 Parameter refl : trm_label. (* TODO automatically generating constructor ids *)
 
-Definition env_typ : typ :=
-  μ (
+Definition env_pretyp : typ :=
       { GN Eq ==
         μ
           {Ai 1 >: ⊥ <: ⊤} ∧ {Ai 2 >: ⊥ <: ⊤}
@@ -27,17 +26,26 @@ Definition env_typ : typ :=
           ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
           ∧ {data ⦂ ssuper ↓ Unit}
         }
-      ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GC Eq 0) ∧ {Bi 1 == this ↓ Bi 1}) }
-    )
+      ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GN Eq) ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}) }
+    (* we should also take unit here, as the data arg, but that seems unnecessary *)
+          (* ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GC Eq 0) ∧ {Bi 1 == this ↓ Bi 1}) } *)
 .
 
-Definition env_trm : trm.
-Admitted.
+Definition env_typ : typ :=
+  μ (env_pretyp).
 
-Lemma env_types : forall G,
-    G ⊢ trm_let libTrm env_trm : env_typ ->
-                                 G ⊢ trm_let libTrm env_trm : env_typ.
+Definition env_trm : trm :=
+  let_trm
+    (ν (env_pretyp)
+       {(
+           { GN Eq ⦂= ⊥ }
+       )}
+    ).
+
+Lemma env_types : forall lib,
+    empty & lib ~ libType ⊢ open_trm_p (pvar lib) env_trm : open_typ_p (pvar lib) env_typ.
   intros.
+  cbv. crush.
 Admitted.
 
 (* lib and env cannot escape, but then we cannot really type the outer program... *)
@@ -344,6 +352,83 @@ Definition p_transitivity_trm : trm :=
     ))
 .
 
+Ltac subsel2 :=
+  match goal with
+  | [ |- ?G ⊢ ?A <: ?B ] =>
+    apply subtyp_sel2 with A
+  end.
+
+Ltac subsel1 :=
+  match goal with
+  | [ |- ?G ⊢ ?A <: ?B ] =>
+    apply subtyp_sel1 with B
+  end.
+
+Ltac solve_subtyp_and :=
+repeat
+  match goal with
+  | [ |- ?G ⊢ ?A ∧ ?B <: ?C ] =>
+    idtac B "---" C;
+    match B with
+    | C =>
+      apply subtyp_and12
+    | _ =>
+      eapply subtyp_trans; try apply subtyp_and11
+    end
+  end.
+
+Notation "G ⊢ A =:= B" := (G ⊢ A <: B /\ G ⊢ B <: A) (at level 40, A at level 59).
+
+Lemma eq_transitive : forall G A B C,
+    G ⊢ A =:= B ->
+    G ⊢ B =:= C ->
+    G ⊢ A =:= C.
+  intros G X Y Z [] [].
+  constructor;
+    eapply subtyp_trans; eauto.
+Qed.
+
+Lemma eq_symmetry : forall G A B,
+    G ⊢ A =:= B ->
+    G ⊢ B =:= A.
+  intros G X Y [].
+  constructor; auto.
+Qed.
+
+Lemma swap_typ : forall G X Y L T,
+    G ⊢ pvar Y : {{pvar X}} ->
+                 G ⊢ pvar X : T ->
+                              G ⊢ pvar X ↓ L =:= pvar Y ↓ L.
+  intros.
+  constructor.
+  - eapply subtyp_sngl_qp with (p := pvar Y) (q := pvar X); eauto.
+    assert (HR: pvar X = (pvar X) •• []) by crush.
+    rewrite HR at 2.
+    assert (HR2: pvar Y = (pvar Y) •• []) by crush.
+    rewrite HR2 at 2.
+    apply rpath.
+  - eapply subtyp_sngl_pq with (p := pvar Y) (q := pvar X); eauto.
+    assert (HR: pvar X = (pvar X) •• []) by crush.
+    rewrite HR at 2.
+    assert (HR2: pvar Y = (pvar Y) •• []) by crush.
+    rewrite HR2 at 2.
+    apply rpath.
+Qed.
+
+Ltac var_subtyp_bind :=
+  var_subtyp;
+  [ apply ty_var; solve_bind
+  | solve_subtyp_and].
+
+Lemma eq_sel : forall G p A T,
+    G ⊢ trm_path p : typ_rcd { A == T } ->
+                     G ⊢ T =:= (p ↓ A).
+  intros.
+  constructor.
+  - eapply subtyp_sel2; eauto.
+  - eapply subtyp_sel1; eauto.
+Qed.
+
 Lemma p_transitivity_types :
   empty & lib ~ libType
   & env ~ (open_typ_p (pvar lib) env_typ)
@@ -401,8 +486,7 @@ Lemma p_transitivity_types :
             end.
             -- apply ty_rec_elim. apply ty_var.
                solve_bind.
-            -- crush.
-               eapply subtyp_trans; try apply subtyp_and11.
+            -- crush. solve_subtyp_and.
         + crush.
       - eapply ty_sub.
         + apply ty_var. solve_bind.
@@ -432,7 +516,7 @@ Lemma p_transitivity_types :
             apply ty_sub with (pvar env ↓ GN Eq).
             * var_subtyp; crush.
               repeat rewrite <- Heqenv.
-              eapply subtyp_trans; apply subtyp_and11.
+              solve_subtyp_and.
             * eapply subtyp_sel1.
               match goal with
               | [ |- context [ env ~ μ ?T ] ] =>
@@ -441,7 +525,7 @@ Lemma p_transitivity_types :
               -- apply ty_rec_elim. apply ty_var.
                  solve_bind.
               -- crush.
-                 eapply subtyp_trans; try apply subtyp_and11.
+                 solve_subtyp_and.
           + crush.
         - eapply ty_sub.
           + apply ty_var. solve_bind.
@@ -505,49 +589,236 @@ Lemma p_transitivity_types :
 
         crush.
         apply ty_sub with ((pvar env ↓ GN Eq) ∧ {Ai 1 == pvar C ↓ GenT} ∧ {Ai 2 == pvar A ↓ GenT}).
-        -- apply ty_sub with (open_typ_p (pvar res) (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == this ↓ Bi 1})
-                                                      ∧ {Ai 2 == this ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})).
-           ++ admit.
-           ++ crush.
-              match goal with
-              | [ |- ?G ⊢ ?A <: ?T ] =>
-                assert (HCL: G ⊢ pvar C ↓ GenT <: pvar res ↓ Bi 1)
-              end.
-              1: {
-                eapply subtyp_sel2.
-                var_subtyp; crush.
-                eapply subtyp_trans; try apply subtyp_and12.
-                apply~ subtyp_typ.
-                eapply subtyp_sel2.
-                apply ty_var; solve_bind.
-              }
-              match goal with
-              | [ |- ?G ⊢ ?A <: ?T ] =>
-                assert (HCR: G ⊢ pvar res ↓ Bi 1 <: pvar C ↓ GenT )
-              end.
-              1: {
-                eapply subtyp_sel1.
-                var_subtyp; crush.
-                eapply subtyp_trans; try apply subtyp_and12.
-                apply~ subtyp_typ.
-                eapply subtyp_sel1.
-                apply ty_var; solve_bind.
-              }
+        -- var_subtyp; crush.
+           match goal with
+           | [ |- ?GG ⊢ ?A <: ?T ] =>
+             remember GG as G
+           end.
+           assert (HBLTC: G ⊢ pvar BLT ↓ Bi 1 =:= pvar C ↓ GenT).
+           1: {
+             rewrite HeqG.
+             constructor.
+             - subsel1. apply ty_var; solve_bind.
+             - subsel2. apply ty_var; solve_bind.
+           }
 
-              repeat apply subtyp_and2.
-              ** eapply subtyp_trans; try apply subtyp_and11.
-                 eapply subtyp_trans; try apply subtyp_and11.
-                 eapply subtyp_trans; try apply subtyp_and11.
-              ** eapply subtyp_trans; try apply subtyp_and11.
-                 eapply subtyp_trans; try apply subtyp_and11.
-                 eapply subtyp_trans; try apply subtyp_and12.
-                 apply~ subtyp_typ.
-              ** eapply subtyp_trans; try apply subtyp_and11.
-                 eapply subtyp_trans; try apply subtyp_and12.
-                 apply subtyp_typ.
-                 --- apply subtyp_trans with (pvar C ↓ GenT); crush.
+           destruct HBLTC.
+           repeat apply~ intersection_order.
+
+           assert (G ⊢ pvar A ↓ GenT =:= pvar B ↓ GenT).
+           1: {
+             assert (Hev1: G ⊢ pvar eq_ev1 : (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev1 ↓ Bi 1}) ∧ {Ai 2 == pvar eq_ev1 ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})).
+             1: {
+               rewrite HeqG.
+               match goal with
+               | [ |- ?G ⊢ ?t : ?T ] =>
+                 match goal with
+                 | [ |- context [{GC Eq 0 == μ ?U}] ] =>
+                   assert (HR: T = open_typ_p (pvar eq_ev1) (open_rec_typ_p 1 (pvar env) U)) by crush
+                 end
+               end.
+               rewrite HR.
+               apply ty_rec_elim. crush.
+               apply ty_sub with (pvar env ↓ GC Eq 0).
+               - var_subtyp; crush; apply ty_var; solve_bind.
+               - subsel1.
+                 match goal with
+                 | [ |- context [ env ~ μ ?T ] ] =>
+                   apply ty_sub with (open_typ_p (pvar env) T)
+                 end.
+                 + apply ty_rec_elim. apply ty_var.
+                   solve_bind.
+                 + crush.
+                   solve_subtyp_and.
+             }
+
+             assert (G ⊢ pvar A ↓ GenT =:= pvar eq_ev1 ↓ Bi 1).
+             1: {
+               apply eq_transitive with (pvar eq1 ↓ Ai 2).
+               - apply eq_sel.
+                 rewrite HeqG; var_subtyp_bind.
+               - apply eq_transitive with (pvar eq_ev1 ↓ Ai 2).
+                 + rewrite HeqG.
+                   eapply swap_typ.
+                   * var_subtyp_bind.
+                   * apply ty_var; solve_bind.
+                 + apply eq_symmetry.
+                   apply eq_sel.
+                   eapply ty_sub.
+                   * apply Hev1.
+                   * solve_subtyp_and.
+             }
+
+             assert (G ⊢ pvar eq_ev1 ↓ Bi 1 =:= pvar B ↓ GenT).
+             1: {
+               apply eq_transitive with (pvar eq1 ↓ Ai 1).
+               - apply eq_transitive with (pvar eq_ev1 ↓ Ai 1).
+                 + apply eq_sel.
+                   eapply ty_sub.
+                   * apply Hev1.
+                   * solve_subtyp_and.
+                 + rewrite HeqG.
+                   apply eq_symmetry.
+                   eapply swap_typ.
+                   * var_subtyp_bind.
+                   * apply ty_var; solve_bind.
+               - apply eq_symmetry.
+                 apply eq_sel.
+                 rewrite HeqG; var_subtyp_bind.
+             }
+
+             eapply eq_transitive with (pvar eq_ev1 ↓ Bi 1); auto.
+           }
+
+           assert (G ⊢ pvar B ↓ GenT =:= pvar C ↓ GenT).
+           1: {
+             assert (G ⊢ pvar B ↓ GenT =:= pvar eq_ev2 ↓ Bi 1).
+             1: {
+               admit.
+             }
+
+             assert (G ⊢ pvar eq_ev2 ↓ Bi 1 =:= pvar C ↓ GenT).
+             1: {
+               admit.
+             }
+
+             eapply eq_transitive with (pvar eq_ev2 ↓ Bi 1); auto.
+           }
+
+           assert (Hfin: G ⊢ pvar BLT ↓ Bi 1 =:= pvar A ↓ GenT).
+           1: {
+             apply eq_transitive with (pvar C ↓ GenT); auto.
+             apply eq_transitive with (pvar B ↓ GenT); auto using eq_symmetry.
+           }
+
+           destruct Hfin.
+           apply~ subtyp_typ.
+
+
+           ++ apply subtyp_trans with (pvar C ↓ GenT); auto.
+              apply subtyp_trans with (pvar B ↓ GenT).
+              ** apply subtyp_trans with (pvar eq_ev1 ↓ Bi 1).
+                 --- apply subtyp_trans with (pvar eq1 ↓ Ai 2).
+                     +++ eapply subtyp_sel2.
+                         var_subtyp; crush.
+                         apply ty_var. solve_bind.
+                     +++ apply subtyp_trans with (pvar eq_ev1 ↓ Ai 2).
+                         *** eapply subtyp_sngl_qp with (p := pvar eq_ev1) (q := pvar eq1);
+                               try solve [var_subtyp; crush; apply ty_var; solve_bind].
+                             assert (HR: pvar eq_ev1 = (pvar eq_ev1) •• []) by crush.
+                             rewrite HR at 2.
+                             assert (HR2: pvar eq1 = (pvar eq1) •• []) by crush.
+                             rewrite HR2 at 2.
+                             apply rpath.
+                         *** eapply subtyp_sel1.
+                             apply ty_sub with (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev1 ↓ Bi 1}) ∧ {Ai 2 == pvar eq_ev1 ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit}).
+                             ----
+                               assert (HR:
+                                         ((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev1 ↓ Bi 1})
+                                          ∧ {Ai 2 == pvar eq_ev1 ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit}
+                                                                           =
+                                                                           open_typ_p (pvar eq_ev1) (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == this ↓ Bi 1}) ∧ {Ai 2 == this ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})) by crush.
+                               rewrite HR.
+                               apply ty_rec_elim.
+                               apply ty_sub with (pvar env ↓ GC Eq 0).
+                               ++++ var_subtyp; crush; apply ty_var; solve_bind.
+                               ++++ eapply subtyp_sel1.
+                                    match goal with
+                                    | [ |- context [ env ~ μ ?T ] ] =>
+                                      apply ty_sub with (open_typ_p (pvar env) T)
+                                    end.
+                                    **** apply ty_rec_elim. apply ty_var.
+                                         solve_bind.
+                                    **** crush.
+                                         eapply subtyp_trans; try apply subtyp_and11.
+                                         apply subtyp_and12.
+                             ---- eapply subtyp_trans; try apply subtyp_and11.
+                                  apply subtyp_and12.
+                 --- apply subtyp_trans with (pvar eq1 ↓ Ai 1).
+                     +++ apply subtyp_trans with (pvar eq_ev1 ↓ Ai 1).
+                         *** eapply subtyp_sel2.
+                             apply ty_sub with (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev1 ↓ Bi 1}) ∧ {Ai 2 == pvar eq_ev1 ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit}).
+                             ----
+                               assert (HR:
+                                         ((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev1 ↓ Bi 1})
+                                          ∧ {Ai 2 == pvar eq_ev1 ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit}
+                                                                           =
+                                                                           open_typ_p (pvar eq_ev1) (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == this ↓ Bi 1}) ∧ {Ai 2 == this ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})) by crush.
+                               rewrite HR.
+                               apply ty_rec_elim.
+                               apply ty_sub with (pvar env ↓ GC Eq 0).
+                               ++++ var_subtyp; crush; apply ty_var; solve_bind.
+                               ++++ eapply subtyp_sel1.
+                                    match goal with
+                                    | [ |- context [ env ~ μ ?T ] ] =>
+                                      apply ty_sub with (open_typ_p (pvar env) T)
+                                    end.
+                                    **** apply ty_rec_elim. apply ty_var.
+                                         solve_bind.
+                                    **** crush.
+                                         eapply subtyp_trans; try apply subtyp_and11.
+                                         apply subtyp_and12.
+                             ---- eapply subtyp_trans; try apply subtyp_and11.
+                                  eapply subtyp_trans; try apply subtyp_and11.
+                                  apply subtyp_and12.
+                         *** eapply subtyp_sngl_pq with (p := pvar eq_ev1) (q := pvar eq1);
+                               try solve [var_subtyp; crush; apply ty_var; solve_bind].
+                             assert (HR: pvar eq_ev1 = (pvar eq_ev1) •• []) by crush.
+                             rewrite HR at 2.
+                             assert (HR2: pvar eq1 = (pvar eq1) •• []) by crush.
+                             rewrite HR2 at 2.
+                             apply rpath.
+                     +++ eapply subtyp_sel1.
+                         var_subtyp; crush.
+                         *** apply ty_var. solve_bind.
+                         *** eapply subtyp_trans; try apply subtyp_and11.
+                             apply subtyp_and12.
+              ** 
+
+                apply subtyp_trans with (pvar eq1 ↓ Ai 1).
+                 2: {
+                   subsel1.
+                   var_subtyp.
+                   +++ apply ty_var; solve_bind.
+                   +++ solve_subtyp_and.
+                 }
+
+                 --- apply subtyp_trans with (pvar eq_ev1 ↓ Ai 2).
+                     {
+                       
+                     }
+                     +++ 
+                     +++ eapply subtyp_sngl_pq with (p := pvar eq_ev1) (q := pvar eq1).
+                         *** var_subtyp; crush; apply ty_var; solve_bind.
+                         *** apply ty_var; solve_bind.
+                         *** assert (HR: pvar eq_ev1 = (pvar eq_ev1) •• []) by crush.
+                             rewrite HR at 2.
+                             assert (HR2: pvar eq1 = (pvar eq1) •• []) by crush.
+                             rewrite HR2 at 2.
+                             apply rpath.
+                     +++ admit.
+                 ---               ** apply subtyp_trans with (pvar eq2 ↓ Ai 1).
+                 --- subsel2.
                      admit.
-                 --- apply subtyp_trans with (pvar C ↓ GenT); crush.
+                 --- subsel1.
+                     var_subtyp.
+                     +++ apply ty_var; solve_bind.
+                     +++ solve_subtyp_and.
+           ++ apply subtyp_trans with (pvar C ↓ GenT); auto.
+              apply subtyp_trans with (pvar B ↓ GenT).
+              ** apply subtyp_trans with (pvar eq2 ↓ Ai 1).
+                 --- subsel2.
+                     var_subtyp.
+                     +++ apply ty_var; solve_bind.
+                     +++ solve_subtyp_and.
+                 --- subsel1.
+                     admit.
+              ** apply subtyp_trans with (pvar eq1 ↓ Ai 1).
+                 --- subsel2.
+                     var_subtyp.
+                     +++ apply ty_var; solve_bind.
+                     +++ solve_subtyp_and.
+                 --- subsel1.
                      admit.
         -- eapply subtyp_sel2.
            apply ty_var; solve_bind.
