@@ -27,7 +27,7 @@ Definition env_typ : typ :=
           ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
           ∧ {data ⦂ ssuper ↓ Unit}
         }
-      ∧ { refl ⦂ ( ∀ ({Bi 1 >: ⊥ <: ⊤}) (super ↓ GC Eq 0) ∧ {Bi 1 == this ↓ Bi 1}) }
+      ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GC Eq 0) ∧ {Bi 1 == this ↓ Bi 1}) }
     )
 .
 
@@ -60,24 +60,27 @@ Eval cbv in p_coerce_typ.
  *)
 
 
-Definition make_fun_apply (f : trm) (arg : trm) : trm :=
+Definition make_fun_apply (f : trm) (arg : trm) (withlet : bool) : trm :=
+  let wrap t :=
+      if withlet then (let_trm t) else t in
   match f with
   | trm_path pf =>
     match arg with
     | trm_path pa =>
-      trm_app pf pa
+      wrap (trm_app pf pa)
     | _ =>
-      trm_let arg (trm_app (shift1_p pf) this)
+      trm_let arg (wrap (trm_app (shift1_p pf) this))
     end
   | _ =>
     trm_let
       f
       (trm_let (shift1_trm arg)
-               (trm_app super this)
+               (wrap (trm_app super this))
       )
   end.
 
-Notation "f $ a" := (make_fun_apply f a) (at level 42).
+Notation "f $ a" := (make_fun_apply f a false) (at level 42).
+Notation "f $$ a" := (make_fun_apply f a true) (at level 42).
 
 Definition TLgen (T : typ) : trm :=
   let inner := shift1_typ T in
@@ -147,8 +150,8 @@ Ltac solve_bind :=
            | |- binds ?Var ?What (?Left & ?Right) =>
     match goal with
     | |- binds Var What (Left & Var ~ ?Sth) =>
-      apply* binds_concat_right; apply* binds_single_eq
-    | _ => apply* binds_concat_left
+      apply~ binds_concat_right; apply~ binds_single_eq
+    | _ => apply~ binds_concat_left
     end
            end).
 
@@ -335,9 +338,7 @@ Definition p_transitivity_trm : trm :=
               (λ (*eq1_ev *) (pvar env ↓ GC Eq 0 ∧ {{ ref 2 }})
                  (ref 2) • pmatch $ ref 1 $
                  (λ (*eq2_ev *) (pvar env ↓ GC Eq 0 ∧ {{ ref 2 }})
-                    (let_trm
-                       ((pvar env) • refl $ (ν({Bi 1 == ref 6 ↓ GenT}) {( {Bi 1 ⦂= ref 6 ↓ GenT} )} ))
-                    )
+                    ((pvar env) • refl $$ (let_trm (ν({Bi 1 == ref 6 ↓ GenT}) {( {Bi 1 ⦂= ref 6 ↓ GenT} )} )))
                  )
               )
     ))
@@ -455,7 +456,101 @@ Lemma p_transitivity_types :
         end.
         apply_fresh ty_all_intro as eq_ev2.
         crush.
-        admit.
+        apply_fresh ty_let as BLT.
+        1: {
+          instantiate (1:={Bi 1 == pvar C ↓ GenT}).
+          apply_fresh ty_let as BLTlet.
+          - apply_fresh ty_new_intro as BLTself.
+            crush.
+          - crush.
+            match goal with
+            | [ |- ?G ⊢ ?t : ?T ] =>
+              assert (HR: open_typ_p (pvar BLTlet) T = T) by crush;
+                rewrite <- HR;
+                clear HR
+            end.
+            apply ty_rec_elim.
+            apply ty_var.
+            solve_bind.
+        }
+
+        crush.
+        apply_fresh ty_let as res.
+        1: {
+          eapply ty_all_elim.
+          - match goal with
+            | [ |- context [ { refl ⦂ ∀ (?T) ?U } ]] =>
+              instantiate (1:=open_rec_typ_p 1 (pvar env) U);
+                instantiate (1:=T);
+                crush
+            end.
+            assert (HR: p_sel (avar_f env) [refl] = (pvar env) • refl) by crush;
+              rewrite HR;
+              clear HR.
+            apply ty_new_elim.
+            match goal with
+            | [ |- context [ env ~ μ ?T ] ] =>
+              apply ty_sub with (open_typ_p (pvar env) T)
+            end.
+            + apply ty_rec_elim.
+              apply ty_var; solve_bind.
+            + crush.
+          - apply ty_sub with ({Bi 1 == pvar C ↓ GenT}).
+            + assert (HR: typ_rcd {Bi 1 == pvar C ↓ GenT} = open_typ_p (pvar BLT) ({Bi 1 == pvar C ↓ GenT})) by crush.
+              rewrite HR.
+              apply ty_rec_elim.
+              crush.
+            + apply~ subtyp_typ.
+        }
+
+        crush.
+        apply ty_sub with ((pvar env ↓ GN Eq) ∧ {Ai 1 == pvar C ↓ GenT} ∧ {Ai 2 == pvar A ↓ GenT}).
+        -- apply ty_sub with (open_typ_p (pvar res) (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == this ↓ Bi 1})
+                                                      ∧ {Ai 2 == this ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})).
+           ++ admit.
+           ++ crush.
+              match goal with
+              | [ |- ?G ⊢ ?A <: ?T ] =>
+                assert (HCL: G ⊢ pvar C ↓ GenT <: pvar res ↓ Bi 1)
+              end.
+              1: {
+                eapply subtyp_sel2.
+                var_subtyp; crush.
+                eapply subtyp_trans; try apply subtyp_and12.
+                apply~ subtyp_typ.
+                eapply subtyp_sel2.
+                apply ty_var; solve_bind.
+              }
+              match goal with
+              | [ |- ?G ⊢ ?A <: ?T ] =>
+                assert (HCR: G ⊢ pvar res ↓ Bi 1 <: pvar C ↓ GenT )
+              end.
+              1: {
+                eapply subtyp_sel1.
+                var_subtyp; crush.
+                eapply subtyp_trans; try apply subtyp_and12.
+                apply~ subtyp_typ.
+                eapply subtyp_sel1.
+                apply ty_var; solve_bind.
+              }
+
+              repeat apply subtyp_and2.
+              ** eapply subtyp_trans; try apply subtyp_and11.
+                 eapply subtyp_trans; try apply subtyp_and11.
+                 eapply subtyp_trans; try apply subtyp_and11.
+              ** eapply subtyp_trans; try apply subtyp_and11.
+                 eapply subtyp_trans; try apply subtyp_and11.
+                 eapply subtyp_trans; try apply subtyp_and12.
+                 apply~ subtyp_typ.
+              ** eapply subtyp_trans; try apply subtyp_and11.
+                 eapply subtyp_trans; try apply subtyp_and12.
+                 apply subtyp_typ.
+                 --- apply subtyp_trans with (pvar C ↓ GenT); crush.
+                     admit.
+                 --- apply subtyp_trans with (pvar C ↓ GenT); crush.
+                     admit.
+        -- eapply subtyp_sel2.
+           apply ty_var; solve_bind.
       * crush.
         match goal with
         | [ |- ?G ⊢ ?e : ?T ] =>
