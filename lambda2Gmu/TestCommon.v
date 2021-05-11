@@ -235,3 +235,14 @@ Ltac ininv2 :=
   | [ H: ?C = (?A, ?B) |- _ ] => inversions H
   | [ H: (?A, ?B) = ?C |- _ ] => inversions H
   end.
+
+Lemma eq_typ_tuple : forall Σ Δ A B C D,
+    entails_semantic Σ Δ (A ≡ C) ->
+    entails_semantic Σ Δ (B ≡ D) ->
+    entails_semantic Σ Δ ((A ** B) ≡ (C ** D)).
+  introv EQ1 EQ2.
+  cbn in *.
+  intros O M.
+  repeat rewrite subst_tt_prime_reduce_tuple.
+  f_equal; auto.
+Qed.

@@ -156,3 +156,127 @@ Lemma transitivity_types : {sigma, emptyΔ, empty} ⊢(Tgen) transitivity_trm �
     fs.
     fs.
 Qed.
+
+Definition construct_typ : typ :=
+  ∀ ∀ ∀ ∀ γ(##3, ##2) Eq ==> γ(##1, ##0) Eq ==> γ(##3 ** ##1, ##2 ** ##0) Eq.
+
+Definition construct_trm : trm :=
+  Λ => Λ => Λ => Λ => λ γ(##3, ##2) Eq => λ γ(##1, ##0) Eq =>
+  case #1 as Eq of {
+                  1 =>
+                  case #1 as Eq of {
+                                  1 =>
+                                  new Refl [| ##4 ** ##2 |] ( <.> )
+                                }
+                }
+.
+
+Lemma construct_types : {sigma, emptyΔ, empty} ⊢(Tgen) construct_trm ∈ construct_typ.
+  cbv.
+  lets: oksigma.
+  eapply Tgen_from_any.
+  autotyper3;
+    try solve [cbn in *; autotyper3].
+  rename x0 into A.
+  rename x1 into B.
+  rename x2 into C.
+  rename x3 into D.
+  rename v into α.
+  forwards~ : H3 α.
+  rename x4 into eq1.
+  rename x5 into eq2.
+  rename x into u1.
+  eapply Tgen_from_any.
+  autotyper4.
+  rename v into β.
+  rename x into u2.
+  forwards~ : H8 β.
+  eapply typing_eq with (T1:=γ( B ** D, B ** D) Eq).
+  1: {autotyper4.}
+
+  apply eq_typ_gadt.
+  2: {autotyper4.}
+
+  apply F2_iff_In_zip.
+  split~.
+  intros U V Hin.
+  repeat ininv2.
+  - apply teq_reflexivity.
+  - apply eq_typ_tuple;
+      eapply teq_transitivity;
+      (apply teq_symmetry + idtac); apply teq_axiom; listin.
+    Unshelve.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+    fs.
+Qed.
+
+Definition destruct_typ : typ :=
+  ∀ ∀ ∀ ∀ γ(##3 ** ##1, ##2 ** ##0) Eq ==> γ(##3, ##2) Eq.
+
+Definition destruct_trm : trm :=
+  Λ => Λ => Λ => Λ => λ γ(##3 ** ##1, ##2 ** ##0) Eq =>
+                    case #0 as Eq of {
+                                    1 =>
+                                    new Refl [| ##4 ** ##3 |] ( <.> )
+                                  }
+.
+
+Lemma destruct_types : {sigma, emptyΔ, empty} ⊢(Tgen) destruct_trm ∈ destruct_typ.
+  cbv.
+  lets: oksigma.
+  eapply Tgen_from_any.
+  autotyper3;
+    try solve [cbn in *; autotyper3].
+  rename x0 into A.
+  rename x1 into B.
+  rename x2 into C.
+  rename x3 into D.
+  rename v into α.
+  forwards~ : H3 α.
+  rename x4 into eq1.
+  rename x into u1.
+  eapply Tgen_from_any.
+  eapply typing_eq with (T1:=γ( B ** D, B ** D) Eq).
+  1: {autotyper4.}
+
+  apply eq_typ_gadt.
+  2: {autotyper4.}
+
+  apply F2_iff_In_zip.
+  split~.
+  intros U V Hin.
+  repeat ininv2.
+  - apply teq_reflexivity.
+  - apply eq_typ_tuple;
+      eapply teq_transitivity;
+      (apply teq_symmetry + idtac); apply teq_axiom; listin.
+    Unshelve.
+Admitted.
