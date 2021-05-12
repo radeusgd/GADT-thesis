@@ -38,7 +38,46 @@ Definition env_trm : trm :=
   let_trm
     (ν (env_pretyp)
        {(
-           { GN Eq ⦂= ⊥ }
+           { GN Eq ⦂=
+             μ
+               {Ai 1 >: ⊥ <: ⊤} ∧ {Ai 2 >: ⊥ <: ⊤}
+             ∧ {pmatch ⦂ ∀ ({GenT >: ⊥ <: ⊤})
+                             ∀ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
+                               (super ↓ GenT)
+               }
+           },
+           { GC Eq 0 ⦂=
+             μ
+               super ↓ GN Eq
+             ∧ {Bi 1 >: ⊥ <: ⊤}
+             ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
+             ∧ {data ⦂ ssuper ↓ Unit}
+           },
+           { refl :=
+               λ ({Bi 1 >: ⊥ <: ⊤}) let_trm (
+                   ν(
+                       {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
+                       ∧ {pmatch ⦂ ∀ ({GenT >: ⊥ <: ⊤})
+                                       ∀ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
+                                         (super ↓ GenT)
+                         }
+                       ∧ {Bi 1 == super ↓ Bi 1}
+                       ∧ {data ⦂ ref 3 ↓ Unit}
+                     ) {(
+                           {Ai 1 ⦂= this ↓ Bi 1}, (* TODO this or super *)
+                           {Ai 2 ⦂= this ↓ Bi 1},
+                           {pmatch :=
+                              λ ({GenT >: ⊥ <: ⊤})
+                                λ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
+                                (* TODO may need a let for self *)
+                                let_trm
+                                (trm_app this super)
+                           },
+                           {Bi 1 ⦂= super ↓ Bi 1},
+                           {data := (ref 3) • mkUnit}
+                       )}
+                 )
+           }
        )}
     ).
 
