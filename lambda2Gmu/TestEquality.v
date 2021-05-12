@@ -191,11 +191,15 @@ Lemma construct_types : {sigma, emptyΔ, empty} ⊢(Tgen) construct_trm ∈ cons
   rename v into β.
   rename x into u2.
   forwards~ : H8 β.
-  eapply typing_eq with (T1:=γ( B ** D, B ** D) Eq).
-  1: {autotyper4.}
+  eapply typing_eq with (T1 := γ( B ** D, B ** D) Eq).
+  1: {
+    autotyper4.
+  }
 
   apply eq_typ_gadt.
-  2: {autotyper4.}
+  2: {
+    autotyper4.
+  }
 
   apply F2_iff_In_zip.
   split~.
@@ -245,7 +249,7 @@ Definition destruct_trm : trm :=
   Λ => Λ => Λ => Λ => λ γ(##3 ** ##1, ##2 ** ##0) Eq =>
                     case #0 as Eq of {
                                     1 =>
-                                    new Refl [| ##4 ** ##3 |] ( <.> )
+                                    new Refl [| ##3 |] ( <.> )
                                   }
 .
 
@@ -264,19 +268,44 @@ Lemma destruct_types : {sigma, emptyΔ, empty} ⊢(Tgen) destruct_trm ∈ destru
   rename x4 into eq1.
   rename x into u1.
   eapply Tgen_from_any.
-  eapply typing_eq with (T1:=γ( B ** D, B ** D) Eq).
-  1: {autotyper4.}
+  eapply typing_eq with (T1:=γ(typ_fvar B, typ_fvar B) Eq).
+  1: {
+    autotyper4.
+  }
 
   apply eq_typ_gadt.
-  2: {autotyper4.}
+  2: {
+    autotyper4.
+  }
 
   apply F2_iff_In_zip.
   split~.
   intros U V Hin.
   repeat ininv2.
   - apply teq_reflexivity.
-  - apply eq_typ_tuple;
-      eapply teq_transitivity;
-      (apply teq_symmetry + idtac); apply teq_axiom; listin.
-    Unshelve.
-Admitted.
+  - match goal with
+    | [ |- entails_semantic ?Σ ?Δ (?E) ] =>
+      assert (entails_semantic Σ Δ ((A ** C) ≡ (B ** D)))
+    end.
+    + apply teq_transitivity with α;
+        (apply teq_symmetry + idtac); apply teq_axiom; listin.
+    + lets []: inversion_eq_tuple H1.
+      apply teq_symmetry.
+      auto.
+      Unshelve.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+Qed.
