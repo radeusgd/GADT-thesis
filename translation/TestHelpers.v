@@ -63,3 +63,136 @@ with lift_rec_defrhs (k: nat) (u: nat) (drhs: def_rhs) : def_rhs :=
 Definition shift1_typ (t : typ) : typ := lift_rec_typ 0 1 t.
 Definition shift1_trm (t : trm) : trm := lift_rec_trm 0 1 t.
 Definition shift1_p (p : path) : path := lift_rec_path 0 1 p.
+
+Coercion trm_path : path >-> trm.
+
+Ltac cleanup :=
+  repeat
+    match goal with
+    | [ H: ?x <> ?y |- _ ] => clear H
+    | [ H: ?x = ?y |- _ ] =>
+      match x with
+      | y => clear H
+      end
+    end.
+
+Ltac var_subtyp :=
+  match goal with
+  | [ |- ?G ⊢ tvar ?x : ?T ] =>
+    match goal with
+    | [ |- context [x ~ ?BT] ] =>
+      apply ty_sub with BT
+    end
+  end.
+
+Ltac solve_bind :=
+  repeat progress (
+           lazymatch goal with
+           | |- binds ?Var ?What (?Left & ?Right) =>
+    match goal with
+    | |- binds Var What (Left & Var ~ ?Sth) =>
+      apply~ binds_concat_right; apply~ binds_single_eq
+    | _ => apply~ binds_concat_left
+    end
+           end).
+Ltac subsel2 :=
+  match goal with
+  | [ |- ?G ⊢ ?A <: ?B ] =>
+    apply subtyp_sel2 with A
+  end.
+
+Ltac subsel1 :=
+  match goal with
+  | [ |- ?G ⊢ ?A <: ?B ] =>
+    apply subtyp_sel1 with B
+  end.
+
+Ltac solve_subtyp_and :=
+repeat
+  match goal with
+  | [ |- ?G ⊢ ?A ∧ ?B <: ?C ] =>
+    match B with
+    | C =>
+      apply subtyp_and12
+    | _ =>
+      eapply subtyp_trans; try apply subtyp_and11
+    end
+  end.
+
+Notation "G ⊢ A =:= B" := (G ⊢ A <: B /\ G ⊢ B <: A) (at level 40, A at level 59).
+
+Lemma eq_transitive : forall G A B C,
+    G ⊢ A =:= B ->
+    G ⊢ B =:= C ->
+    G ⊢ A =:= C.
+  intros G X Y Z [] [].
+  constructor;
+    eapply subtyp_trans; eauto.
+Qed.
+
+Lemma eq_symmetry : forall G A B,
+    G ⊢ A =:= B ->
+    G ⊢ B =:= A.
+  intros G X Y [].
+  constructor; auto.
+Qed.
+
+Lemma swap_typ : forall G X Y L T,
+    G ⊢ pvar Y : {{pvar X}} ->
+                 G ⊢ pvar X : T ->
+                              G ⊢ pvar X ↓ L =:= pvar Y ↓ L.
+  intros.
+  constructor.
+  - eapply subtyp_sngl_qp with (p := pvar Y) (q := pvar X); eauto.
+    assert (HR: pvar X = (pvar X) •• []) by crush.
+    rewrite HR at 2.
+    assert (HR2: pvar Y = (pvar Y) •• []) by crush.
+    rewrite HR2 at 2.
+    apply rpath.
+  - eapply subtyp_sngl_pq with (p := pvar Y) (q := pvar X); eauto.
+    assert (HR: pvar X = (pvar X) •• []) by crush.
+    rewrite HR at 2.
+    assert (HR2: pvar Y = (pvar Y) •• []) by crush.
+    rewrite HR2 at 2.
+    apply rpath.
+Qed.
+
+Ltac var_subtyp_bind :=
+  var_subtyp;
+  [ apply ty_var; solve_bind
+  | solve_subtyp_and].
+
+Lemma eq_sel : forall G p A T,
+    G ⊢ trm_path p : typ_rcd { A == T } ->
+                     G ⊢ T =:= (p ↓ A).
+  intros.
+  constructor.
+  - eapply subtyp_sel2; eauto.
+  - eapply subtyp_sel1; eauto.
+Qed.
+
+Definition make_fun_apply (f : trm) (arg : trm) (withlet : bool) : trm :=
+  let wrap t :=
+      if withlet then (let_trm t) else t in
+  match f with
+  | trm_path pf =>
+    match arg with
+    | trm_path pa =>
+      wrap (trm_app pf pa)
+    | _ =>
+      trm_let arg (wrap (trm_app (shift1_p pf) this))
+    end
+  | _ =>
+    trm_let
+      f
+      (trm_let (shift1_trm arg)
+               (wrap (trm_app super this))
+      )
+  end.
+
+Notation "f $ a" := (make_fun_apply f a false) (at level 42).
+Notation "f $$ a" := (make_fun_apply f a true) (at level 42).
+
+Definition TLgen (T : typ) : trm :=
+  let inner := shift1_typ T in
+  let_trm (ν({GenT == inner}) {( {GenT ⦂= inner} )}).
