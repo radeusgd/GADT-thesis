@@ -44,7 +44,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.conf: 
-	coq_makefile -R . Top -R ../lambda2Gmu GMu -R ../../dot-calculus/src/extensions/paths '' Helpers.v Library.v Predefs.v TestEquality2.v TestEquality.v TestHelpers.v Translation.v -o Makefile
+	coq_makefile -R . Top -R ../lambda2Gmu GMu -R ../../dot-calculus/src/extensions/paths '' Helpers.v Library.v Predefs.v TestEquality2.v TestEqualityEnv.v TestEquality.v TestHelpers.v Translation.v -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need

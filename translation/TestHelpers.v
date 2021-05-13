@@ -196,3 +196,28 @@ Notation "f $$ a" := (make_fun_apply f a true) (at level 42).
 Definition TLgen (T : typ) : trm :=
   let inner := shift1_typ T in
   let_trm (ν({GenT == inner}) {( {GenT ⦂= inner} )}).
+
+Ltac invert_label :=
+  match goal with
+  | [ H: label_typ ?A = label_typ ?B |- _ ] =>
+    inversion H
+  | [ H: label_trm ?A = label_trm ?B |- _ ] =>
+    inversion H
+  end.
+Ltac var_subtyp_mu :=
+  match goal with
+  | [ |- ?G ⊢ tvar ?x : ?T ] =>
+    match goal with
+    | [ |- context [x ~ μ ?BT] ] =>
+      apply ty_sub with (open_typ_p (pvar x) BT)
+    end
+  end.
+Ltac var_subtyp_mu2 :=
+  var_subtyp_mu; [
+    apply ty_rec_elim; apply ty_var; solve_bind
+  | crush
+  ].
+Ltac var_subtyp2 :=
+  var_subtyp; [
+    apply ty_var; solve_bind
+  | idtac ].

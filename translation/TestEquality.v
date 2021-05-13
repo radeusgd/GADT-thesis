@@ -3,90 +3,11 @@ Require Import Library.
 Require Import TestHelpers.
 Require Import GMu.TestEquality.
 Require Import Translation.
+Require Import Top.TestEqualityEnv.
 
 Definition p_coerce_typ : typ :=
   translateTyp0 coerce_typ.
 
-
-Parameter refl : trm_label. (* TODO automatically generating constructor ids *)
-
-Definition env_pretyp : typ :=
-      { GN Eq ==
-        μ
-          {Ai 1 >: ⊥ <: ⊤} ∧ {Ai 2 >: ⊥ <: ⊤}
-        ∧ {pmatch ⦂ ∀ ({GenT >: ⊥ <: ⊤})
-                        ∀ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
-                          (super ↓ GenT)
-          }
-      }
-      ∧ { GC Eq 0 ==
-          μ
-            super ↓ GN Eq
-          ∧ {Bi 1 >: ⊥ <: ⊤}
-          ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
-          ∧ {data ⦂ ssuper ↓ Unit}
-        }
-      ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GN Eq) ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}) }
-    (* we should also take unit here, as the data arg, but that seems unnecessary *)
-          (* ∧ { refl ⦂  ∀ ({Bi 1 >: ⊥ <: ⊤}) ((super ↓ GC Eq 0) ∧ {Bi 1 == this ↓ Bi 1}) } *)
-.
-
-Definition env_typ : typ :=
-  μ (env_pretyp).
-
-Definition env_trm : trm :=
-  let_trm
-    (ν (env_pretyp)
-       {(
-           { GN Eq ⦂=
-             μ
-               {Ai 1 >: ⊥ <: ⊤} ∧ {Ai 2 >: ⊥ <: ⊤}
-             ∧ {pmatch ⦂ ∀ ({GenT >: ⊥ <: ⊤})
-                             ∀ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
-                               (super ↓ GenT)
-               }
-           },
-           { GC Eq 0 ⦂=
-             μ
-               super ↓ GN Eq
-             ∧ {Bi 1 >: ⊥ <: ⊤}
-             ∧ {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
-             ∧ {data ⦂ ssuper ↓ Unit}
-           },
-           { refl :=
-               λ ({Bi 1 >: ⊥ <: ⊤}) let_trm (
-                   ν(
-                       {Ai 1 == this ↓ Bi 1} ∧ {Ai 2 == this ↓ Bi 1}
-                       ∧ {pmatch ⦂ ∀ ({GenT >: ⊥ <: ⊤})
-                                       ∀ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
-                                         (super ↓ GenT)
-                         }
-                       ∧ {Bi 1 == super ↓ Bi 1}
-                       ∧ {data ⦂ ref 3 ↓ Unit}
-                     ) {(
-                           {Ai 1 ⦂= this ↓ Bi 1}, (* TODO this or super *)
-                           {Ai 2 ⦂= this ↓ Bi 1},
-                           {pmatch :=
-                              λ ({GenT >: ⊥ <: ⊤})
-                                λ ( ∀ (ssuper ↓ GC Eq 0 ∧ {{super}} ) (super ↓ GenT))
-                                (* TODO may need a let for self *)
-                                let_trm
-                                (trm_app this super)
-                           },
-                           {Bi 1 ⦂= super ↓ Bi 1},
-                           {data := (ref 3) • mkUnit}
-                       )}
-                 )
-           }
-       )}
-    ).
-
-Lemma env_types : forall lib,
-    empty & lib ~ libType ⊢ open_trm_p (pvar lib) env_trm : open_typ_p (pvar lib) env_typ.
-  intros.
-  cbv. crush.
-  (* TODO pDOT Σ env example def + typing *)
-Admitted.
 
 (* lib and env cannot escape, but then we cannot really type the outer program... *)
 
@@ -295,7 +216,7 @@ Lemma p_coerce_types :
                 apply subtyp_and12.
       }
 
-crush.
+      crush.
       apply ty_sub with (pvar TL ↓ GenT); crush.
       * assert (HR: open_typ_p (pvar c0case) (pvar TL ↓ GenT) = pvar TL ↓ GenT) by crush.
         rewrite <- HR.

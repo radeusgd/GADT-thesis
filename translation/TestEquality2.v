@@ -3,6 +3,7 @@ Require Import Library.
 Require Import TestHelpers.
 Require Import GMu.TestEquality.
 Require Import Translation.
+Require Import Top.TestEqualityEnv.
 Require Import Top.TestEquality.
 
 Definition p_destruct_typ : typ :=
