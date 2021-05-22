@@ -23,8 +23,8 @@ Definition p_destruct_trm : trm :=
   λ (*A*) ({GenT >: ⊥ <: ⊤}) λ (*B*) ({GenT >: ⊥ <: ⊤})
     λ (*C*) ({GenT >: ⊥ <: ⊤}) λ (*D*) ({GenT >: ⊥ <: ⊤})
     λ (*eq1*) (((pvar env ↓ GN Eq) ∧
-           {Ai 1 == ((pvar lib ↓ Tuple) ∧ {T1 == ssuper ↓ GenT}) ∧ {T2 == this ↓ GenT} })
-         ∧ {Ai 2 == ((pvar lib ↓ Tuple) ∧ {T1 == sssuper ↓ GenT}) ∧ {T2 == super ↓ GenT} })
+           {Ai 1 == ((pvar lib ↓ Tuple) ∧ {T1 == (ref 2) ↓ GenT}) ∧ {T2 == (ref 0) ↓ GenT} })
+         ∧ {Ai 2 == ((pvar lib ↓ Tuple) ∧ {T1 == (ref 3) ↓ GenT}) ∧ {T2 == (ref 1) ↓ GenT} })
     trm_let
     (* TL = *)
     (TLgen (((pvar env ↓ GN Eq) ∧ {Ai 1 == (* B *) ref 3 ↓ GenT}) ∧ {Ai 2 == (* A *) ref 4 ↓ GenT}))
@@ -49,6 +49,7 @@ Lemma p_destruct_types :
   crush.
   apply_fresh ty_all_intro as A; crush.
   apply_fresh ty_all_intro as B; crush.
+  cleanup.
   apply_fresh ty_all_intro as C; crush.
   apply_fresh ty_all_intro as D; crush.
   cleanup.
@@ -133,9 +134,35 @@ Lemma p_destruct_types :
              auto.
            }
 
-           assert (G ⊢ pvar A ↓ GenT =:= pvar B ↓ GenT).
+           match goal with
+           | [ _: context [eq ~ ((?T ∧ typ_rcd {Ai 1 == ?X}) ∧ typ_rcd {Ai 2 == ?Y})] |- _ ] =>
+             assert (G ⊢ X =:= Y)
+           end.
            1: {
              admit.
+           }
+
+           assert (G ⊢ pvar eq ↓ Ai 1 =:= pvar eq ↓ Ai 2).
+           1: {
+             admit.
+           }
+
+           assert (G ⊢ pvar A ↓ GenT =:= pvar B ↓ GenT).
+           1: {
+             assert (G ⊢ {T1 == pvar A ↓ GenT} =:= {T1 == pvar B ↓ GenT}).
+             1: {admit.}
+
+             {foo == bot} </: {bar == bot}
+
+
+             x = refl [{C ∧ {X >: Int <: String}}]
+             admit.
+             A ~ {T}
+               B ~ {T}
+               eq ~ {A1 == C ∧ {X == A.T}} ∧ {A2 == C ∧ {X == B.T}}
+                                               ev ~ {???} => eq.A1 =:= eq.A2
+                    (*                                              A.T =:= B.T *)
+                                                                  t : A -> t : B
            }
 
            assert (EA: G ⊢ pvar BTL ↓ Bi 1 =:= pvar A ↓ GenT).

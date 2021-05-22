@@ -115,7 +115,7 @@ Lemma p_coerce_types :
              apply ty_sub with (pvar env ↓ GN Eq).
              ** var_subtyp; crush.
                 repeat rewrite <- Heqenv.
-                eapply subtyp_trans; apply subtyp_and11.
+                solve_subtyp_and.
              ** eapply subtyp_sel1.
                 match goal with
                 | [ |- context [ env ~ μ ?T ] ] =>
@@ -178,7 +178,7 @@ Lemma p_coerce_types :
                        apply subtyp_and12.
           -- apply subtyp_trans with (pvar eq ↓ Ai 1).
              ++ apply subtyp_trans with (pvar eq_ev ↓ Ai 1).
-                ** eapply subtyp_sel2.
+                ** subsel2.
                    apply ty_sub with (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev ↓ Bi 1}) ∧ {Ai 2 == pvar eq_ev ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit}).
                    ---
                      assert (HR:
@@ -200,9 +200,7 @@ Lemma p_coerce_types :
                          *** crush.
                              eapply subtyp_trans; try apply subtyp_and11.
                              apply subtyp_and12.
-                   --- eapply subtyp_trans; try apply subtyp_and11.
-                       eapply subtyp_trans; try apply subtyp_and11.
-                       apply subtyp_and12.
+                   --- solve_subtyp_and.
                 ** eapply subtyp_sngl_pq with (p := pvar eq_ev) (q := pvar eq);
                      try solve [var_subtyp; crush; apply ty_var; solve_bind].
                    assert (HR: pvar eq_ev = (pvar eq_ev) •• []) by crush.
@@ -448,14 +446,8 @@ Lemma p_transitivity_types :
                apply ty_sub with (pvar env ↓ GC Eq 0).
                - var_subtyp; crush; apply ty_var; solve_bind.
                - subsel1.
-                 match goal with
-                 | [ |- context [ env ~ μ ?T ] ] =>
-                   apply ty_sub with (open_typ_p (pvar env) T)
-                 end.
-                 + apply ty_rec_elim. apply ty_var.
-                   solve_bind.
-                 + crush.
-                   solve_subtyp_and.
+                 var_subtyp_mu2.
+                 solve_subtyp_and.
              }
 
              assert (G ⊢ pvar A ↓ GenT =:= pvar eq_ev1 ↓ Bi 1).

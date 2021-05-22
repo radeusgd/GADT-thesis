@@ -171,6 +171,17 @@ Definition construct_trm : trm :=
                 }
 .
 
+(*
+Tuple /\ {T1 == A} ∧ {T2 == B} =:= Tuple /\ {T1 == C} ∧ {T2 == D}
+
+repeat apply intersection_order.
+Tuple =:= Tuple
+{T1 == A} =:= {T1 == C} <-
+  {T1 == A} <: {T1 == C} <-- A =:= C
+*)
+
+
+
 Lemma construct_types : {sigma, emptyΔ, empty} ⊢(Tgen) construct_trm ∈ construct_typ.
   cbv.
   lets: oksigma.

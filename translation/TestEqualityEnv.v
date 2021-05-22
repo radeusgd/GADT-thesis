@@ -221,10 +221,23 @@ Lemma env_types : forall lib,
         var_subtyp_mu2;
         solve_subtyp_and.
     + var_subtyp_mu2.
-      eapply subtyp_trans; try apply subtyp_and11.
-      eapply subtyp_trans; try apply subtyp_and11.
-      eapply subtyp_trans; try apply subtyp_and11.
-      eapply subtyp_trans; try apply subtyp_and12.
+      repeat
+        match goal with
+        | [ |- ?G ⊢ ?A ∧ ?B <: ?C ] =>
+          match B with
+          | typ_rcd {?N == ?T} =>
+            match C with
+            | typ_rcd {N == ?U} =>
+              eapply subtyp_trans; try apply subtyp_and12
+            | _ =>
+              eapply subtyp_trans; try apply subtyp_and11
+            end
+          | C =>
+            apply subtyp_and12
+          | _ =>
+            eapply subtyp_trans; try apply subtyp_and11
+          end
+        end.
       apply subtyp_typ;
         [subsel2 | subsel1];
         var_subtyp_mu2;
