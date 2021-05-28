@@ -38,23 +38,22 @@ Proof.
     dependent induction Hp; eauto.
   - Case "subtyp_typ"%string.
     dependent induction Hp; eauto.
-  - Case "subtyp_typ_inv1"%string.
-    apply ty_inv_r.
-    (* Check ty_dec_typ_inv. *)
-    (* eapply ty_dec_typ_inv. *)
-    (* apply ty_precise_inv. *)
-    (* Check pt3. *)
-    admit.
-    (*
-Debug: 1 depth=5
-Debug: 1.1 depth=4 simple apply ty_inv_r
-Debug: 1.1.2 depth=3 simple eapply ty_dec_typ_inv
-Debug: 1.1.2.1 depth=3 exact H
-Debug: 1.1.2.1.1 depth=3 exact Hs1
-Debug: 1.1.2.1.1.1 depth=3 exact Hs2
-     *)
-  - Case "subtyp_typ_inv2"%string.
-    admit.
+(*   - Case "subtyp_typ_inv1"%string. *)
+(*     (* Check ty_dec_typ_inv. *) *)
+(*     (* eapply ty_dec_typ_inv. *) *)
+(*     (* apply ty_precise_inv. *) *)
+(*     (* Check pt3. *) *)
+(*     admit. *)
+(*     (* *)
+(* Debug: 1 depth=5 *)
+(* Debug: 1.1 depth=4 simple apply ty_inv_r *)
+(* Debug: 1.1.2 depth=3 simple eapply ty_dec_typ_inv *)
+(* Debug: 1.1.2.1 depth=3 exact H *)
+(* Debug: 1.1.2.1.1 depth=3 exact Hs1 *)
+(* Debug: 1.1.2.1.1.1 depth=3 exact Hs2 *)
+(*      *) *)
+(*   - Case "subtyp_typ_inv2"%string. *)
+(*     admit. *)
   - Case "subtyp_sngl_pq"%string.
     pose proof (pt2_exists H0) as [? ?].
     apply* replacement_repl_closure_pq3.
@@ -67,7 +66,7 @@ Debug: 1.1.2.1.1.1 depth=3 exact Hs2
     apply* path_sel_repl_inv.
   - Case "subtyp_all"%string.
     dependent induction Hp; eauto.
-Admitted.
+Qed.
 
 (** If a path has a replacement type it also has a III-level precise type *)
 Lemma repl_prec_exists: forall G p T,
@@ -520,8 +519,8 @@ Proof.
   - destruct* (repl_andv Hi HT).
   - dependent induction HT. dependent induction H. dependent induction H.
   - dependent induction HT. dependent induction H. dependent induction H.
-  - admit.
-  - admit.
+  (* - admit. *)
+  (* - admit. *)
   - pose proof (pt2_exists H0) as [? ?]. apply* replacement_repl_closure_pq3_v.
     (* repl closure for vals *)
   - pose proof (pt2_exists H0) as [? ?]. apply* replacement_repl_closure_qp3_v.
@@ -529,7 +528,7 @@ Proof.
   - apply* path_sel_repl_v.
   - apply* path_sel_repl_inv_v.
   - dependent induction HT. constructor*.
-Admitted.
+Qed.
 
 Lemma replacement_closure_v : forall G v T,
     inert G ->

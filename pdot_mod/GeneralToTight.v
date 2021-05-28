@@ -90,6 +90,101 @@ Proof.
         ** apply repl_swap in Hr1'. eauto.
 Qed.
 
+Lemma inert_top_false : forall G d,
+    inert G ->
+    G ⊢# ⊤ <: typ_rcd d -> False.
+Admitted.
+Lemma inert_bot_false : forall G d,
+    inert G ->
+    G ⊢# typ_rcd d <: ⊥ -> False.
+Admitted.
+Lemma inert_dec_lam_unfit_false : forall G d T1 T2,
+    inert G ->
+    G ⊢# typ_rcd d <: ∀(T1) T2 -> False.
+Admitted.
+
+                       (*
+Spróbować regułę która jakoś mówi o dowolnym kształcie typu.
+
+forall G U1 U2,
+G ⊢# U1 <: U2 ->
+(
+exists A T1 T2, U1 = typ_rcd { A >: T1 <: T2 } ...
+-> T1 <: T2
+
+/\
+exists p A, U1 = p ↓ A -> binds G p >> {A == U2}
+/\
+...
+)
+                       *)
+Lemma inert_typ_inv_1: forall (G : ctx) (S1 S2 T1 T2 : typ) (A : typ_label),
+    inert G ->
+    G ⊢# typ_rcd {A >: S1 <: T1} <: typ_rcd {A >: S2 <: T2} ->
+    G ⊢# T1 <: T2.
+Proof.
+  intros G S1 S2 T1 T2 A Hi IH.
+  gen_eq U2: (typ_rcd {A >: S2 <: T2}).
+  gen_eq U1: (typ_rcd {A >: S1 <: T1}).
+  gen A S1 S2 T1 T2.
+  induction IH; intros X Sl Sr Tl Tr EQ1 EQ2; subst; try congruence.
+  - inversions EQ2. trivial.
+  - destruct T.
+    + false* inert_top_false.
+    + false* inert_bot_false.
+    + (* looks reasonable:
+         show that d = {X >: Sm <: Tm}
+         then use transitivity of Tl <: Tm <: Tr
+       *)
+      admit.
+    + admit.
+    + rename t into B.
+      (* IHs are useless here, but maybe we can just prove Tl = Tr due to the fact that p: {t : U..U} for some U *)
+      admit.
+    + (* IHs are useless here, same as below *)
+      admit.
+    + false* inert_dec_lam_unfit_false.
+    + (* IHs are useless here, but maybe this is contradictory altogether?
+         because no rule allows this conclusion directly and indirect rules would need to use p.A, but this will also not give that form
+       *)
+      admit.
+  - inversions H1.
+    inversions H6; auto.
+    apply* subtyp_sngl_pq_t.
+  - inversions H1.
+    inversions H6; auto.
+    apply* subtyp_sngl_qp_t.
+
+
+  (* dependent induction IH; auto. *)
+  (* - destruct T. *)
+  (*   + false* inert_top_false. *)
+  (*   + false* inert_bot_false. *)
+  (*   + admit. *)
+  (*   + admit. *)
+  (*   + admit. *)
+  (*   + admit. *)
+  (*   + admit. *)
+  (*   + admit. *)
+  (*   2 : { *)
+      
+  (*   } *)
+
+  (*   inversions IH1. *)
+  (*   (* inversions IH1. *) *)
+  (*   (* + admit. *) *)
+  (*   (* + apply~ IHIH2. *) *)
+  (*   (* +  *) *)
+  (*   (* apply* IHIH2. *) *)
+  (*   admit. *)
+  (* - inversions H1. *)
+  (*   inversions H6; auto. *)
+  (*   apply* subtyp_sngl_pq_t. *)
+  (* - inversions H1. *)
+  (*   inversions H6; auto. *)
+  (*   apply* subtyp_sngl_qp_t. *)
+Admitted.
+
 (** ** General to Tight [⊢ to ⊢#] *)
 (** In an inert environment, general typing ([ty_trm] [⊢]) can
     be reduced to tight typing ([ty_trm_t] [⊢#]).
@@ -118,9 +213,11 @@ Proof.
   intros G0 Hi.
   apply ts_mutind; intros; subst;
     try solve [eapply sel_replacement; auto]; eauto.
+  - admit.
+  - apply~ inert_typ_inv_1.
   - destruct* (sngl_replacement Hi (H eq_refl) (H0 eq_refl) r).
   - apply repl_swap in r. destruct* (sngl_replacement Hi (H eq_refl) (H0 eq_refl) r).
-Qed.
+Admitted.
 
 (** The general-to-tight lemma, formulated for term typing. *)
 Lemma general_to_tight_typing: forall G t T,

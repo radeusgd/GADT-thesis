@@ -191,19 +191,19 @@ with subtyp_t : ctx -> typ -> typ -> Prop :=
     G ⊢# T1 <: T2 ->
     G ⊢# typ_rcd { A >: S1 <: T1 } <: typ_rcd { A >: S2 <: T2 }
 
-(** [G ⊢# {A: S1..T1} <: {A: S2..T2}]  #<br>#
-    [――――――――――――――――――――――――――――――――] #<br>#
-    [G ⊢# S2 <: S1]                   *)
-| subtyp_typ_inv1_t: forall G S1 S2 T1 T2 A,
-    G ⊢# typ_rcd { A >: S1 <: T1 } <: typ_rcd { A >: S2 <: T2 } ->
-    G ⊢# S2 <: S1
+(* (** [G ⊢# {A: S1..T1} <: {A: S2..T2}]  #<br># *)
+(*     [――――――――――――――――――――――――――――――――] #<br># *)
+(*     [G ⊢# S2 <: S1]                   *) *)
+(* | subtyp_typ_inv1_t: forall G S1 S2 T1 T2 A, *)
+(*     G ⊢# typ_rcd { A >: S1 <: T1 } <: typ_rcd { A >: S2 <: T2 } -> *)
+(*     G ⊢# S2 <: S1 *)
 
-(** [G ⊢# {A: S1..T1} <: {A: S2..T2}]  #<br>#
-    [――――――――――――――――――――――――――――――――] #<br>#
-    [G ⊢# T1 <: T2]                   *)
-| subtyp_typ_inv2_t: forall G S1 S2 T1 T2 A,
-    G ⊢# typ_rcd { A >: S1 <: T1 } <: typ_rcd { A >: S2 <: T2 } ->
-    G ⊢# T1 <: T2
+(* (** [G ⊢# {A: S1..T1} <: {A: S2..T2}]  #<br># *)
+(*     [――――――――――――――――――――――――――――――――] #<br># *)
+(*     [G ⊢# T1 <: T2]                   *) *)
+(* | subtyp_typ_inv2_t: forall G S1 S2 T1 T2 A, *)
+(*     G ⊢# typ_rcd { A >: S1 <: T1 } <: typ_rcd { A >: S2 <: T2 } -> *)
+(*     G ⊢# T1 <: T2 *)
 
 (** [G ⊢!!! p: q.type]                 #<br>#
     [G ⊢!!! q: U]                      #<br>#
