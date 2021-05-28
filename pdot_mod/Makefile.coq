@@ -44,7 +44,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.coq.conf: 
-	coq_makefile -R . "" -install none -o Makefile.coq Narrowing.v TightTyping.v PreciseFlow.v Safety.v ReplacementTyping1.v InvertibleTyping.v ListExample.v Substitution.v Definitions.v Sequences.v Subenvironments.v RecordAndInertTypes.v SingletonTypeExample.v Replacement.v CompilerExample.v Lookup.v ReplacementTyping.v Reduction.v ExampleTactics.v CanonicalForms.v Binding.v GeneralToTight.v PreciseTyping.v Weakening.v
+	coq_makefile -R . "" -install none -o Makefile.coq TightTyping.v PreciseFlow.v Safety.v ReplacementTyping1.v InvertibleTyping.v ListExample.v Substitution.v GeneralToTight.v Definitions.v Sequences.v Subenvironments.v RecordAndInertTypes.v SingletonTypeExample.v CompilerExample.v Lookup.v ReplacementTyping.v Reduction.v ExampleTactics.v Narrowing.v Replacement.v CanonicalForms.v Binding.v PreciseTyping.v Weakening.v
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need

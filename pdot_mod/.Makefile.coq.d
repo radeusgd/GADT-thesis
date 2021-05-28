@@ -1,6 +1,3 @@
-Narrowing.vo Narrowing.glob Narrowing.v.beautified Narrowing.required_vo: Narrowing.v Definitions.vo Subenvironments.vo Weakening.vo
-Narrowing.vio: Narrowing.v Definitions.vio Subenvironments.vio Weakening.vio
-Narrowing.vos Narrowing.vok Narrowing.required_vos: Narrowing.v Definitions.vos Subenvironments.vos Weakening.vos
 TightTyping.vo TightTyping.glob TightTyping.v.beautified TightTyping.required_vo: TightTyping.v Definitions.vo PreciseTyping.vo
 TightTyping.vio: TightTyping.v Definitions.vio PreciseTyping.vio
 TightTyping.vos TightTyping.vok TightTyping.required_vos: TightTyping.v Definitions.vos PreciseTyping.vos
@@ -22,6 +19,9 @@ ListExample.vos ListExample.vok ListExample.required_vos: ListExample.v ExampleT
 Substitution.vo Substitution.glob Substitution.v.beautified Substitution.required_vo: Substitution.v Definitions.vo Binding.vo Replacement.vo Weakening.vo
 Substitution.vio: Substitution.v Definitions.vio Binding.vio Replacement.vio Weakening.vio
 Substitution.vos Substitution.vok Substitution.required_vos: Substitution.v Definitions.vos Binding.vos Replacement.vos Weakening.vos
+GeneralToTight.vo GeneralToTight.glob GeneralToTight.v.beautified GeneralToTight.required_vo: GeneralToTight.v Sequences.vo Definitions.vo RecordAndInertTypes.vo PreciseTyping.vo TightTyping.vo InvertibleTyping.vo Narrowing.vo Replacement.vo ReplacementTyping.vo
+GeneralToTight.vio: GeneralToTight.v Sequences.vio Definitions.vio RecordAndInertTypes.vio PreciseTyping.vio TightTyping.vio InvertibleTyping.vio Narrowing.vio Replacement.vio ReplacementTyping.vio
+GeneralToTight.vos GeneralToTight.vok GeneralToTight.required_vos: GeneralToTight.v Sequences.vos Definitions.vos RecordAndInertTypes.vos PreciseTyping.vos TightTyping.vos InvertibleTyping.vos Narrowing.vos Replacement.vos ReplacementTyping.vos
 Definitions.vo Definitions.glob Definitions.v.beautified Definitions.required_vo: Definitions.v 
 Definitions.vio: Definitions.v 
 Definitions.vos Definitions.vok Definitions.required_vos: Definitions.v 
@@ -37,9 +37,6 @@ RecordAndInertTypes.vos RecordAndInertTypes.vok RecordAndInertTypes.required_vos
 SingletonTypeExample.vo SingletonTypeExample.glob SingletonTypeExample.v.beautified SingletonTypeExample.required_vo: SingletonTypeExample.v ExampleTactics.vo
 SingletonTypeExample.vio: SingletonTypeExample.v ExampleTactics.vio
 SingletonTypeExample.vos SingletonTypeExample.vok SingletonTypeExample.required_vos: SingletonTypeExample.v ExampleTactics.vos
-Replacement.vo Replacement.glob Replacement.v.beautified Replacement.required_vo: Replacement.v Sequences.vo Definitions.vo Binding.vo
-Replacement.vio: Replacement.v Sequences.vio Definitions.vio Binding.vio
-Replacement.vos Replacement.vok Replacement.required_vos: Replacement.v Sequences.vos Definitions.vos Binding.vos
 CompilerExample.vo CompilerExample.glob CompilerExample.v.beautified CompilerExample.required_vo: CompilerExample.v ExampleTactics.vo
 CompilerExample.vio: CompilerExample.v ExampleTactics.vio
 CompilerExample.vos CompilerExample.vok CompilerExample.required_vos: CompilerExample.v ExampleTactics.vos
@@ -55,15 +52,18 @@ Reduction.vos Reduction.vok Reduction.required_vos: Reduction.v Definitions.vos 
 ExampleTactics.vo ExampleTactics.glob ExampleTactics.v.beautified ExampleTactics.required_vo: ExampleTactics.v Definitions.vo Binding.vo Weakening.vo
 ExampleTactics.vio: ExampleTactics.v Definitions.vio Binding.vio Weakening.vio
 ExampleTactics.vos ExampleTactics.vok ExampleTactics.required_vos: ExampleTactics.v Definitions.vos Binding.vos Weakening.vos
+Narrowing.vo Narrowing.glob Narrowing.v.beautified Narrowing.required_vo: Narrowing.v Definitions.vo Subenvironments.vo Weakening.vo
+Narrowing.vio: Narrowing.v Definitions.vio Subenvironments.vio Weakening.vio
+Narrowing.vos Narrowing.vok Narrowing.required_vos: Narrowing.v Definitions.vos Subenvironments.vos Weakening.vos
+Replacement.vo Replacement.glob Replacement.v.beautified Replacement.required_vo: Replacement.v Sequences.vo Definitions.vo Binding.vo
+Replacement.vio: Replacement.v Sequences.vio Definitions.vio Binding.vio
+Replacement.vos Replacement.vok Replacement.required_vos: Replacement.v Sequences.vos Definitions.vos Binding.vos
 CanonicalForms.vo CanonicalForms.glob CanonicalForms.v.beautified CanonicalForms.required_vo: CanonicalForms.v Binding.vo Definitions.vo GeneralToTight.vo InvertibleTyping.vo Lookup.vo Narrowing.vo PreciseTyping.vo Replacement.vo ReplacementTyping.vo RecordAndInertTypes.vo Substitution.vo Subenvironments.vo TightTyping.vo Weakening.vo Sequences.vo
 CanonicalForms.vio: CanonicalForms.v Binding.vio Definitions.vio GeneralToTight.vio InvertibleTyping.vio Lookup.vio Narrowing.vio PreciseTyping.vio Replacement.vio ReplacementTyping.vio RecordAndInertTypes.vio Substitution.vio Subenvironments.vio TightTyping.vio Weakening.vio Sequences.vio
 CanonicalForms.vos CanonicalForms.vok CanonicalForms.required_vos: CanonicalForms.v Binding.vos Definitions.vos GeneralToTight.vos InvertibleTyping.vos Lookup.vos Narrowing.vos PreciseTyping.vos Replacement.vos ReplacementTyping.vos RecordAndInertTypes.vos Substitution.vos Subenvironments.vos TightTyping.vos Weakening.vos Sequences.vos
 Binding.vo Binding.glob Binding.v.beautified Binding.required_vo: Binding.v Definitions.vo
 Binding.vio: Binding.v Definitions.vio
 Binding.vos Binding.vok Binding.required_vos: Binding.v Definitions.vos
-GeneralToTight.vo GeneralToTight.glob GeneralToTight.v.beautified GeneralToTight.required_vo: GeneralToTight.v Sequences.vo Definitions.vo RecordAndInertTypes.vo PreciseTyping.vo TightTyping.vo InvertibleTyping.vo Narrowing.vo Replacement.vo ReplacementTyping.vo
-GeneralToTight.vio: GeneralToTight.v Sequences.vio Definitions.vio RecordAndInertTypes.vio PreciseTyping.vio TightTyping.vio InvertibleTyping.vio Narrowing.vio Replacement.vio ReplacementTyping.vio
-GeneralToTight.vos GeneralToTight.vok GeneralToTight.required_vos: GeneralToTight.v Sequences.vos Definitions.vos RecordAndInertTypes.vos PreciseTyping.vos TightTyping.vos InvertibleTyping.vos Narrowing.vos Replacement.vos ReplacementTyping.vos
 PreciseTyping.vo PreciseTyping.glob PreciseTyping.v.beautified PreciseTyping.required_vo: PreciseTyping.v Sequences.vo Definitions.vo Binding.vo RecordAndInertTypes.vo Replacement.vo PreciseFlow.vo
 PreciseTyping.vio: PreciseTyping.v Sequences.vio Definitions.vio Binding.vio RecordAndInertTypes.vio Replacement.vio PreciseFlow.vio
 PreciseTyping.vos PreciseTyping.vok PreciseTyping.required_vos: PreciseTyping.v Sequences.vos Definitions.vos Binding.vos RecordAndInertTypes.vos Replacement.vos PreciseFlow.vos

@@ -128,6 +128,17 @@ Inductive ty_path_inv : ctx -> path -> typ -> Prop :=
     repl_typ p q {{ r'}} {{ r'' }} ->
     G ⊢## r : {{ r'' }}
 
+
+| ty_dec_typ_inv1 : forall G p A T1 T2 S1 S2,
+  G ⊢## p : T1 ->
+  G ⊢# typ_rcd {A >: S1 <: T1} <: typ_rcd {A >: S2 <: T2} ->
+  G ⊢## p : T2
+
+| ty_dec_typ_inv2 : forall G p A T1 T2 S1 S2,
+  G ⊢## p : S2 ->
+  G ⊢# typ_rcd {A >: S1 <: T1} <: typ_rcd {A >: S2 <: T2} ->
+  G ⊢## p : S1
+
 where "G '⊢##' p ':' T" := (ty_path_inv G p T).
 
 Hint Constructors ty_path_inv.
@@ -160,7 +171,10 @@ Proof.
     + eapply narrow_subtyping. apply* Hs. apply subenv_last. apply* tight_to_general.
       apply* ok_push.
     + eauto.
-Qed.
+  - 
+    admit.
+  - admit.
+Admitted.
 
 (** Invertible-to-precise typing for records:
     [inert G]                    #<br>#
@@ -184,7 +198,9 @@ Proof.
   - specialize (IHHinv _ _ _ HG eq_refl).
     destruct IHHinv as [V [Hx [Hs1 Hs2]]].
     exists V. split*.
-Qed.
+  - admit.
+  - admit.
+Admitted.
 
 (** *** Invertible Replacement Closure *)
 
@@ -230,6 +246,8 @@ Ltac solve_repl_sub :=
     try solve [apply* repl_sub];
     eauto.
 
+Variable FOO : typ_label.
+
 (** Singleton-subtyping closure for inert and record types:
     If [Γ ⊢!!! p: T] and [Γ ⊢! q: r.type] then [Γ ⊢## p: T[r/q]] *)
 Lemma invertible_repl_closure_helper :
@@ -274,6 +292,23 @@ Proof.
     pose proof (typed_paths_named (precise_to_general2 H2)) as Hs.
     lets Ho: (repl_open_var y H9 Ht Hs). eapply weaken_subtyp. solve_repl_sub.
     apply* ok_push.
+    Unshelve.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
+    exact FOO.
+    exact ⊤.
 Qed.
 
 (** Singleton-subtyping closure for invertible typing:
