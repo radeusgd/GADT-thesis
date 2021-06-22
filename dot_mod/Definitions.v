@@ -446,6 +446,15 @@ with subtyp : ctx -> typ -> typ -> Prop :=
     G ⊢ T1 <: T2 ->
     G ⊢ typ_rcd (dec_typ A S1 T1) <: typ_rcd (dec_typ A S2 T2)
 
+
+| subtyp_typ_inv1: forall G A S1 T1 S2 T2,
+    G ⊢ typ_rcd (dec_typ A S1 T1) <: typ_rcd (dec_typ A S2 T2) ->
+    G ⊢ T1 <: T2
+
+| subtyp_typ_inv2: forall G A S1 T1 S2 T2,
+    G ⊢ typ_rcd (dec_typ A S1 T1) <: typ_rcd (dec_typ A S2 T2) ->
+    G ⊢ S2 <: S1
+
 (** [G ⊢ x: {A: S..T}] #<br>#
     [――――――――――――――――] #<br>#
     [G ⊢ S <: x.A]     *)
