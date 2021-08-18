@@ -100,10 +100,37 @@ A very important feature of GADTs is that the compiler can use the additional in
 
 The above example shows that the real power of GADTs lies not only in allowing to restrict what kinds of structures can be created using the constructors, but also in allowing the compiler to perform more advanced type equality reasoning when pattern matching these types.
 
-\section{GADTs in Scala (?)}
+\section{GADTs in Scala}
 
-TODO discuss GADTs in Scala 2 and 3, the syntaxes and the problems
+GADTs have already been available in Scala 2, although there was no special syntax for defining a GADT. Instead, they were emulated using \textit{sealed traits} and \textit{case classes}.
 
+We can take a simplified example from the previous section (we will often use it in this simplified form from now on) in Scala 3 syntax:
+
+\begin{verbatim}
+enum Expr[T]:
+  case IntLiteral(value: Int) extends Expr[Int]
+  case Plus(lhs: Expr[Int], rhs: Expr[Int])
+  case Pair[A, B](lhs: Expr[A], rhs: Expr[B]) extends Expr[(A, B)]
+\end{verbatim}
+
+The analogous construction in Scala 2 would be following:
+
+\begin{verbatim}
+sealed trait Expr[T]
+object Expr {
+  case class IntLiteral(value: Int) extends Expr[Int]
+  case class Plus(lhs: Expr[Int], rhs: Expr[Int]) extends Expr[Int]
+  case class Pair[A, B](lhs: Expr[A], rhs: Expr[B]) extends Expr[(A, B)]
+}
+\end{verbatim}
+
+In fact, the \texttt{enum} syntactic sugar of Scala 3 desugars to a class hierarchy that very closely resembles the above definition.
+
+Unfortunately, the type inference of GADTs in Scala 2 was plagued with soundness issues \cite{Towards}. \todo{Maybe look for a concrete example and show it here?}
+
+Scala 3 has been built on new, sound, type-theoretic foundations, the calculus of Dependent Object Types \cite{EssenceDOT}. The redesign of the language involved removing some of its features to make the language more consistent and sound \todo{Probably worth listing these features}. The new type inference is designed to more closely resemble the foundational calculus which should give more assurance that such type inference is sound.
+
+To better understand the GADT reasoning in context of Scala's calculus and guide the implementation of type inference, a sketch of encoding GADTs using simpler Scala constructs has been proposed \cite{Towards}. I have then refined this sketch and proposed an encoding \cite{myreport:277075} \todo{not sure if I should cite this, as the report's name is the same as the thesis which may look strange?} of a lambda calculus containing GADTs into pDOT (an extension of DOT, \cite{pDOT}). Part of this work is an attempt to further formalize this encoding.
 
 \section{Practical Example}
 
@@ -169,4 +196,4 @@ init.onComplete { binding: ServerBinding =>
 
 \section{Describe the work done}
 
-TODO the formalization and encoding sketch
+TODO the formalization and encoding sketch; this should probably be done later when I know precisely what is and is not done
