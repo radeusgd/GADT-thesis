@@ -216,9 +216,9 @@ init.onComplete { binding: ServerBinding =>
 
 \section{Formalizing the GADT reasoning}
 
-One of the first papers to describe the GADTs \cite{XiGRDT} introduces a lambda calculus focused on modeling the GADT reasoning. The $\lambda_{2G\mu}$ is an extension of System F with GADTs.
+One of the first papers to describe the GADTs \cite{XiGRDT} introduces a lambda calculus focused on modeling the GADT reasoning. The $\lambda_{2G\mu}$ is an extension of System F \cite{girard_prot} with GADTs.
 
-The calculus adds a special syntactic category for GADT types, constructors and a special pattern matching operation for destructuring the GADT instances. Moreover, it adds a unit type and tuples. It makes use of an additional environment which defines the GADT types and their constructors. Overall, the language has three different environments: $\Gamma$ which maps variables to their types (as in simple types), a separate environment $\Delta$ which tracks type variables that are currently available in scope (similarly to System F) and $\Sigma$ which maps GADT constructor names to their type signatures. Additionally, the $\Delta$ environment is extended to keep track of type equalities that are introduced by pattern matching on GADTs. All GADT constructors in this calculus take exactly one data \textit{value?} argument, but as explained in section \ref{}, since the calculus also supports tuples and unit, GADTs with an arbitrary amount of arguments can easily be rewritten to GADTs of a single argument that take tuples. The type signature of a constructor has form $\forall_{A_1, ..., A_m}. \tau \to (\gamma_1, ..., \gamma_n) T$ where $A_1$ to $A_m$ are the type parameters of the constructor (which will then turn into existential types when pattern matching), $\tau$ is the single data argument and $\gamma_1$ to $\gamma_n$ are instantiations of the type parameters of the GADT $T$ that is being constructed. Of course both $\tau$ and $\gamma_i$ can refer to the type parameters $A_j$.
+The calculus adds a special syntactic category for GADT types, constructors and a special pattern matching operation for destructuring the GADT instances. Moreover, it adds a unit type and tuples, and a fixpoint operator to allow for recursive definitions of functions. It makes use of an additional environment which defines the GADT types and their constructors. Overall, the language has three different environments: $\Gamma$ which maps variables to their types (as in simple types), a separate environment $\Delta$ which tracks type variables that are currently available in scope (similarly to System F) and $\Sigma$ which maps GADT constructor names to their type signatures. Additionally, the $\Delta$ environment is extended to keep track of type equalities that are introduced by pattern matching on GADTs. All GADT constructors in this calculus take exactly one data \textit{value?} argument, but as explained in section \ref{}, since the calculus also supports tuples and unit, GADTs with an arbitrary amount of arguments can easily be rewritten to GADTs of a single argument that take tuples. The type signature of a constructor has form $\forall_{A_1, ..., A_m}. \tau \to (\gamma_1, ..., \gamma_n) T$ where $A_1$ to $A_m$ are the type parameters of the constructor (which will then turn into existential types when pattern matching), $\tau$ is the single data argument and $\gamma_1$ to $\gamma_n$ are instantiations of the type parameters of the GADT $T$ that is being constructed. Of course both $\tau$ and $\gamma_i$ can refer to the type parameters $A_j$.
 
 \comment{There are no constructs for modifying the $\Sigma$ environment, so the GADTs are defined for the whole program - it is not possible to have local definitions. This is rather desirable for a formally defined language as otherwise additional mechanics would be needed for handling escaping types.}
 
@@ -256,10 +256,67 @@ While being quite simple, the DOT calculus is very expressive. Many features of 
 
 Since the soundness of DOT has been proven, encoding other language into the DOT calculus and using a similar method of desugaring these constructs in the actual compiler implementation allows to gain confidence that the implementation is sound too. Unfortunately, typing in DOT is undecidable in general \cite{?}, so the compiler may often need to use various heuristics and approximations which can still lead to errors, but it is much easier to reason about complying with the core concepts of DOT rather than the interactions with all the other language features.
 
-Some features of Scala cannot be directly encoded in pure DOT and so there are extensions being developed that enable the missing features. One of these extensions is pDOT \cite{pDOT}. It lifts DOT's restriction of dependent types being able to only refer to immediate names, allowing for arbitrary paths (so apart from $x.T$, pDOT also allows type references like $p.q.r.T$). This was important for enabling some recursive definitions. Moreover, it brings singleton types - a type that is inhabited only by its single instance and so allows expressing on the type level that some two objects are actually the same object.
+\subsection{Examples}
 
-\comment{TODO: maybe show some examples and describe features in more details, can use the presentation from seminarium}
-  
+The DOT calculus features two kinds of values: objects that can contain multiple fields and dependent functions. It also features intersection types which can be used to create more complex object types from simple ones. Members of object types can be accessed using the selection operator $x.a$.
+
+The type system introduces a subtyping hierarchy (a partial ordering of types) with the greatest element $\top$ and the least element $\bot$, functions and objects are compared structurally and the intersection operator $\wedge$ can be treated as a greatest lower bound operation in this ordering. While the subtyping relation is structural, nominal types can be emulated \cite{EssenceDOT}.
+
+\begin{table}[h]
+  \begin{tabular}{ccc}
+   & Objects & Functions \\
+   Value &
+    $\nu (s : \{ A : T..T \} \wedge \{ x: s.A \}) \{ A = T \wedge x = foo.bar \}$ & 
+    $\lambda (x : U) \; e$
+    \\
+   Type &
+   $\mu(s : \{ A : T..T \} \wedge \{ x: s.A \})$  & 
+   $\forall (x : U) \; V$
+  \end{tabular}
+\end{table}
+
+As can be seen above, there is also a recursive type operator $\mu$ which allows to define recursive types.
+
+As the functions are dependent, the return type of the function can refer to the name of the argument. This can by for example used to define polymorphic functions similar to what can be done System F. To encode an identity function, which in System F would be $(\Lambda A. \lambda x^A . \; x) : \Pi A. \, A \to A$, we can create a function which will take an argument that contains a single type member which corresponds to the type $\alpha$ from the example and whose return type will depend on this argument: \\ $(\lambda (a : \{ T : \bot..\top \}) \; \lambda (x: a.T) \; x) : \forall (a : \{ T : \bot..\top \}) \; \forall (x : a.T) \; a.T$.
+
+\subsection{Extensions}
+
+Some features of Scala cannot be directly encoded in pure DOT and so there are extensions being developed that enable the missing features. One of these extensions is pDOT \cite{pDOT}. It lifts DOT's restriction that selection could only refer to immediate names. This restriction made it impossible to express some structures, like some mutually recursive definitions. In pDOT arbitrary paths can be used in selection, so apart from $x.T$, pDOT also allows selections like $p.q.r.T$. 
+
+Moreover, pDOT adds \textit{singleton types} (known in some literature as \textit{selftypes} \cite{zenger}). A singleton type allows to track path equality - a path $p$ can be typed to $q.type$ if and only if it can be proven that $p$ always points to the same element as $q$ - so that essentially both $p$ and $q$ are interchangeable. Singleton types can be for example used to implement the method chaining pattern \cite{pDOT}.
+
+\begin{figure}[h]
+\caption{One example application of singleton types - the method chaining pattern. Scala code has been used for clarity, but the example works analogously in pDOT too - it is just more verbose.}
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}{scala}
+trait C {
+  def incr: C
+}
+trait D extends C {
+  def decr: D
+}
+val x: D = ...
+x.decr.incr // ok
+x.incr.decr // type error:
+// decr is not a member of C
+// x.incr: C
+\end{minted}
+    &
+\begin{minted}{scala}
+trait C { self =>
+  def incr: self.type
+}
+trait D extends C { self =>
+  def decr: self.type
+}
+val x: D = ...
+x.decr.incr // ok
+x.incr.decr // ok
+// x.incr: x.type =:= D
+\end{minted}
+\end{tabular}  
+\end{figure}
+
 
 \section{Contributions}
 
