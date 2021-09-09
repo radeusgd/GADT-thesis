@@ -1,0 +1,325 @@
+\chapter{Introduction}
+%\chapter*{Introduction}
+%\addcontentsline{toc}{chapter}{Introduction}
+Generalized Algebraic Data Types make a type system more expressive, allowing to express some more complex invariants and structures in a type-safe way.
+
+This work tries to further the understanding of formal foundations of type systems involving GADTs with a focus on the Scala language. GADTs are a powerful language feature and are hard to get right in practice - for example the implementation of GADTs in Scala 2 was not sound \cite{TODO}\todo{Ask Alek about the citation from his paper.}. Recently, Scala 3, based on new theoretical foundations has been released and it is hoped that the issues with GADTs have been fixed. Exploring the formal foundations of this new approach to GADTs in Scala should give more certainty about the new implementation or allow to find issues that may need to be fixed.
+
+\todo{Tu można jeszcze coś dopisac jak już pozostałe rozdziały będą gotowe.}
+
+\section{GADTs}
+
+An Algebraic Data Type is a type whose values can be one of some predefined variants (called \textit{constructors}). They are, however, more powerful than just enumeration types, because each variant can hold additional data within it. As the type is recursive, the data held by each constructor can also refer to the ADT type itself, allowing for nested data structures. Moreover, they usually can be parametric - that is, the ADT can be parametrized by type arguments.
+
+A classic example of an ADT are the Option and List types:
+
+\begin{verbatim}
+enum Option[T]:
+  case Some(x: T)
+  case None
+\end{verbatim}
+
+The \texttt{Option} type is parametrized by a single type parameter \texttt{T}\footnote{In practice, in Scala, we would write \texttt{Option[+T]} to indicate that the type is covariant in \texttt{T}, however this work mostly focuses on invariant GADTs, so for simplicity this detail is omitted.} (indicating the type of element held by it) and has two constructors: \texttt{Some} containing some data of type \texttt{T} and \texttt{None} indicating that the value was empty.
+
+\begin{verbatim}
+enum List[T]:
+  case Cons(head: T, tail: List[T])
+  case Nil
+\end{verbatim}
+
+The \texttt{List} type is also parametrized by the type of elements that will be held on the list and has two constructors: \texttt{Nil} indicating an empty list and \texttt{Cons} which holds a single element (the list's head) and a reference to the tail of the list (which can contain more elements or be empty).
+
+Generalized Algebraic Data Types extend ADTs with existential types and type constraints. The difference between ADTs and GADTs is that the latter allow to have \textit{additional} type parameters for each constructor and allow to instantiate the type parameters of the type itself to specific values. To express this, Scala 3 uses the \texttt{extends} syntax which allows to specifically instantiate the type parameters.
+
+For example, going back to the \texttt{Option} example, we could have written:
+
+\begin{verbatim}
+enum Option[T]:
+  case Some(x: T) extends Option[T]
+  case None extends Option[T]
+\end{verbatim}
+
+The above more clearly shows that both \texttt{Some} and \texttt{None} are constructors which take one or zero arguments and create an instance of \texttt{Option[T]}. Usually this is omitted for conciseness in case of simple ADTs, as the compiler can infer that. However in case of GADTs we may instantiate these arguments to more specific values, for example:
+
+\begin{verbatim}
+enum Expr[T]:
+  case IntLiteral(value: Int) extends Expr[Int]
+  case StringLiteral(value: String) extends Expr[String]
+  case Plus(lhs: Expr[Int], rhs: Expr[Int])
+  case Concat(lhs: Expr[String], rhs: Expr[String])
+  case Pair[A, B](lhs: Expr[A], rhs: Expr[B]) extends Expr[(A, B)]
+\end{verbatim}
+
+The above is a classic example of an application of ADTs - we can create a type-safe expression type that allows us to build expressions operating on integers, strings and pairs of data and will not allow to build an expression that does not typecheck.
+
+A variant without GADTs would not be able to enforce that the \texttt{Plus} operation can only take expressions returning an integer at compile time:
+
+\begin{verbatim}
+enum Expr:
+  case IntLiteral(value: Int)
+  case StringLiteral(value: String)
+  case Plus(lhs: Expr, rhs: Expr)
+  case Concat(lhs: Expr, rhs: Expr)
+  case Pair(lhs: Expr, rhs: Expr)
+  
+// Would compile but is ill-formed
+Plus(IntLiteral(42), StringLiteral("foo"))
+\end{verbatim}
+
+The \texttt{Expr} example will be used many times throughout this work (often in a slightly thinned down version) as it shows all the features of GADTs.
+
+It is a sum type with 5 variants. Its constructors instantiate the type parameter to specific values and the \texttt{Pair} constructor exhibits existential types.
+
+To show the usefulness of this kind of an encoding, we can write a type-safe interpreter of these expressions:
+
+\begin{verbatim}
+def eval[A](expr: Expr[A]): A = expr match {
+  case IntLiteral(x) => x
+  case StringLiteral(s) => s
+  case Plus(lhs, rhs) => 
+    val l: Int = eval(lhs)
+    val r: Int = eval(rhs)
+    l + r
+  case Concat(lhs, rhs) =>
+    val l: String = eval(lhs)
+    val r: String = eval(rhs)
+    s"$l$r" // (TODO) string concatenation
+  case Pair[X, Y](lhs, rhs) =>
+    val l: X = eval(lhs)
+    val r: Y = eval(rhs)
+    (l, r)
+}
+\end{verbatim}
+
+The nice thing about the above interpreter is that it is able to specify in its function type that for an expression of type \texttt{Expr[A]} it will return an evaluated value of type \texttt{A}. Moreover, by the construction of the \texttt{Expr} type, it will only take valid expressions, so there is no possibility of a runtime type error - it is impossible to construct, for example an expression that adds a string to an integer using this model.
+
+A very important feature of GADTs is that the compiler can use the additional information about particular constructors and how they instantiate the type parameters to infer some additional type constraints which can be used during typechecking. We can see them on the above example:
+
+\begin{itemize}
+  \item The \texttt{IntLiteral} branch returns \texttt{x} which has type \texttt{Int}, but since we have deconstructed \texttt{expr} and know that it has been created using the \texttt{IntLiteral} constructor, which always instantiates the type parameter to \texttt{Int}, the compiler can infer a type constraint \texttt{A =:= Int} and thus the branch type-checks, because it returns an \texttt{Int} where a value of type \texttt{A} is expected, but we know that they are of the same type.
+  
+  \item The \texttt{Plus} branch works in a similar way - its data members \texttt{lhs} and \texttt{rhs} are of type \texttt{Expr[Int]} so the recursive invocations of \texttt{eval} return \texttt{Int}s too and the overall operation returns \texttt{Int} where \texttt{A} is expected, but since we know that in this case \texttt{expr} was created using the \texttt{Plus} constructor, again we get a constraint proving that \texttt{A =:= Int}.
+  
+  \item The \texttt{Pair} branch is more interesting because it also features the existential types - when we enter this branch, types \texttt{X} and \texttt{Y} enter the scope. We know that \texttt{expr} has been created using the \texttt{Pair} constructors which was provided with some two types, we do not know anything about them, but can refer to them by the bound names\footnote{This is very similar to existential quantification in logic, where in the expresssion $\exists_x. P(x)$ we know that we have $P(x)$ for some element $x$, but we do not know anything else about this element, the only thing that we can do is we can give it a name, for example $e$ and we will know from the predicate that $P(e)$ holds.}. From the constructor that was used, we know that \texttt{A} was instantiated to \texttt{(X, Y)}, so we get a constraint \texttt{A =:= (X, Y)}. As \texttt{lhs} has type \texttt{Expr[X]}, \texttt{eval(lhs)} will have type \texttt{X} and analogously for \texttt{rhs}, so then \texttt{(l, r)} has type \texttt{(X, Y)} and everything type-checks.
+\end{itemize}
+
+The above example shows that the real power of GADTs lies not only in allowing to restrict what kinds of structures can be created using the constructors, but also in allowing the compiler to perform more advanced type equality reasoning when pattern matching these types.
+
+\section{GADTs in Scala}
+
+GADTs have already been available in Scala 2, although there was no special syntax for defining a GADT. Instead, they were emulated using \textit{sealed traits} and \textit{case classes}.
+
+We can take a simplified example from the previous section (we will often use it in this simplified form from now on) in Scala 3 syntax:
+
+\begin{verbatim}
+enum Expr[T]:
+  case IntLiteral(value: Int) extends Expr[Int]
+  case Plus(lhs: Expr[Int], rhs: Expr[Int])
+  case Pair[A, B](lhs: Expr[A], rhs: Expr[B]) extends Expr[(A, B)]
+\end{verbatim}
+
+The analogous construction in Scala 2 would be following:
+
+\begin{verbatim}
+sealed trait Expr[T]
+object Expr {
+  case class IntLiteral(value: Int) extends Expr[Int]
+  case class Plus(lhs: Expr[Int], rhs: Expr[Int]) extends Expr[Int]
+  case class Pair[A, B](lhs: Expr[A], rhs: Expr[B]) extends Expr[(A, B)]
+}
+\end{verbatim}
+
+In fact, the \texttt{enum} syntactic sugar of Scala 3 desugars to a class hierarchy that very closely resembles the above definition.
+
+Unfortunately, the type inference of GADTs in Scala 2 was plagued with soundness issues \cite{Towards}. \todo{Maybe look for a concrete example and show it here?}
+
+\todo{Dlacego pisze o dwóch wersjach?}
+
+Scala 3 has been built on new, sound, type-theoretic foundations, the calculus of Dependent Object Types \cite{EssenceDOT}. The redesign of the language involved removing some of its features to make the language more consistent and sound \todo{Probably worth listing these features}. The new type inference is designed to more closely resemble the foundational calculus which should give more assurance that such type inference is sound.
+
+To better understand the GADT reasoning in context of Scala's calculus and guide the implementation of type inference, a sketch of encoding GADTs using simpler Scala constructs has been proposed \cite{Towards}. I have then refined this sketch and proposed an encoding \cite{myreport:277075} \todo{not sure if I should cite this, as the report's name is the same as the thesis which may look strange?} of a lambda calculus containing GADTs into pDOT (an extension of DOT, \cite{pDOT}). Part of this work is an attempt to further formalize this encoding.
+
+\section{Practical Example}
+
+To further advertise the usefulness of GADTs, I show an example of production code using GADTs to get better invariants at the type level for something very practical - configuration of a logging service\footnote{The code is adapted from the logging service of the Enso engine, available at https://github.com/enso-org/enso/blob/746521f8b20de95f4300fb950207c12c8ee687c0/lib/scala/logging-service/src/main/scala/org/enso/loggingservice/LoggerMode.scala under the Apache 2.0 license; copyright New Byte Order sp. z o.o.}. While most of this work is focused on the newer Scala 3, the code below is in Scala 2 - that is because Scala 3 has been released quite recently so it is easier to show production examples from Scala 2 - but while the syntax is slightly different, the same program could be easily implemented in Scala 3.
+
+The logging service can run in three different modes: Local mode which just prints logs to the standard output or some files, Client mode which forwards the logs to a server and Server mode which can gather logs from the clients and its own instance and print them, aggregated, in a similar way to the Local mode.
+
+The configuration like above can be easily modeled with a simple ADT, but GADTs allow us to do something even better. When we initialize the service in Client or Local mode, we just want to know that it has been initialized and there is no other data that should be returned. However, when we initialize it in Server mode, the system automatically allocates a free port and we need to know which port was chosen so that it can later be passed on to the clients. This is where the instantiation of type parameters in GADTs can help us - we parametrize the configuration with a single type parameter - \texttt{InitializationResult}. The parameter is instantiated to \texttt{Unit} for Local and Client modes, however for the Server mode it is instantiated to a \texttt{ServerBinding} type that can be used to tell the clients how to connect to the service.
+
+This leads us to the following definition of the configuration:
+
+\begin{verbatim}
+sealed trait LoggerMode[InitializationResult]
+object LoggerMode {
+  case class Client(endpoint: Uri) extends LoggerMode[Unit]
+  case class Server(
+    printers: Seq[Printer], 
+    port: Option[Int] = None, 
+    interface: String = "localhost") extends LoggerMode[ServerBinding]
+  case class Local(printers: Seq[Printer]) extends LoggerMode[Unit]
+}
+\end{verbatim}
+
+This is where the Scala 2 syntax differs most significantly - it did not have a special syntax for GADTs, instead it relies on a sealed class hierarchy which in Scala is able to exploit the GADT reasoning. In Scala 3 the same code would look like the one below and since the \textit{enum} syntax is actually just syntactic sugar, it would actually desugar to a similar class hierarchy as the one shown above:
+
+\begin{verbatim}
+enum LoggerMode[InitializationResult]:
+  case Client(endpoint: Uri) extends LoggerMode[Unit]
+  case Server(
+    printers: Seq[Printer], 
+    port: Option[Int] = None, 
+    interface: String = "localhost") extends LoggerMode[ServerBinding]
+  case Local(printers: Seq[Printer]) extends LoggerMode[Unit]
+}
+\end{verbatim}
+
+Now, when writing the code to initialize the service, we can parametrize the initializer function so that it will return the \texttt{InitializationResult} based on the chosen mode\footnote{The implementation below has been simplified from the actual implementation for conciseness, but the GADT related logic has been kept in a very similar manner.}.
+
+\begin{verbatim}
+object LoggingServiceManager {
+  def setup[InitializationResult](mode: LoggerMode[InitializationResult])
+    : Future[InitializationResult] = Future {
+      mode match {
+        case Local(printers) =>
+          setupLocal(printers) : Unit
+        case Client(uri) =>
+          connectToServer(uri) : Unit
+        case Server(printers, port, interface) =>
+          val server = new Server(printers, port, interface)
+          server.start()
+          server.getBindings : ServerBinding
+      }
+    }
+    
+}
+\end{verbatim}
+
+So that if the user wants to just run the service in client mode, they will just get a future that completes with an `empty' (\texttt{Unit}) value, which will indicate that the initialization has completed:
+
+\begin{verbatim}
+val config = LoggerMode.Client("ws://localhost:1234/")
+LoggingServiceManager.setup(config) : Future[Unit]
+\end{verbatim}
+
+However, if the client wants to set up a server, once the initialization is complete, they will get the \texttt{ServerBinding} which they can pass to the clients:
+
+\begin{verbatim}
+val config = LoggerMode.Server(Seq(new StdOutPrinter))
+val init: Future[ServerBinding] = LoggingServiceManager.setup(config)
+init.onComplete { binding: ServerBinding =>
+  for (client <- clients) {
+    client.informAboutServer(binding)
+  }
+}
+\end{verbatim}
+
+\section{Formalizing the GADT reasoning}
+
+One of the first papers to describe the GADTs \cite{XiGRDT} introduces a lambda calculus focused on modeling the GADT reasoning. The $\lambda_{2G\mu}$ is an extension of System F \cite{girard_prot} with GADTs.
+
+The calculus adds a special syntactic category for GADT types, constructors and a special pattern matching operation for destructuring the GADT instances. Moreover, it adds a unit type and tuples, and a fixpoint operator to allow for recursive definitions of functions. It makes use of an additional environment which defines the GADT types and their constructors. Overall, the language has three different environments: $\Gamma$ which maps variables to their types (as in simple types), a separate environment $\Delta$ which tracks type variables that are currently available in scope (similarly to System F) and $\Sigma$ which maps GADT constructor names to their type signatures. Additionally, the $\Delta$ environment is extended to keep track of type equalities that are introduced by pattern matching on GADTs. All GADT constructors in this calculus take exactly one data \textit{value?} argument, but as explained in section \ref{}, since the calculus also supports tuples and unit, GADTs with an arbitrary amount of arguments can easily be rewritten to GADTs of a single argument that take tuples. The type signature of a constructor has form $\forall_{A_1, ..., A_m}. \tau \to (\gamma_1, ..., \gamma_n) T$ where $A_1$ to $A_m$ are the type parameters of the constructor (which will then turn into existential types when pattern matching), $\tau$ is the single data argument and $\gamma_1$ to $\gamma_n$ are instantiations of the type parameters of the GADT $T$ that is being constructed. Of course both $\tau$ and $\gamma_i$ can refer to the type parameters $A_j$.
+
+\comment{There are no constructs for modifying the $\Sigma$ environment, so the GADTs are defined for the whole program - it is not possible to have local definitions. This is rather desirable for a formally defined language as otherwise additional mechanics would be needed for handling escaping types.}
+
+When an instance of a GADT, for example $e: (\beta_1, ..., \beta_n) T$ is pattern matched, the branch that corresponds to a constructor with the signature as defined above will introduce $A_1$ to $A_m$ as bound type variables (the existential types, similarly to the type parameters inside of a $\Lambda$). Additionally, we can infer the equalities $\beta_i \equiv \gamma_i$.
+
+Below we present the \texttt{Expr} example from earlier defined in the $\lambda_{2G\mu}$ calculus. First we need to define $\Sigma$:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+$\Sigma$(lit)   = Int $\to$ (Int) Expr
+$\Sigma$(plus) = (Int) Expr * (Int) Expr $\to$ (Int) Expr
+$\Sigma$(pair) = $\forall$ a, b. ((a) Expr * (b) Expr) $\to$ (a * b) Expr
+\end{lstlisting}
+
+And the \texttt{eval} function as defined in section \ref{}, can be defined as follows:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+eval : $\forall$ a. a Expr $\to$ a
+eval = fix f:($\forall$ a. a Expr $\to$ a).
+  $\Lambda$a. $\lambda$e:a Expr.
+    case e of
+      lit[](i) => i
+      plus[](tup) => (f[a] fst(tup)) + (f[Int] snd(tup))
+      pair[b,c](tup) => <f[b] fst(tup), f[c] snd(tup)>
+\end{lstlisting}
+
+The calculus has a few quirks that will be discussed later on, but it allows to use GADT reasoning as usually understood and has been proven to be sound, so it is a good candidate to use as a reference for other implementations of GADT reasoning.
+
+\section{Formal foundations of Scala 3}
+
+For some time, formal foundations for the Scala language were being developed. Most notable of these developments is the Dependent Object Types calculus \cite{EssenceDOT} which encodes the distinguishing features of the core Scala language \todo{read DOT intro and make sure this makes sense :)} - a restricted form of dependent function types and object types. The new Scala 3 compiler has been revised to more closely rely on these foundations, to make the implementation more robust to soundness issues that were common in the earlier versions (although not all soundness issues can be solved in the full language, for example due to presence of \texttt{null} pointers).
+
+The DOT calculus is a basis for the \textit{dotty} compiler that has become Scala 3 and is a major starting point for formal developments concerning Scala. It models the core features of the Scala language in a simple calculus, stripped of unnecessary features at the expense of being rather verbose.
+
+While being quite simple, the DOT calculus is very expressive. Many features of the full Scala language that are not directly present in DOT can be encoded into it. A notable example is being able to encode generic or higher-kinded types using type members and intersection types \cite{HKTDOT}. What is even more interesting about this example is that the \textit{dotty} compiler actually performs the same desugaring under the hood to keep as close to the foundations laid down by DOT.
+
+Since the soundness of DOT has been proven, encoding other language into the DOT calculus and using a similar method of desugaring these constructs in the actual compiler implementation allows to gain confidence that the implementation is sound too. Unfortunately, typing in DOT is undecidable in general \cite{?}, so the compiler may often need to use various heuristics and approximations which can still lead to errors, but it is much easier to reason about complying with the core concepts of DOT rather than the interactions with all the other language features.
+
+\subsection{Examples}
+
+The DOT calculus features two kinds of values: objects that can contain multiple fields and dependent functions. It also features intersection types which can be used to create more complex object types from simple ones. Members of object types can be accessed using the selection operator $x.a$.
+
+The type system introduces a subtyping hierarchy (a partial ordering of types) with the greatest element $\top$ and the least element $\bot$, functions and objects are compared structurally and the intersection operator $\wedge$ can be treated as a greatest lower bound operation in this ordering. While the subtyping relation is structural, nominal types can be emulated \cite{EssenceDOT}.
+
+\begin{table}[h]
+  \begin{tabular}{ccc}
+   & Objects & Functions \\
+   Value &
+    $\nu (s : \{ A : T..T \} \wedge \{ x: s.A \}) \{ A = T \wedge x = foo.bar \}$ & 
+    $\lambda (x : U) \; e$
+    \\
+   Type &
+   $\mu(s : \{ A : T..T \} \wedge \{ x: s.A \})$  & 
+   $\forall (x : U) \; V$
+  \end{tabular}
+\end{table}
+
+As can be seen above, there is also a recursive type operator $\mu$ which allows to define recursive types.
+
+As the functions are dependent, the return type of the function can refer to the name of the argument. This can by for example used to define polymorphic functions similar to what can be done System F. To encode an identity function, which in System F would be $(\Lambda A. \lambda x^A . \; x) : \Pi A. \, A \to A$, we can create a function which will take an argument that contains a single type member which corresponds to the type $\alpha$ from the example and whose return type will depend on this argument: \\ $(\lambda (a : \{ T : \bot..\top \}) \; \lambda (x: a.T) \; x) : \forall (a : \{ T : \bot..\top \}) \; \forall (x : a.T) \; a.T$.
+
+\subsection{Extensions}
+
+Some features of Scala cannot be directly encoded in pure DOT and so there are extensions being developed that enable the missing features. One of these extensions is pDOT \cite{pDOT}. It lifts DOT's restriction that selection could only refer to immediate names. This restriction made it impossible to express some structures, like some mutually recursive definitions. In pDOT arbitrary paths can be used in selection, so apart from $x.T$, pDOT also allows selections like $p.q.r.T$. 
+
+Moreover, pDOT adds \textit{singleton types} (known in some literature as \textit{selftypes} \cite{zenger}). A singleton type allows to track path equality - a path $p$ can be typed to $q.type$ if and only if it can be proven that $p$ always points to the same element as $q$ - so that essentially both $p$ and $q$ are interchangeable. Singleton types can be for example used to implement the method chaining pattern \cite{pDOT}.
+
+\begin{figure}[h]
+\caption{One example application of singleton types - the method chaining pattern. Scala code has been used for clarity, but the example works analogously in pDOT too - it is just more verbose.}
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}{scala}
+trait C {
+  def incr: C
+}
+trait D extends C {
+  def decr: D
+}
+val x: D = ...
+x.decr.incr // ok
+x.incr.decr // type error:
+// decr is not a member of C
+// x.incr: C
+\end{minted}
+    &
+\begin{minted}{scala}
+trait C { self =>
+  def incr: self.type
+}
+trait D extends C { self =>
+  def decr: self.type
+}
+val x: D = ...
+x.decr.incr // ok
+x.incr.decr // ok
+// x.incr: x.type =:= D
+\end{minted}
+\end{tabular}  
+\end{figure}
+
+
+\section{Contributions}
+
+\todo[inline]{explain the formalization and encoding sketch; this should probably be done later when I know precisely what is and is not done}
+
+An important contribution of this (paper | work | ?) is a mechanized version of the proof of soudness of the $\lambda_{2G\mu}$ calculus from \cite{XiGRDT}.

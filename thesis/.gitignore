@@ -1,5 +1,8 @@
 pracamgr.cls
-*.toc
-*.pdf
+*.bbl
+*.aux
 *.log
+*.pdf
+*.blg
 *.gz
+*.toc

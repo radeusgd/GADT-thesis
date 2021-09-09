@@ -1,0 +1,21 @@
+\chapter{Formalizing GADT reasoning}
+
+From a type-theoretic point of view a GADT is a specific instance of a recursive disjoint sum-type where each element of the sum can contain existential types and introduce type constraints based on simple equations.
+
+Let \texttt{X} be a generic GADT defined using the syntax of Scala 3:
+
+\begin{lstlisting}[mathescape=true]
+enum X[$T_1$, ..., $T_k$]:
+  case $C1$[$A_1$, ..., $A_{m_1}$](data: $\tau_1$) extends X[$B_{1, 1}$, ..., $B_{1, k}$]
+  ...
+  case $Cn$[$A_1$, ..., $A_{m_n}$](data: $\tau_n$) extends X[$B_{n, 1}$, ..., $B_{n, k}$]
+\end{lstlisting}
+
+The type has $k$ type parameters and $n$ constructors called $C1$ to $Cn$. The $i$th constructor has $m_i$ type parameters ($A_1$, ..., $A_{m_i}$ - which become the existential types) and instantiates the parameters of the type with concrete types $B_{n, 1}$, ..., $B_{n, k}$ which can also refer to $A_1$, ..., $A_{m_i}$. 
+
+Each constructor has also exactly one data parameter. This may seem limiting - after all examples that have been shown before had constructors with zero to two parameters. However, if the language in which the GADTs are being defined supports tuples or objects with multiple fields (which can effectively be used to emulate tuples), a single data parameter is always enough. If two or more parameters are needed, (potentially nested) tuples allow to pack them into this single argument. If there should be zero parameters, the data parameter can be of type Unit (or some type that emulates it by having exactly one inhabitant). Of course the type $\tau_{i}$ can refer to $A_1$, ..., $A_{m_i}$.
+
+
+
+\section{[Describe calculus]}
+\section{[examples with derivations]}
