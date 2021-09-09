@@ -283,12 +283,29 @@ Qed.
 Lemma notin_domΔ_eq : forall D1 D2 X,
     X \notin domΔ (D1 |,| D2) <->
     X \notin domΔ D1 /\ X \notin domΔ D2.
-  induction D1; intros; constructor;
+  induction D2; intros; constructor;
     try solve [cbn in *; intuition]; intro H;
-      destruct a; cbn in *;
+      destruct a; try destruct eq; cbn in *;
         repeat rewrite notin_union in *;
-        destruct (IHD1 D2 X) as [IH1 IH2];
+        destruct (IHD2 X) as [IH1 IH2];
         intuition.
+Qed.
+
+Lemma in_domΔ_eq : forall D1 D2 X,
+    X \in domΔ (D1 |,| D2) <->
+    X \in domΔ D1 \/ X \in domΔ D2.
+  induction D2; intros; constructor;
+    intro H;
+    try solve [
+          cbn in *; intuition
+        | destruct a; try destruct eq; cbn in *;
+          repeat rewrite in_union in *;
+          destruct (IHD2 X) as [IH1 IH2];
+          intuition
+        ].
+  destruct H.
+  - cbn. auto.
+  - cbn in H. false* in_empty_inv.
 Qed.
 
 Lemma fold_empty : forall Ts,
@@ -369,4 +386,241 @@ Proof.
   - false* binds_empty_inv.
   - lets [[? ?] | [? ?]]: binds_push_inv Hbind; subst;
       try destruct v; lets* [? ?]: notin_env_inv FE.
+Qed.
+
+Lemma domDelta_in:
+  forall (Δ : typctx) (X : var), List.In (tc_var X) Δ -> \{ X} \c domΔ Δ.
+Proof.
+  induction Δ; introv Hin.
+  - inversion Hin.
+  - cbn in Hin.
+    destruct Hin as [Hin | Hin].
+    + subst. cbn. eauto.
+    + cbn. destruct a.
+      * assert (\{ X } \c domΔ Δ).
+        -- apply~ IHΔ.
+        -- introv HX.
+           rewrite in_union.
+           right~.
+      * destruct eq.
+        introv In.
+        repeat rewrite in_union.
+        repeat right.
+        apply* IHΔ.
+Qed.
+
+Lemma subset_fold : forall T U P Xs E C,
+    (forall x : T, List.In x Xs -> P x \c C) ->
+    E \c C ->
+    List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) Xs E \c C.
+  induction Xs; introv HXs HE;
+    cbn; auto.
+  apply IHXs.
+  - auto with listin.
+  - rewrite <- union_same.
+    lets Hsu: subset_union_2 E (P a) C C.
+    apply~ Hsu.
+    auto with listin.
+Qed.
+
+Lemma wft_gives_fv : forall Σ Δ T,
+    wft Σ Δ T ->
+    fv_typ T \c domΔ Δ.
+  induction 1; cbn; eauto;
+    try solve [
+          rewrite <- union_same;
+          lets Hsu: subset_union_2 (fv_typ T1) (fv_typ T2) (domΔ Δ) (domΔ Δ);
+          apply ~Hsu
+        ].
+  - unfold is_var_defined in H.
+    apply~ domDelta_in.
+  - introv Hx.
+    pick_fresh X.
+    assert (Fr2: X \notin L); auto.
+    assert (x <> X); auto.
+    lets IH: H0 Fr2.
+    lets Hopen: fv_open T2 (typ_fvar X) 0.
+    fold (T2 open_tt_var X) in Hopen.
+    destruct Hopen as [Ho | Ho].
+    + rewrite Ho in IH.
+      assert (Hu: x \in fv_typ T2 \u fv_typ (typ_fvar X)).
+      * rewrite~ in_union.
+      * lets Hd: IH Hu.
+        apply in_domΔ_eq in Hd.
+        destruct~ Hd as [? | Hd].
+        cbn in Hd.
+        rewrite union_empty_r in Hd.
+        rewrite in_singleton in Hd.
+        false.
+    + rewrite Ho in IH.
+      lets Hd: IH Hx.
+      apply in_domΔ_eq in Hd.
+      destruct Hd as [| Hd]; auto.
+      cbn in Hd.
+      rewrite union_empty_r in Hd.
+      rewrite in_singleton in Hd.
+      false.
+  - apply~ subset_fold.
+Qed.
+
+Lemma equations_have_no_dom : forall Deqs,
+    (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
+    domΔ Deqs = \{}.
+  induction Deqs; cbn; auto; destruct a; intros.
+  - lets HF: H (tc_var A).
+    false~ HF.
+  - apply IHDeqs.
+    intros. auto.
+Qed.
+
+Lemma subst_match_notin_srcs2 : forall O X U,
+    List.In (X, U) O ->
+    X \in substitution_sources O.
+  induction O; introv Hin.
+  - inversion Hin.
+  - cbn in Hin.
+    destruct Hin.
+    + subst. cbn. rewrite in_union. left. apply in_singleton_self.
+    + cbn.
+      rewrite in_union. right. fold_subst_src.
+      apply* IHO.
+Qed.
+
+Lemma subst_src_app : forall O1 O2,
+    substitution_sources (O1 |,| O2) = substitution_sources O1 \u substitution_sources O2.
+  induction O2.
+  - cbn. fold_subst_src.
+    rewrite~ union_empty_r.
+  - cbn. fold_subst_src.
+    rewrite IHO2.
+    repeat rewrite union_assoc.
+    rewrite~ (union_comm \{ fst a}).
+Qed.
+
+Lemma substitution_sources_from_in : forall O A T,
+    List.In (A, T) O ->
+    A \in substitution_sources O.
+  induction O; introv Oin; cbn in *.
+  - false.
+  - fold_subst_src.
+    rewrite in_union.
+    destruct Oin.
+    + subst. cbn.
+      left. apply in_singleton_self.
+    + right. apply* IHO.
+Qed.
+
+Lemma fv_delta_app : forall D1 D2,
+    fv_delta (D1 |,| D2) = fv_delta D1 \u fv_delta D2.
+  induction D2 as [| [X | [T1 T2]]];
+    cbn; auto using union_empty_r.
+  rewrite IHD2.
+  repeat rewrite union_assoc.
+  f_equal.
+  rewrite union_comm.
+  repeat rewrite union_assoc.
+  auto.
+Qed.
+
+Lemma fv_delta_alphas : forall As,
+    fv_delta (tc_vars As) = \{}.
+  induction As; cbn; auto.
+Qed.
+
+Lemma fv_delta_equations : forall A Ts Us,
+    (forall T, List.In T Ts -> A \notin fv_typ T) ->
+    (forall U, List.In U Us -> A \notin fv_typ U) ->
+    A \notin fv_delta (equations_from_lists Ts Us).
+  induction Ts as [| T Ts]; cbn; introv FrT FrU; auto.
+  destruct Us as [| U Us]; cbn; auto.
+  repeat rewrite notin_union.
+  split; auto with listin.
+Qed.
+
+Lemma fold_left_subset_base : forall T U P As B,
+    B \c List.fold_left (fun (fv : fset U) (x : T) => fv \u P x) As B.
+  induction As; introv; cbn; auto.
+  lets IH: IHAs (B \u P a).
+  apply subset_transitive with (B \u P a); auto.
+Qed.
+
+Lemma fold_left_subset : forall T A P As B,
+    List.In A As ->
+    P A \c List.fold_left (fun (fv : fset var) (x : T) => fv \u P x) As B.
+  induction As; introv In.
+  - inversion In.
+  - inversions In.
+    + cbn.
+      apply subset_transitive with (B \u P A);
+        auto using fold_left_subset_base.
+    + cbn.
+      apply~ IHAs.
+Qed.
+
+Lemma domDelta_app : forall D1 D2,
+    domΔ (D1 |,| D2) = domΔ D1 \u domΔ D2.
+  induction D2 as [| [|]]; cbn; auto.
+  - rewrite~ union_empty_r.
+  - rewrite union_comm.
+    rewrite (union_comm (\{A})).
+    rewrite IHD2.
+    rewrite~ union_assoc.
+Qed.
+
+Lemma distinct_split1 : forall O1 O2,
+    DistinctList (List.map fst O1 |,| List.map fst O2) ->
+    substitution_sources O1 \n substitution_sources O2 = \{}.
+  induction O2 as [| [A U]]; cbn; introv D; fold_subst_src.
+  - apply inter_empty_r.
+  - inversions D.
+    lets SS: IHO2 H2.
+    rewrite inter_comm.
+    rewrite union_distributes.
+    rewrite inter_comm in SS.
+    rewrite SS.
+    rewrite union_empty_r.
+    apply~ fset_extens.
+    intros x HF.
+    false.
+    rewrite in_inter in HF. destruct HF as [HF1 HF2].
+    rewrite in_singleton in HF1. subst.
+    apply H1.
+    apply List.in_or_app. right.
+    gen HF2. clear. intro H.
+    induction O1 as [| [X V]]; cbn in *.
+    + apply* in_empty_inv.
+    + fold_subst_src.
+      rewrite in_union in H. destruct H as [H | H].
+      * left. rewrite~ in_singleton in H.
+      * right~.
+Qed.
+
+Lemma sources_list_fst : forall A O,
+  List.In A (List.map fst O) ->
+  A \in substitution_sources O.
+  induction O as [| [X V]]; cbn; introv In; fold_subst_src.
+  - false.
+  - destruct In; subst; rewrite in_union.
+    + left. apply in_singleton_self.
+    + right~.
+Qed.
+
+Lemma subst_td_alphas : forall Z P As,
+    List.map (subst_td Z P) (tc_vars As) =
+    tc_vars As.
+  induction As; cbn; auto.
+  rewrite List.map_map.
+  f_equal.
+Qed.
+
+Lemma domDelta_subst_td : forall Δ Z P,
+    domΔ Δ = domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [| []]]; eauto; introv; cbn.
+  f_equal. auto.
+Qed.
+
+Lemma notin_domDelta_subst_td : forall x Δ Z P,
+  x \notin domΔ Δ ->
+  x \notin domΔ (List.map (subst_td Z P) Δ).
+  induction Δ as [| [|[]]]; introv FR; cbn in *; auto.
 Qed.

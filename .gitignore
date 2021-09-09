@@ -8,3 +8,7 @@
 .lia.cache
 priv/
 papers/
+
+*.dpd
+*.dot
+*.svg

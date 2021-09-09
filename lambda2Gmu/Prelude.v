@@ -1,5 +1,7 @@
 Require Export Zip.
+Require Import Definitions.
 Require Export Definitions.
+Require Export TypInduction.
 Require Export TLC.LibTactics.
 Require Export TLC.LibFset.
 Require Export TLC.LibEnv.
@@ -9,7 +11,6 @@ Require Import Coq.Init.Nat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.EqNat.
 Require Import List.
-Export List.ListNotations.
 
 #[export] Hint Constructors type term wft typing red value.
 
@@ -29,7 +30,7 @@ Ltac gather_vars :=
   let F := gather_vars_with (fun x : ctx => dom x \u fv_env x) in
   let G := gather_vars_with (fun x : list var => from_list x) in
   let H := gather_vars_with (fun x : list typ => fv_typs x) in
-  let I := gather_vars_with (fun x : typctx => domΔ x) in
+  let I := gather_vars_with (fun x : typctx => domΔ x \u fv_delta x) in
   constr:(A \u B \u C \u E \u F \u G \u H \u I).
 
 (** "pick_fresh x" tactic create a fresh variable with name x *)
@@ -81,11 +82,6 @@ Ltac crush_compare :=
   | H: context [(?i ?= ?j)] |- _ => decide_compare i j; (try lia); eauto
   | |- context [(?i ?= ?j)] => decide_compare i j; (try lia); eauto
   end.
-
-Goal forall i j, i <> j -> (match compare i j with | Lt => 0 | Gt => 0 | Eq => 1 end) = 0.
-  intros.
-  crush_compare.
-Qed.
 
 Ltac decide_eq i j :=
   let CMP := fresh "CMP" in
@@ -213,16 +209,6 @@ Lemma union_distribute : forall T (A B C : fset T),
   rewrite union_comm.
   assert (CuA: C \u A = A \u C); try apply union_comm.
   rewrite* CuA.
-Qed.
-
-
-Lemma fold_map : forall A B bs G F a0,
-    List.fold_left (fun (a : A) (b : B) => G a b) (List.map F bs) a0 =
-    List.fold_left (fun (a : A) (b : B) => G a (F b)) bs a0.
-  induction bs; intros.
-  - cbn. eauto.
-  - cbn.
-    apply* IHbs.
 Qed.
 
 Lemma union_fold_detach : forall B (ls : list B) (P : B -> fset var) (z : fset var) (z' : fset var),
@@ -390,51 +376,6 @@ Lemma in_from_list : forall As (x : var),
       exists A. split*.
 Qed.
 
-(* Lemma add_types_assoc : forall E F As, *)
-(*     (add_types (E & F) As = E & add_types F As)%env. *)
-(*   induction As; cbn; eauto. *)
-(*   - rewrite IHAs. eauto using concat_assoc. *)
-(* Qed. *)
-
-(* Lemma add_types_dom_is_from_list : forall As, *)
-(*     (dom (add_types EnvOps.empty As) = from_list As)%env. *)
-(*   induction As; cbn. *)
-(*   - apply dom_empty. *)
-(*   - rewrite dom_concat. *)
-(*     rewrite IHAs. *)
-(*     rewrite union_comm. *)
-(*     unfold from_list. *)
-(*     rewrite dom_single. *)
-(*     trivial. *)
-(* Qed. *)
-
-Lemma fromlist_notin_restated : forall T (X : T) As,
-    ~ List.In X As ->
-    X \notin from_list As.
-  induction As as [|Ah Ats]; introv Hnotin.
-  - cbn. eauto.
-  - cbn.
-    rewrite notin_union.
-    constructor.
-    + apply notin_singleton.
-      intro HF. subst.
-      apply Hnotin. eauto with listin.
-    + unfold from_list in IHAts.
-      apply* IHAts.
-      intro HF.
-      apply Hnotin. eauto with listin.
-Qed.
-
-Lemma env_map_ext_id : forall T (E : env T) (f : T -> T),
-    (forall x, f x = x) ->
-    EnvOps.map f E = E.
-  induction E using env_ind; introv fext;
-    autorewrite with rew_env_map; trivial.
-  - rewrite* IHE.
-    rewrite fext.
-    trivial.
-Qed.
-
 Lemma env_map_compose : forall A B C (E : env A) (f : A -> B) (g : B -> C) (h : A -> C),
     (forall x, g (f x) = h x) ->
     EnvOps.map g (EnvOps.map f E) = EnvOps.map h E.
@@ -448,30 +389,22 @@ Qed.
 Ltac clean_empty_Δ :=
   repeat match goal with
          | [ H: context [ emptyΔ |,| ?D ] |- _ ] =>
-           rewrite List.app_nil_l in H
+           rewrite List.app_nil_r in H
          | [ H: context [ ?D |,| emptyΔ ] |- _ ] =>
-           rewrite List.app_nil_r in H
-         | [ H: context [ [] |,| ?D ] |- _ ] =>
            rewrite List.app_nil_l in H
-         | [ H: context [ ?D |,| [] ] |- _ ] =>
+         | [ H: context [ []* |,| ?D ] |- _ ] =>
            rewrite List.app_nil_r in H
+         | [ H: context [ ?D |,| []* ] |- _ ] =>
+           rewrite List.app_nil_l in H
          | [ |- context [ emptyΔ |,| ?D ] ] =>
-           rewrite List.app_nil_l
+           rewrite List.app_nil_r
          | [ |- context [ ?D |,| emptyΔ ] ] =>
-           rewrite List.app_nil_r
-         | [ |- context [ [] |,| ?D ] ] =>
            rewrite List.app_nil_l
-         | [ |- context [ ?D |,| [] ] ] =>
+         | [ |- context [ []* |,| ?D ] ] =>
            rewrite List.app_nil_r
+         | [ |- context [ ?D |,| []* ] ] =>
+           rewrite List.app_nil_l
          end.
-
-Lemma LibList_app_def : forall A (La Lb : list A),
-    List.app La Lb = La ++ Lb.
-  induction La; intros; cbn.
-  - clean_empty_Δ. trivial.
-  - rewrite IHLa.
-    auto.
-Qed.
 
 Lemma binds_ext : forall A (x : var) (v1 v2 : A) E,
     binds x v1 E ->
@@ -536,3 +469,162 @@ Ltac fresh_intros :=
       | [ H: ?x \notin ?L |- _ ] =>
         instantiate (1:=envvars) in H
            end.
+
+Lemma union_distributes : forall T (A B C : fset T),
+    (A \u B) \n C = (A \n C) \u (B \n C).
+  intros.
+  apply fset_extens; intros x H.
+  - rewrite in_union.
+    rewrite in_inter in H.
+    destruct H as [HAB HC].
+    rewrite in_union in HAB.
+    destruct HAB.
+    + left.
+      rewrite~ in_inter.
+    + right.
+      rewrite~ in_inter.
+  - rewrite in_union in H.
+    destruct H as [H | H]; rewrite in_inter in H; destruct H;
+      rewrite in_inter;
+      split~; rewrite~ in_union.
+Qed.
+
+Lemma union_empty : forall T (A B : fset T),
+    A \u B = \{} ->
+    A = \{} /\ B = \{}.
+  intros.
+  split;
+    apply fset_extens; intros x Hin;
+      solve [
+          assert (xAB: x \in A \/ x \in B); auto;
+          rewrite <- in_union in xAB;
+          rewrite H in xAB; auto
+        | false* in_empty_inv].
+Qed.
+
+Lemma empty_inter_implies_notin : forall T (x : T) A B,
+    A \n B = \{} ->
+    x \in A -> x \notin B.
+  intros.
+  intro HF.
+  asserts~ AB: (x \in A /\ x \in B).
+  rewrite <- in_inter in AB.
+  rewrite H in AB.
+  apply* in_empty_inv.
+Qed.
+
+Ltac fold_subst_src :=
+  repeat match goal with
+  | [ H: context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] |- _ ] =>
+    fold (from_list (List.map fst Th)) in H;
+    fold (substitution_sources Th) in H
+  | [ |- context[LibList.fold_right (fun (x : var) (acc : fset var) => \{ x} \u acc) \{} (List.map fst ?Th)] ] =>
+    fold (from_list (List.map fst Th));
+    fold (substitution_sources Th)
+  end.
+
+Lemma subset_transitive : forall T (A B C : fset T),
+    A \c B ->
+    B \c C ->
+    A \c C.
+  introv AB BC.
+  intros x In.
+  auto.
+Qed.
+
+Lemma lists_map_eq : forall A B (f : A -> B) la lb a b,
+    List.map f la = List.map f lb ->
+    List.In (a, b) (zip la lb) ->
+    f a = f b.
+  induction la as [| a' la]; destruct lb as [| b' lb]; introv Map In; try solve [inversion Map | inversion In].
+  cbn in *.
+  inversions Map.
+  destruct In as [In | In].
+  - inversions~ In.
+  - apply IHla with lb; auto.
+Qed.
+
+Lemma equations_from_lists_are_equations : forall D Ts Us,
+    D = equations_from_lists Ts Us ->
+    (forall eq, List.In eq D -> exists ϵ, eq = tc_eq ϵ).
+  induction D; cbn; introv Deq Hin; auto.
+  + false.
+  + destruct Ts; destruct Us; cbn; try solve [false].
+    cbn in Deq.
+    inversions Deq.
+    destruct Hin; subst; eauto.
+Qed.
+
+Open Scope list_scope.
+
+Ltac fold_delta :=
+  repeat match goal with
+  | [ H: context [List.map tc_var ?As] |- _ ] =>
+    fold (tc_vars As) in H
+  | [ H: context [ (tc_var ?X) :: ?As] |- _ ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As) in H
+    end
+  | [ H: context [ (tc_eq ?eq) :: ?As] |- _ ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As) in H
+    end
+  | [ |- context [List.map tc_var ?As] ] =>
+    fold (tc_vars As)
+  | [ |- context [ (tc_var ?X) :: ?As] ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_var X]* ++ As)
+    end
+  | [ |- context [ (tc_eq ?eq) :: ?As] ] =>
+    match As with
+    | []* => fail 1
+    | _ => fold ([tc_eq eq]* ++ As)
+    end
+  end.
+
+Ltac destruct_in_app :=
+  match goal with
+  | [ H: List.In ?X (?A ++ ?B) |- _ ] =>
+    apply List.in_app_or in H;
+    destruct H
+  | [ H: is_var_defined (?A ++ ?B) ?X |- _ ] =>
+    unfold is_var_defined in H;
+    apply List.in_app_or in H;
+    destruct H
+  end.
+Close Scope list_scope.
+
+Lemma Forall2_eq_len : forall A P (l1 l2 : list A),
+    List.Forall2 P l1 l2 ->
+    List.length l1 = List.length l2.
+  induction l1; destruct l2;
+    introv H; cbn in *;
+      inversions H; auto.
+Qed.
+
+Lemma nth_error_map : forall A B (F : A -> B) l n d,
+    List.nth_error (List.map F l) n = Some d ->
+    exists e, List.nth_error l n = Some e /\ d = F e.
+Proof.
+  induction l; destruct n; introv EQ; cbn in *; try solve [false*].
+  - inversions EQ. eauto.
+  - eauto.
+Qed.
+
+Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
+    List.In (def, cl)
+            (zip Defs (map_clause_trm_trm F Clauses)) ->
+    exists (clA : nat) (clT : trm),
+      List.In (def, (clause clA clT)) (zip Defs Clauses) /\
+      cl = clause clA (F clT).
+  introv In.
+  lets [n [ND NC]]: Inzip_to_nth_error In.
+  unfold map_clause_trm_trm in NC.
+  lets [[clA clT] [? ?]]: nth_error_map NC.
+  exists clA clT.
+  split~.
+  apply* Inzip_from_nth_error.
+Qed.

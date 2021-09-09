@@ -1,10 +1,13 @@
 Require Import TestCommon.
 
+Open Scope L2GMu.
 Axiom Nat : var.
-Definition NatDef := mkGADT 0 [
-                            mkGADTconstructor 0 typ_unit [];
-                            mkGADTconstructor 0 (typ_gadt [] Nat) []
-                          ].
+Definition NatDef :=
+  enum 0 {{
+             mkGADTconstructor 0 typ_unit []*
+             |
+             mkGADTconstructor 0 (γ() Nat) []*
+         }}.
 
 Definition natSigma := (empty & Nat ~ NatDef).
 Lemma all_distinct : True.
@@ -24,40 +27,39 @@ Qed.
 
 #[export] Hint Immediate oknat.
 
-Definition zero := trm_constructor [] (Nat, 0) trm_unit.
+Definition zero := new (Nat, 0) [| |] (trm_unit).
 
-Lemma zero_type : {natSigma, emptyΔ, empty} ⊢ zero ∈ typ_gadt [] Nat.
+Lemma zero_type : {natSigma, emptyΔ, empty} ⊢(Treg) zero ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
 Qed.
 
 Require Import Psatz.
-Definition one := trm_constructor [] (Nat, 1) zero.
-Lemma one_type : {natSigma, emptyΔ, empty} ⊢ one ∈ typ_gadt [] Nat.
+Definition one := new (Nat, 1) [| |] (zero).
+Lemma one_type : {natSigma, emptyΔ, empty} ⊢(Treg) one ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
 Qed.
 
-Definition succ := trm_abs (typ_gadt [] Nat) (trm_constructor [] (Nat, 1) (#0)).
+Definition succ := λ γ() Nat => (new (Nat, 1) [| |] (#0)).
 
-Lemma succ_type : {natSigma, emptyΔ, empty} ⊢ succ ∈ (typ_gadt [] Nat) ==> (typ_gadt [] Nat).
+Lemma succ_type : {natSigma, emptyΔ, empty} ⊢(Treg) succ ∈ (γ() Nat) ==> (γ() Nat).
   cbv.
+  lets: oknat.
   autotyper1.
-  apply oknat.
 Qed.
 
-Definition NAT := (typ_gadt [] Nat).
-Definition const := trm_abs NAT (trm_abs NAT (#1)).
-Lemma const_types : {natSigma, emptyΔ, empty} ⊢ const ∈ (NAT ==> NAT ==> NAT).
+Definition const := λ γ() Nat => (λ γ() Nat => #1).
+Lemma const_types : {natSigma, emptyΔ, empty} ⊢(Treg) const ∈ (γ() Nat ==> γ() Nat ==> γ() Nat).
   cbv.
+  lets: oknat.
   autotyper1.
-  apply oknat.
 Qed.
 
-Definition const_test := (trm_app (trm_app const one) zero).
-Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢ const_test ∈ NAT.
+Definition const_test := const <| one <| zero.
+Lemma const_test_types : {natSigma, emptyΔ, empty} ⊢(Treg) const_test ∈ γ() Nat.
   cbv.
   lets: oknat.
   autotyper1.
@@ -75,8 +77,16 @@ Lemma const_test_evals : evals const_test one.
   crush_eval.
 Qed.
 
-Definition plus := trm_fix ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))) (trm_abs (typ_gadt [] Nat) (trm_abs (typ_gadt [] Nat) (trm_matchgadt (#1) Nat [clause 0 (#1); clause 0 (trm_app (trm_app (#3) (#0)) (trm_constructor [] (Nat, 1) (#1)))]))).
-
+Definition plus :=
+  fixs ((γ() Nat) ==> ((γ() Nat) ==> (γ() Nat))) =>
+    (λ γ() Nat =>
+       (λ γ() Nat =>
+        (case #1 as Nat of
+                        {
+                          0 => #1 |
+                          0 => (#3 <| #0 <| (new (Nat, 1) [| |] (#1)))
+                        }
+    ))).
 
 Ltac autodestruct :=
   match goal with
@@ -96,49 +106,45 @@ Tactic Notation "with_fresh" tactic(act) :=
          instFresh H FV
        end).
 
-Ltac crush_1 :=
-  repeat (
-      with_fresh (
-          auto using oknat;
-          econstructor)
-    );
-    try solve [
-          intros; cbn in *; repeat autodestruct; contradiction
-        | solve_dom all_distinct
-        | binds_inv; congruence
-        | cbn in *; solve_bind; try solve_dom all_distinct
-        ].
-
 Ltac clauseDefResolver1 :=
   match goal with
   | [ H: (?A, ?B) = (?C, ?D) |- _ ] =>
     inversions H; cbn in *; autotyper1
   end.
 
-Lemma plus_types : {natSigma, emptyΔ, empty} ⊢ plus ∈ ((typ_gadt [] Nat) ==> ((typ_gadt [] Nat) ==> (typ_gadt [] Nat))).
+Ltac fresh_intros := let free := gather_vars in
+  let x' := fresh "x" in
+  let xiL := fresh "xiL" in
+  intros x' xiL; intros;
+    try instantiate (1 := free) in xiL.
+
+Lemma plus_types : {natSigma, emptyΔ, empty} ⊢(Treg) plus ∈ ((γ() Nat) ==> ((γ() Nat) ==> (γ() Nat))).
   cbv.
   lets: oknat.
-  autotyper1;
-    cbn in *;
-    (* let fr := gather_vars in *)
-    destruct_const_len_list;
+  econstructor.
+  1: autotyper1; cbn in *; destruct_const_len_list; autotyper1.
+  intros x Fr. clear Fr.
+  econstructor; cbn in *.
+  fresh_intros.
+  econstructor.
+  fresh_intros.
+  econstructor; cbn in *; eauto.
+  autotyper1.
+  autotyper1.
+  inversions H0. cbn. auto.
+  inversions H0. cbn. auto.
+  let free := gather_vars in
+  intros;
+    try instantiate (1 := free) in H4.
+  inversions H0.
+  - inversions H6. cbn in *.
+    destruct_const_len_list. cbn.
     autotyper1.
-  - inversions H0.
-    cbn. trivial.
-  - inversions H0.
-    cbn. trivial.
-  - inversions H0.
-    cbn.
-    instantiate (1:= \{ x0 } \u \{ x1 } \u \{ x2 }) in H4.
-    autotyper1.
-  - inversions H0.
-    cbn in *.
-    congruence.
-  - inversions H0.
-    cbn.
-    autotyper1.
-  - inversions H0. cbn in *.
-    congruence.
+  - inversions H6.
+    + inversions H0.
+      destruct_const_len_list. cbn.
+      autotyper1.
+    + cbn in *. false.
     Unshelve.
     fs.
 Qed.
@@ -149,8 +155,8 @@ Ltac destruct_clauses :=
            destruct H
          end.
 
-Definition two := trm_constructor [] (Nat, 1) one.
-Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
+Definition two := new (Nat, 1) [| |] (one).
+Lemma plus_evals : evals (plus <| one <| one) two.
   cbv.
   crush_eval;
     repeat (
@@ -158,6 +164,41 @@ Lemma plus_evals : evals (trm_app (trm_app plus one) one) two.
         destruct_const_len_list;
         autotyper1).
   Unshelve.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+Qed.
+
+Definition four := new (Nat, 1) [| |] (new (Nat, 1) [| |] (two)).
+Lemma plus_evals4 : evals (plus <| two <| two) four.
+  cbv.
+  crush_eval;
+    repeat (
+        cbn in *;
+        destruct_const_len_list;
+        autotyper1).
+  Unshelve.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
+  fs.
   fs.
   fs.
   fs.

@@ -762,3 +762,24 @@ Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
     destruct B; destruct b; cbn in HA'. fold (fv_env E) in HA'.
     auto.
 Qed.
+
+Lemma subst_commute:
+  forall (X : var) (U : typ) (A : var) (P T : typ),
+    X <> A ->
+    A \notin fv_typ U ->
+    subst_tt X U (subst_tt A P T) = subst_tt A (subst_tt X U P) (subst_tt X U T).
+Proof.
+  induction T using typ_ind'; introv Neq Fr; cbn; auto;
+    try solve [
+          rewrite~ IHT1; rewrite~ IHT2
+        ].
+  - repeat case_if; subst; cbn; repeat case_if; eauto.
+    rewrite~ subst_tt_fresh.
+  - rewrite~ IHT.
+  - rewrite List.Forall_forall in *.
+    f_equal.
+    repeat rewrite List.map_map.
+    apply List.map_ext_in.
+    intros T Tin.
+    apply~ H.
+Qed.

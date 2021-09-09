@@ -1,4 +1,5 @@
 Require Import TestCommon.
+Require Import Equations.
 
 (*
 
@@ -31,9 +32,6 @@ we can create a vector containing two units:
   uvec = (cons () (cons () empty)) // I skip the type args here, they are elaborated in the proof
   uvec : Vector Unit (Succ (Succ Zero))
 
->> ^ this is implemented
->> the things below are not (yet) because pattern matching is not yet done and they require it
-
 we can create a map function that guarantees that it preserves length:
   map : forall a b n, (a -> b) -> Vector a n -> Vector b n
 
@@ -47,6 +45,8 @@ this will be an occassion to show how we handle contradictory branches:
 another showcase of GADT abilities will be a typesafe zip function that only allows to zip vectors of equal length
   zip : forall a b n, Vector a n -> Vector b n -> Vector (a * b) n
   def zip[A,B,N](va: Vector[A,N])(vb: Vector[B,N]): Vector[(A,B), N]
+
+  append (nat - plus)
 *)
 
 (* type level natural numbers *)
@@ -54,25 +54,29 @@ Axiom Zero : var.
 Axiom Succ : var.
 Axiom Vector : var.
 
+Open Scope L2GMu.
 Axiom all_distinct :
   (Zero <> Succ) /\ (Succ <> Vector) /\ (Zero <> Vector).
+
+(* De Bruijn indices for arguments are in 'reverse' order, that is the last arg on the list is treated as 'closest' and referred to as ##0 *)
 Definition VectorDef := (* Vector a len *)
-  mkGADT 2 [
-         (* empty : () -> Vector a Zero *)
-         mkGADTconstructor 1 typ_unit [@0; typ_gadt [] Zero];
-         (* cons : (a * Vector a n) -> Vector a (Succ n) *)
-         mkGADTconstructor 2 (@0 ** typ_gadt [@0; @1] Vector) [@0; typ_gadt [@1] Succ]
-       ].
+  enum 2 {{
+         (* empty : forall a, () -> Vector a Zero *)
+         mkGADTconstructor 1 typ_unit [##0; γ() Zero]* |
+         (* cons : forall a n, (a * Vector a n) -> Vector a (Succ n) *)
+         mkGADTconstructor 2 (##1 ** γ(##1, ##0) Vector) [##1; γ(##0) Succ]*
+         }}
+.
 
 Definition sigma :=
   empty
     (* Zero and Succ are phantom types, but we add them constructors as at least one constructor is required for consistency *)
-  & Zero ~ mkGADT 0 [
-           mkGADTconstructor 0 typ_unit []
-         ]
-  & Succ ~ mkGADT 1 [
-           mkGADTconstructor 1 typ_unit [@0]
-         ]
+  & Zero ~ enum 0 {{
+           mkGADTconstructor 0 typ_unit []*
+         }}
+  & Succ ~ enum 1 {{
+           mkGADTconstructor 1 typ_unit [##0]*
+         }}
   & Vector ~ VectorDef.
 
 Lemma oksigma : okGadt sigma.
@@ -88,10 +92,13 @@ Lemma oksigma : okGadt sigma.
       repeat rewrite union_empty_r; auto.
 Qed.
 
-Definition nil A := trm_constructor [A] (Vector, 0) trm_unit.
-Definition cons A N h t := trm_constructor [A; N] (Vector, 1) (trm_tuple h t).
+Definition Nil := (Vector, 0).
+Definition Cons := (Vector, 1).
 
-Lemma nil_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (nil (@0))) ∈ typ_all (typ_gadt [@0; typ_gadt [] Zero] Vector).
+Definition nil A := new Nil [| A |] (trm_unit).
+Definition cons A N h t := new Cons [|A, N|]  (trm_tuple h t).
+
+Lemma nil_type : {sigma, emptyΔ, empty} ⊢(Treg) (Λ => nil (##0)) ∈ typ_all (γ(##0, γ() Zero) Vector).
   cbv.
   lets: oksigma.
   autotyper1.
@@ -117,20 +124,126 @@ Lemma notin_eqv : forall A (x : A) L,
   intuition.
 Qed.
 
-Lemma cons_type : {sigma, emptyΔ, empty} ⊢ (trm_tabs (trm_tabs (trm_abs (@1) (trm_abs (typ_gadt [@1; @0] Vector) (cons (@1) (@0) (#1) (#0)))))) ∈ typ_all (typ_all (typ_arrow (@1) (typ_arrow (typ_gadt [@1; @0] Vector) (typ_gadt [@1; typ_gadt [@0] Succ] Vector)))).
+Lemma cons_type :
+  {sigma, emptyΔ, empty} ⊢(Treg)
+                         (Λ => Λ =>
+                          (λ ##1 => λ γ(##1, ##0) Vector =>
+                           cons (##1) (##0) (#1) (#0)
+                         ))
+                         ∈
+                         ∀ ∀ (##1 ==> (γ(##1, ##0) Vector) ==> (γ(##1, γ(##0) Succ) Vector)).
   cbv.
   lets: oksigma.
   autotyper1.
 Qed.
 
-Definition GZ := typ_gadt [] Zero.
-Definition GS (T : typ) := typ_gadt [T] Succ.
+Definition GZ := γ() Zero.
+Definition GS (T : typ) := γ(T) Succ.
 
 Definition uvec2 := cons typ_unit (GS GZ) trm_unit (cons typ_unit GZ trm_unit (nil typ_unit)).
 
-Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢ uvec2 ∈ typ_gadt [typ_unit; GS (GS GZ)] Vector.
+Definition two := GS (GS GZ).
+Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢(Treg) uvec2 ∈ γ(typ_unit, two) Vector.
   cbv.
   lets: oksigma.
   lets [? [? ?]]: all_distinct.
   autotyper1.
+Qed.
+
+(*
+  map : forall a b n, (a -> b) -> Vector a n -> Vector b n
+ *)
+Definition map :=
+  fixs ∀ ∀ ∀ ((##2 ==> ##1) ==> γ(##2, ##0) Vector ==> γ(##1, ##0) Vector) =>
+  Λ (* a *) => Λ (* b *) => Λ (* n *) =>
+  λ (* f *) (##2 ==> ##1) =>
+  λ (* v *) γ(##2, ##0) Vector =>
+  case #0 as Vector of {
+                      (* a' *) 1 => new Nil [| ##2 |] ( <.> ) |
+                      (* a', n'; elem *) 2 => new Cons [| ##3, ##0 |] (
+                                      trm_tuple
+                                        (#2 <| fst(#0))
+                                        (#3 <|| ##4 <|| ##3 <|| ##0 <| #2 <| snd(#0))
+                                    )
+                    }.
+
+
+Lemma map_types : {sigma, emptyΔ, empty} ⊢(Treg) map ∈ ∀ ∀ ∀ ((##2 ==> ##1) ==> γ(##2, ##0) Vector ==> γ(##1, ##0) Vector).
+  cbv.
+  lets: oksigma.
+  lets [? [? ?]]: all_distinct.
+  autotyper3;
+    rename x0 into map;
+    rename x4 into f;
+    rename x1 into A;
+    rename x2 into B;
+    rename x3 into N;
+    rename x5 into vec.
+  - rename v into C.
+    forwards~ : H6 C.
+    eapply typing_eq with (T1:=γ(typ_fvar B, γ() Zero) Vector).
+    + autotyper4.
+    + apply eq_typ_gadt.
+      apply F2_iff_In_zip.
+      split~.
+      intros.
+      repeat ininv2.
+      * apply teq_symmetry.
+        apply teq_axiom. listin.
+      * apply teq_reflexivity.
+    + autotyper4.
+  - rename v0 into A'.
+    rename v into N'.
+    forwards~ : H6 A'.
+    forwards~ : H6 N'.
+    apply typing_eq with (γ(typ_fvar B, γ(typ_fvar N') Succ) Vector) Treg.
+    + eapply typing_cons; autotyper0.
+      * eapply typing_tuple; autotyper0.
+        -- econstructor.
+           ++ instantiate (1:=A).
+              apply typing_eq with A' Treg.
+              ** autotyper4.
+              ** apply teq_symmetry. apply teq_axiom. listin.
+              ** autotyper4.
+           ++ autotyper4.
+        -- econstructor; autotyper0.
+           instantiate (1:= γ(typ_fvar A, typ_fvar N') Vector).
+           ++ apply typing_eq with (γ(typ_fvar A', typ_fvar N') Vector) Treg.
+              ** autotyper4.
+              ** apply eq_typ_gadt.
+                 apply F2_iff_In_zip.
+                 split~.
+                 intros.
+                 repeat ininv2.
+                 --- apply teq_reflexivity.
+                 --- apply teq_symmetry.
+                     apply teq_axiom. listin.
+              ** autotyper4.
+           ++ autotyper4.
+      * autotyper4.
+    + apply eq_typ_gadt.
+      apply F2_iff_In_zip.
+      split~.
+      intros.
+      repeat ininv2.
+      * apply teq_symmetry.
+        apply teq_axiom. listin.
+      * apply teq_reflexivity.
+    + autotyper4.
+      Unshelve.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
+      fs.
 Qed.
