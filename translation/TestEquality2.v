@@ -17,6 +17,16 @@ Eval cbv in p_destruct_typ.
          ∧ {Ai 2 == ((pvar lib ↓ Tuple) ∧ {T1 == sssuper ↓ GenT}) ∧ {T2 == super ↓ GenT}})
       (((pvar env ↓ GN Eq) ∧ {Ai 1 == sssuper ↓ GenT}) ∧ {Ai 2 == ssssuper ↓ GenT})))))
      : typ
+ *)
+
+
+(*
+
+{A: bot..U }
+
+let
+ x  = nu(self: {A: U..U}) { A = U } : mu(self: {A: U..U}) in x
+
 *)
 
 Definition p_destruct_trm : trm :=
@@ -133,6 +143,39 @@ Lemma p_destruct_types :
              rewrite HeqG;
              auto.
            }
+
+           (*
+             A,B,C,D
+
+             class Eq[X, Y]:
+               type A1 = X
+               type A2 = Y
+             class Tuple[X, Y]:
+               type T1 = X
+               type T2 = Y
+
+             eq1 : Eq[A*B,C*D]
+             eq1_ev : Refl /\ eq1.type
+
+             new Refl[A] : Eq[A,A] : Eq[A,C]
+
+             A = {T:bot..top} ... A.T
+
+             A*B =:= C*D
+
+             Tuple /\ {T1 = A} /\ {T2 = B} =:= eq1.A1
+             Tuple /\ {T1 = C} /\ {T2 = D} =:= eq1.A2
+
+             eq1.A1 =:= eq1_ev.A1 =:= eq1_ev.
+
+             Tuple /\ {T1 = A} /\ {T2 = B} =:= Tuple /\ {T1 = C} /\ {T2 = D}
+             |-
+             {T1 = A} =:= {T1 = C}
+             |- A =:= C
+
+
+             {T1 = A} =:= {T1 = C} |- A =:= C
+            *)
 
            match goal with
            | [ _: context [eq ~ ((?T ∧ typ_rcd {Ai 1 == ?X}) ∧ typ_rcd {Ai 2 == ?Y})] |- _ ] =>

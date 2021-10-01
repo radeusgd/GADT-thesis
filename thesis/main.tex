@@ -30,8 +30,9 @@
 %\autoriv{Autor nr Cztery}{432145}
 %\autorv{Autor nr Pięć}{342011}
 
-\title{Title in English}
-\titlepl{Tytuł po polsku}
+%TODO mogę takie odstępy porobić? IMO ładniej
+\title{Formal foundations for \\ Generalized Algebraic Data Types \\ in Scala}
+\titlepl{Formalne podstawy uogólnionych algebraicznych typów danych w Scali}
 
 %\tytulang{An implementation of a difference blabalizer based on the theory of $\sigma$ -- $\rho$ phetors}
 
@@ -103,6 +104,44 @@
 \usepackage{listings}
 \usepackage{minted}
 \usepackage[textsize=tiny]{todonotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{bussproofs}
+\usepackage{rotating}
+\usepackage{geometry}
+
+\usepackage[section]{placeins} % a workaround to have figures AFTER start of their corresponding section
+
+% TODO style from https://tex.stackexchange.com/questions/202479/unable-to-define-scala-language-with-listings  - acknowledge or change it
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{scala}{
+  %frame=tb,
+  language=scala,
+  %aboveskip=3mm,
+  %belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  keepspaces=true,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  %frame=single,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+  otherkeywords={enum},
+}
+
+\newcommand{\Expr}{\texttt{Expr}}
+\newcommand{\Int}{\texttt{Int}}
+\newcommand{\String}{\texttt{String}}
 
 % koniec definicji
 

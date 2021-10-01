@@ -252,4 +252,174 @@ doi = {10.1016/j.tcs.2009.11.014}
   keywords = {mixins, classes, Scala, components, abstract types}
 }
 
+@inproceedings{HKTDOT,
+  author = {Odersky, Martin and Martres, Guillaume and Petrashko, Dmitry},
+  title = {Implementing Higher-Kinded Types in Dotty},
+  year = {2016},
+  isbn = {9781450346481},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/2998392.2998400},
+  doi = {10.1145/2998392.2998400},
+  abstract = {dotty is a new, experimental Scala compiler based on DOT, the calculus of Dependent
+  Object Types. Higher-kinded types are a natural extension of first-order lambda calculus,
+  and have been a core construct of Haskell and Scala. As long as such types are just
+  partial applications of generic classes, they can be given a meaning in DOT relatively
+  straightforwardly. But general lambdas on the type level require extensions of the
+  DOT calculus to be expressible. This paper is an experience report where we describe
+  and discuss four implementation strategies that we have tried out in the last three
+  years. Each strategy was fully implemented in the dotty compiler. We discuss the usability
+  and expressive power of each scheme, and give some indications about the amount of
+  implementation difficulties encountered.},
+  booktitle = {Proceedings of the 2016 7th ACM SIGPLAN Symposium on Scala},
+  pages = {51–60},
+  numpages = {10},
+  keywords = {DOT, dotty, type constructor polymorphism, dependent object types, higher-order genericity, Scala, higher-kinded types},
+  location = {Amsterdam, Netherlands},
+  series = {SCALA 2016}
+}
 
+@article{undecidableDOT,
+  author = {Hu, Jason Z. S. and Lhot\'{a}k, Ond\v{r}ej},
+  title = {Undecidability of $D_{<:}$ And Its Decidable Fragments},
+  year = {2019},
+  issue_date = {January 2020},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {4},
+  number = {POPL},
+  url = {https://doi.org/10.1145/3371077},
+  doi = {10.1145/3371077},
+  abstract = {Dependent Object Types (DOT) is a calculus with path dependent types, intersection
+  types, and object self-references, which serves as the core calculus of Scala 3. Although
+  the calculus has been proven sound, it remains open whether type checking in DOT is
+  decidable. In this paper, we establish undecidability proofs of type checking and
+  subtyping of D&lt;:, a syntactic subset of DOT. It turns out that even for D&lt;:, undecidability
+  is surprisingly difficult to show, as evidenced by counterexamples for past attempts.
+  To prove undecidability, we discover an equivalent definition of the D&lt;: subtyping
+  rules in normal form. Besides being easier to reason about, this definition makes
+  the phenomenon of subtyping reflection explicit as a single inference rule. After
+  removing this rule, we discover two decidable fragments of D&lt;: subtyping and identify
+  algorithms to decide them. We prove soundness and completeness of the algorithms with
+  respect to the fragments, and we prove that the algorithms terminate. Our proofs are
+  mechanized in a combination of Coq and Agda.},
+  journal = {Proc. ACM Program. Lang.},
+  month = dec,
+  articleno = {9},
+  numpages = {30},
+  keywords = {Dependent Object Types, $D_{&lt;:}$, Undecidability, Algorithmic Typing}
+}
+
+@article{exist1,
+  author = {Mitchell, John C. and Plotkin, Gordon D.},
+  title = {Abstract Types Have Existential Type},
+  year = {1988},
+  issue_date = {July 1988},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {10},
+  number = {3},
+  issn = {0164-0925},
+  url = {https://doi.org/10.1145/44501.45065},
+  doi = {10.1145/44501.45065},
+  abstract = {Abstract data type declarations appear in typed programming languages like Ada, Alphard,
+  CLU and ML. This form of declaration binds a list of identifiers to a type with associated
+  operations, a composite “value” we call a data algebra. We use a second-order typed
+  lambda calculus SOL to show how data algebras may be given types, passed as parameters,
+  and returned as results of function calls. In the process, we discuss the semantics
+  of abstract data type declarations and review a connection between typed programming
+  languages and constructive logic.},
+  journal = {ACM Trans. Program. Lang. Syst.},
+  month = jul,
+  pages = {470–502},
+  numpages = {33}
+}
+
+@inproceedings{existjavawildcards,
+  author = {Cameron, Nicholas and Drossopoulou, Sophia},
+  title = {On Subtyping, Wildcards, and Existential Types},
+  year = {2009},
+  isbn = {9781605585406},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/1557898.1557902},
+  doi = {10.1145/1557898.1557902},
+  abstract = {Wildcards are an often confusing part of the Java type system: the behaviour of wildcard
+  types is not fully specified by subtyping, due to wildcard capture, and the rules
+  for type checking are often misunderstood. Their very formulation seems somehow 'different'
+  from the rest of the Java type system, which is based on a simple, nominal hierarchy.We
+  investigate subtyping in models for Java with and without generics and wildcards.
+  We separate subclassing from subtyping, unify subtyping for class and wildcard types
+  using existential types, and show that Java wildcards emerge naturally from the combination
+  of inclusion and parametric polymorphism.},
+  booktitle = {Proceedings of the 11th International Workshop on Formal Techniques for Java-like Programs},
+  articleno = {4},
+  numpages = {7},
+  location = {Genova, Italy},
+  series = {FTfJP '09}
+}
+
+@article{exist2infer,
+  author = {Eisenberg, Richard A. and Duboc, Guillaume and Weirich, Stephanie and Lee, Daniel},
+  title = {An Existential Crisis Resolved: Type Inference for First-Class Existential Types},
+  year = {2021},
+  issue_date = {August 2021},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {5},
+  number = {ICFP},
+  url = {https://doi.org/10.1145/3473569},
+  doi = {10.1145/3473569},
+  abstract = {Despite the great success of inferring and programming with universal types, their
+  dual—existential types—are much harder to work with. Existential types are useful
+  in building abstract types, working with indexed types, and providing first-class
+  support for refinement types. This paper, set in the context of Haskell, presents
+  a bidirectional type-inference algorithm that infers where to introduce and eliminate
+  existentials without any annotations in terms, along with an explicitly typed, type-safe
+  core language usable as a compilation target. This approach is backward compatible.
+  The key ingredient is to use strong existentials, which support (lazily) projecting
+  out the encapsulated data, not weak existentials accessible only by pattern-matching.},
+  journal = {Proc. ACM Program. Lang.},
+  month = aug,
+  articleno = {64},
+  numpages = {29},
+  keywords = {Haskell, existential types, type inference}
+}
+
+@article{squid,
+  title = {Squid: Type-Safe, Hygienic, and Reusable Quasiquotes},
+  author = {Parreaux, Lionel and Shaikhha, Amir and Koch, Christoph},
+  publisher = {ACM},
+  journal = {Proceedings of 8th ACM SIGPLAN International Scala  Symposium (SCALA’17)},
+  address = {New York, NY, USA},
+  year = {2017},
+  abstract = {Quasiquotes have been shown to greatly simplify the task  of metaprogramming. This is in part because they hide the  data structures of the intermediate representation (IR),  instead allowing metaprogrammers to use the concrete syntax  of the language they manipulate. Scala has had  ``syntactic'' quasiquotes for a long time, but still misses  a statically-typed version like in MetaOCaml, Haskell and  F#. This safer flavor of quasiquotes has been particularly  useful for staging and domain-specific languages. In this  paper we present Squid, a metaprogramming system for Scala  that fills this gap. Squid quasiquotes are novel in three  ways: they are the first statically-typed quasiquotes we  know that allow code inspection (via pattern matching);  they are implemented purely as a macro library, without  modifications to the compiler; and they are reusable in the  sense that they can manipulate different IRs. Adapting (or  binding) a new IR to Squid is done simply by implementing a  well-defined interface in the style of object algebras  (i.e., tagless-final). We detail how Squid is implemented,  leveraging the metaprogramming tools already offered by  Scala, and show three application examples: the definition  of a binding for a DSL in the style of LMS; a safe ANF  conversion; and the introduction of type-safe, hygienic  macros as an alternative to the current macro system.},
+  url = {http://infoscience.epfl.ch/record/231700},
+  doi = {10.1145/3136000.3136005},
+}
+
+
+@article{LionelPhD,
+  title = {Type-Safe Metaprogramming and Compilation Techniques For  Designing Efficient Systems in High-Level Languages},
+  author = {Parreaux, Lionel Emile Vincent},
+  institution = {IINFCOM},
+  publisher = {EPFL},
+  address = {Lausanne},
+  year = {2020},
+  abstract = {Software engineering practices have been steadily moving  towards higher-level programming languages and away from  lower-level ones. High-level languages tend to greatly  improve safety, productivity, and code maintainability  because they handle various implementation details  automatically, allowing programmers to focus on their  problem domains.
+  
+  However, the gains offered by high-level  languages are usually made at the cost of reduced  performance: higher-level languages usually consume more  memory, run more slowly and require expensive  garbage-collecting runtime systems. This trend has been  worsening with the increasing adoption of the functional  programming paradigm by the industry. Modern programmers  are thus faced with a dilemma: should they favor  productivity and lower maintenance costs at the expense of  performance, or should they focus on performance, to the  detriments of almost everything else?
+  
+  The main idea behind  this thesis is that we can help solve this dilemma by  making advances in type systems, metaprogramming, and  compilers technology. In particular, we study how  metaprogramming via statically-typed quasiquotation can let  programmers define their own domain-specific optimizations  in a safe way, while leveraging the latest advances in  intermediate program representations.
+  
+  We present the  design and implementation of the Squid metaprogramming  framework, which extends the Scala programming language  with multi-staged programming capabilities and more. We  also present different application examples for Squid,  including a polymorphic yet efficient library for linear  algebra, a stream fusion engine improving on the state of  the art, a demonstration of query compilation by rewriting,  a staged SQL database system prototype, and a new embedded  domain-specific language for expressing queries over  collections of data.},
+  url = {http://infoscience.epfl.ch/record/281735},
+  doi = {10.5075/epfl-thesis-10285},
+}
+
+@misc{OCamlDoc,
+  title = {{The OCaml system  release 4.13}},
+  howpublished = "\url{https://ocaml.org/manual/letrecvalues.html}",
+  year = {2021}, 
+  note = "[Online; accessed 28-September-2021]"
+}

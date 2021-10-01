@@ -1,21 +1,650 @@
 \chapter{Formalizing GADT reasoning}
 
-From a type-theoretic point of view a GADT is a specific instance of a recursive disjoint sum-type where each element of the sum can contain existential types and introduce type constraints based on simple equations.
+This chapter first discusses the general form of a GADT as defined in Scala 3 and later explains in more depth the $\lambda_{2,G\mu}$ calculus.
+% which is the reference point of what GADT reasoning should allow for in a language. 
+Knowing the general form of a GADT allows us to think about GADTs in a more abstract manner instead of only looking at concrete examples. It also gives hints as to how a GADT can be represented in the compiler. Then this is further extended by defining a whole lambda calculus featuring GADTs with precisely defined type system and semantics. If such calculus is proven sound, its rules can serve as a good reference point for implementing the GADT reasoning in a practical language. Lastly, this chapter describes some simplifications to the $\lambda_{2,G\mu}$ in comparison to the original formulation from \cite{XiGRDT} that I have made to make the soundness proof and the future encoding into pDOT simpler, while, as I will argue in the last section, retaining the desired features.
 
-Let \texttt{X} be a generic GADT defined using the syntax of Scala 3:
+\section{General form of a GADT definition}
 
-\begin{lstlisting}[mathescape=true]
+From a type-theoretic point of view a GADT is a specific instance of a recursive disjoint sum-type where each element of the sum can contain existential types and introduce type constraints based on simple equations. The paper that is my reference point for the definition of GADTs is called \textit{Guarded Recursive Datatype Constructors} \cite{XiGRDT} as this was the name used for this concept before the name \textit{Generalized Algebraic Data Types} became more popular. The original name indeed corresponds closely to the theoretic definition - the GADT can be seen from the perspective of the constructors of various variants of the sum-type, the constructors are guarded by the type constraints and they are recursive, because the data held by the constructor can also have type that refers to the same GADT, which is heavily used in nested structures like lists and trees.
+
+A general form of a GADT defined using the syntax of Scala 3 looks like this:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
 enum X[$T_1$, ..., $T_k$]:
   case $C1$[$A_1$, ..., $A_{m_1}$](data: $\tau_1$) extends X[$B_{1, 1}$, ..., $B_{1, k}$]
   ...
   case $Cn$[$A_1$, ..., $A_{m_n}$](data: $\tau_n$) extends X[$B_{n, 1}$, ..., $B_{n, k}$]
 \end{lstlisting}
 
-The type has $k$ type parameters and $n$ constructors called $C1$ to $Cn$. The $i$th constructor has $m_i$ type parameters ($A_1$, ..., $A_{m_i}$ - which become the existential types) and instantiates the parameters of the type with concrete types $B_{n, 1}$, ..., $B_{n, k}$ which can also refer to $A_1$, ..., $A_{m_i}$. 
+The type \texttt{X} has $k$ type parameters $T_1$, ..., $T_k$ and $n$ constructors called $C1$ to $Cn$. The $i$th constructor has $m_i$ type parameters ($A_1$, ..., $A_{m_i}$ - which become the existential types) and instantiates the parameters of the type with concrete types $B_{n, 1}$, ..., $B_{n, k}$ which can also refer to $A_1$, ..., $A_{m_i}$. 
 
-Each constructor has also exactly one data parameter. This may seem limiting - after all examples that have been shown before had constructors with zero to two parameters. However, if the language in which the GADTs are being defined supports tuples or objects with multiple fields (which can effectively be used to emulate tuples), a single data parameter is always enough. If two or more parameters are needed, (potentially nested) tuples allow to pack them into this single argument. If there should be zero parameters, the data parameter can be of type Unit (or some type that emulates it by having exactly one inhabitant). Of course the type $\tau_{i}$ can refer to $A_1$, ..., $A_{m_i}$.
+Each constructor has also exactly one data parameter. This may seem limiting - after all examples that have been shown before had constructors with zero to two parameters. However, if the language in which the GADTs are being defined supports tuples or objects with multiple fields (which can effectively be used to emulate tuples), a single data parameter is always enough. If two or more parameters are needed, (potentially nested) tuples allow to pack them into this single argument. If there should be zero parameters, the data parameter can be of type Unit (or some type that emulates it by having exactly one inhabitant). Of course the types $\tau_{i}$ and $B_{i, j}$ can refer to $A_1$, ..., $A_{m_i}$.
 
 
 
-\section{[Describe calculus]}
-\section{[examples with derivations]}
+% the theoretic definition
+
+From a type-theoretic standpoint, this general form of a GADT can be seen as:\footnote{Based on the definition from \cite{XiGRDT}.}
+
+\[
+\hspace*{-1.5cm}
+X = \mu X. \lambda T_1 ... T_k. \left(\exists \{ A1, ..., A_{m_1}, T_1 \equiv B_{1,1}, ..., T_k \equiv B_{1,k} \} \; \tau_1 \;\; + \; ... \; + \;\; \exists \{ A1, ..., A_{m_n}, T_1 \equiv B_{n,1}, ..., T_k \equiv B_{n,k} \} \; \tau_n\right)
+\]
+
+% Nasz typ $X$ jest zdefiniowany w sposób rekurencyjny - dzięki kombinatorowi $\mu$ dalsza część definicji może się odwoływać do typu $X$, co pozwala nam na definiowanie zagnieżdżonych struktur jak listy czy drzewa.
+
+Our type $X$ is defined recursively - thanks to the $\mu$ combinator, the latter part of the definition can refer to the type $X$, which allows to define nested data structures like lists or trees.
+
+It takes $k$ type parameters and is itself a sum type. We interpret the $+$ operator in a similar way to a disjoint union - even if two variants on this list looked the same, they are still distinct - implicitly distinguished by their position on this list - in Scala that is even made explicit by giving each constructor a name - $C_1$, ..., $C_n$.
+
+Each variant introduces some existential types and some type equations: the notation $\exists \{A_1, ..., A_n, T_1 \equiv U_1, ..., T_k \equiv U_k \}. \tau$ is to be understood as - there exist some types $A_1$, ..., $A_n$ (but we do not know what they are, we only know that they are some valid types and can give them names) for which the equations $T_i \equiv U_i$ (of course the types $U_i$ can and often will refer to $A_j$) hold and the type $\tau$ is a valid type with these types in scope. 
+To construct an instance of an existential type defined as above, we need to provide some concrete types $\tau_1$, ..., $\tau_n$ such that if we replace $A_i$ with $\tau_i$, the mentioned equations hold, and a piece of data of type $\tau$ (in which $A_i$ were also replaced with $\tau_i$). 
+If we have an instance of this existential type, we can destruct it - then the type names $A_1$, ..., $A_n$ enter the scope (but all we know about these names is that they refer to some valid types, and nothing more) and we get a data value of type $\tau$.
+
+Similarly, to destruct a sum type we need to be able to handle each case in some way - so we need to provide a list of cases, which are like functions, which take each variant and return some common type - then depending on which variant the destructed piece of data was, the corresponding `function' is executed to get the result. This already looks similar to pattern matching and indeed once we combine that with destructing the existential types in a single step, we get exactly the pattern matching as known from GADTs.
+
+An important caveat is that the above definition must not reorder the $\lambda$ and $\mu$. It may seem fine for some definitions, like for example list could be defined as $List = \lambda \alpha. \mu t. \alpha \times t + 1$ (where $1$ stands for the unit type which here denotes an empty list), but such order of operators would not allow definitions in which the type parameters of nested instances of a GADT are different - one notable example is our \texttt{Expr} type:
+
+\[
+\texttt{Expr} = \mu t. \lambda \alpha. \left(
+\exists \{ \alpha \equiv Int \}. \, Int
+\; + \;
+\exists \{ \alpha \equiv Int \}. \, t \; Int \times t \; Int
+\; + \;
+\exists \{ \beta, \gamma, \alpha \equiv \beta \times \gamma \}. \, t \; \beta \times t \; \gamma
+\right)
+\]
+
+Here the three variants of the sum type represent the \texttt{Lit}, \texttt{Plus} and \texttt{Pair} constructors respectively. We can see that while the \texttt{Pair} constructor's type parameter is instantiated with $\beta \times \gamma$, the nested instances are instantiated with $\beta$ and $\gamma$ respectively - so the type arguments differ.
+
+\section{The $\lambda_{2,G\mu}$ calculus}
+
+The $\lambda_{2,G\mu}$ calculus has been defined in \cite{XiGRDT} as an internal language for the purposes of modelling the GADT reasoning. The language is quite simple and its typesystem has been proven sound, so it is a good point of reference for comparing GADT implementations. It allows to exploit all the major features that the GADTs provide (see examples in section \ref{lamexamples}).
+
+\subsection{Syntax}
+
+The syntax of the calculus replicated from \cite{XiGRDT} is presented in figure \ref{lamsyntax}.
+
+\begin{figure}
+  \begin{tabular}{lrcl}
+    types & $\tau$ & $::=$ & $\alpha$ | $\mathbf{1}$ | $\tau_1 * \tau_2$ | $\tau_1 \to \tau_2$ | \\
+    & & & $(\overrightarrow{\tau}) T$ | $\forall \alpha. \tau$ \\
+    patterns & $p$ & $::=$ & $x$ | $\langle \rangle$ | $\langle p_1, p_2 \rangle$ | $c[\overrightarrow{\alpha}](p)$ \\
+    clauses & $ms$ & $::=$ & $(p_1 \Rightarrow e_1 \; | \dots | \; p_n \Rightarrow e_n)$ \\
+    expressions & $e$ & $::=$ & $x$ | $f$ | $c[\overrightarrow{\tau}](e)$ | \\
+    & & &  $\langle \rangle$ | $\langle e_1, e_2 \rangle$ | $\mathbf{fst}(e)$ | $\mathbf{snd}(e)$ | \\
+    & & & $\lambda x : \tau. e$ | $e_1 (e_2)$ | $\Lambda \alpha. v$ | $e[\tau]$ | \\
+    & & & $\mathbf{fix} \, f : \tau. v$ | $\mathbf{case} \, e \, \mathbf{of} \, ms$ | \\
+    & & & $\mathbf{let} \, x = e_1 \, \mathbf{in} \, e_2 \, \mathbf{end}$ \\
+    values & $v$ & $::=$ & $x$ | $c[\overrightarrow{\tau}](v)$ | $\langle \rangle$ | $\langle v_1, v_2 \rangle$ | \\
+    & & & $\lambda x : \tau. e$ | $\Lambda \alpha. v$
+  \end{tabular}
+  \caption{Syntax for the $\lambda_{2,G\mu}$ language, reproduced from \cite{XiGRDT}.}
+  \label{lamsyntax}
+\end{figure}
+
+In the type syntax, $\alpha$ stands for type names (introduced by $\Lambda$), $\mathbf{1}$ represents the unit type, the $*$ operator is used to create tuple types and, as usual, $\to$ represents function types. $(\overrightarrow{\tau}) T$ represents a GADT with type arguments $\overrightarrow{\tau}$ (the vector arrow represents a possibly empty sequence of types). $\forall \alpha. \tau$ stands for a type abstraction, as usual in System F.
+
+Expressions are rather intuitive - $\langle\rangle$ stands for the unit value, $\langle e_1, e_2 \rangle$ create tuples, $\mathbf{fst}$ and $\mathbf{snd}$ are used to extract the first and second element of the tuple, respectively. Data abstraction ($\lambda$) and type abstraction $\Lambda$ and application are just like in System F or similar calculi. There is a $\mathbf{let}$ construct and a fixpoint operator $\mathbf{fix}$.
+
+The important additions are:
+\begin{itemize}
+  \item the constructor application expression - $c[\overrightarrow{\tau}](e)$ which creates a GADT instance using the constructor $c$, with type arguments $\overrightarrow{\tau}$ and the single data argument $e$ (as discussed before, the calculus requires every constructor to be unary, if it should not take any arguments it can take the unit type, and multiple arguments can be emulated with tuples);
+  \item the $\mathbf{case}$ statement that is used for pattern matching. It consists of a list of clauses, where each clause has a pattern that may introduce some binders into the context and an expression which is evaluated in the context created by this pattern. The patterns can be nested.
+\end{itemize}
+
+The calculus also distinguishes some types of expressions as \textit{values}. These can be thought of as normal forms (as they will not reduce further, unless some arguments are applied to them if it is a function) and some expressions actually are required to be values and not arbitrary expressions - that is the case for the body of $\Lambda$ and $\mathbf{fix}$.
+
+Moreover there is another subtlety that there are two `kinds' of variable names - there are lambda-variables $x$ (introduced by $\lambda$) and fix-variables $f$ (introduced by $\mathbf{fix}$). The difference is that lambda-variables are treated as values, but fix-variables are not. This seems like it may be an arbitrary design decision inspired by OCaml\todo{Nie znalazłem manuala OCamla w postaci książki wiec cytuje URL. Istnieje jakaś forma którą można "ładniej" zacytować?}\footnote{This is likely related to how recursive definitions are done in OCaml using the \texttt{let rec} syntax. The documentation \cite{OCamlDoc} only allows expressions which are \textit{statically constructive} and not \textit{immediately linked} to the names that are being recursively defined. Separating the fix-variables from lam-variables achieves a very similar purpose.}, since the paper is written in the context of that language. As it will be discussed in section \ref{simplifications}, the distinction is not really important from the perspective of analysing the GADT reasoning and it can be dropped.
+
+\subsection{Typing}
+\label{lamtypes}
+
+As already described in section \ref{introlam}, there are three environments in the calculus: a global $\Sigma$ defining the signatures of GADT constructors available in the program, and the local $\Delta$ used for types and type equations and the standard $\Gamma$ mapping variables to their types.
+
+Most of the typing rules are standard (ant thus are omitted, they can be found in \cite{XiGRDT}\todo{Add them in appendix}) - the lambda abstractions and applications are just like in System F, fixpoint, tuples and unit are also handled in the usual way.
+
+The rules that are worth exploring in more depth are the ones that are directly related to the GADTs.
+
+\textbf{ty-cons} is used to typecheck the application of a constructor that creates an instance of a GADT\footnote{The $\Delta \vdash \tau : *$ notation means that the type $\tau$ is well formed in the context of $\Delta$, which in particular means that all type variables used in $\tau$ are declared in $\Delta$.}.
+
+\begin{prooftree}
+\AxiomC{$\Sigma(c) = \forall \overrightarrow{\alpha}. \tau_1 \to \tau_2 $}
+\AxiomC{$\Delta \vdash \overrightarrow{\tau} : \overrightarrow{*}$}
+\AxiomC{$\Delta; \Gamma \vdash e : \tau_1 [ \overrightarrow{\alpha} \mapsto \overrightarrow{\tau}]$}
+\RightLabel{\textbf{(ty-cons)}}
+\TrinaryInfC{$\Delta; \Gamma \vdash c[\overrightarrow{\tau}](e) : \tau_2 [ \overrightarrow{\alpha} \mapsto \overrightarrow{\tau}]$}
+\end{prooftree}
+
+This rule explains in detail how a GADT instance can be constructed.
+First, the constructor $c$ must be defined in the signature $\Sigma$. Then we need a (possibly empty) sequence of types $\overrightarrow{\tau}$. It must have the same length as $\overrightarrow{\alpha}$ - the sequence of type parameters of the constructor. Each type in the sequence $\overrightarrow{\tau}$ must be well formed in the current type environment $\Delta$.
+Finally, we need an expression $e$ which will evaluate to the data argument of the constructor. The expression must have a type that will match with the argument type $\tau_1$ of the constructor with the type parameters $\overrightarrow{\alpha}$ substituted with our concrete arguments $\overrightarrow{\tau}$.
+With all this, the applied constructor yields the type $\tau_2$ as defined in the signature (the type $\tau_2$ will have form $(\overrightarrow{\gamma}) T$ where $T$ is the GADT corresponding to the constructor $c$), again with the type parameters $\overrightarrow{\alpha}$ substituted with $\overrightarrow{\tau}$.
+
+For example, we can typecheck applying the \texttt{pair} constructor. Let's assume that $\Gamma(x) = (\Int) \; \Expr$ and $\Gamma(y) = (\String) \; \Expr$, then:
+
+\begin{prooftree}
+%\hskip -2cm
+\small
+\AxiomC{$\Delta \vdash \Int : *$}
+\AxiomC{$\Delta \vdash \String : *$}
+\noLine
+\BinaryInfC{$\Sigma(\texttt{pair}) = \forall a, b. ((a) \; \Expr * (b) \; \Expr) \to (a * b) \; \Expr$}
+
+\AxiomC{$\Delta; \Gamma \vdash \langle x, y \rangle : ((a) \; \Expr * (b) \; \Expr )[ a \mapsto \Int, \, b \mapsto \String]$}
+
+\BinaryInfC{$\Delta; \Gamma \vdash \texttt{pair}[\Int, \String](\langle x, y \rangle) : ((a * b) \; \Expr )[a \mapsto \Int, \, b \mapsto \String]$}
+\UnaryInfC{$\Delta; \Gamma \vdash \texttt{pair}[\Int, \String](\langle x, y \rangle) : (\Int * \String) \; \Expr$}
+\end{prooftree}
+
+
+The next important rule is \textbf{ty-case} which does the reverse - allows us to destruct the GADT by pattern matching and perform actions depending on which variant the instance was. $\lambda_{2,G\mu}$ actually allows nested patterns and thus it is also able to match tuples (and unit too), but these details are not crucial to understanding the GADT mechanism so they will not be covered in depth.
+
+\begin{prooftree}
+\AxiomC{$\Delta; \Gamma \vdash e : \tau_1$}
+\AxiomC{$\Delta; \Gamma \vdash ms : \tau_1 \implies \tau_2$}
+\RightLabel{\textbf{(ty-case)}}
+\BinaryInfC{$\Delta; \Gamma \vdash \mathbf{case} \, e \, \mathbf{of} \, ms : \tau_2$}
+\end{prooftree}
+
+This rule relies on typing a list of clauses $ms$. In a given context, a list of clauses $ms$ types to $\tau_1 \implies \tau_2$ if every clause on the list types to $\tau_1 \implies \tau_2$.
+
+Now, to type a single clause, we need to type the pattern which yields a modified context, since the pattern may introduce new data and type variables into the context:
+
+\begin{prooftree}
+\AxiomC{$\Delta \vdash \downarrow \tau_1 \implies (\Delta'; \Gamma')$}
+\AxiomC{$\Delta, \Delta'; \Gamma, \Gamma' \vdash e : \tau_2$}
+\BinaryInfC{$\Delta; \Gamma \vdash p \implies e : \tau_1 \implies \tau_2$}
+\end{prooftree}
+
+The pattern typing rule that interests us the most is \textbf{pat-cons} which inspects a specific GADT variant corresponding to some constructor:
+
+\begin{prooftree}
+\AxiomC{$\Sigma(c) = \forall \overrightarrow{\alpha}. \tau \to (\overrightarrow{\tau_1}) T$}
+\AxiomC{$\Delta_0, \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2} \vdash p \downarrow \tau \implies \Delta; \Gamma$}
+\RightLabel{\textbf{(pat-cons)}}
+\BinaryInfC{$\Delta_0 \vdash c[\overrightarrow{\alpha}](p) \downarrow (\overrightarrow{\tau_2}) T \implies \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2}, \Delta; \Gamma$}
+\end{prooftree}
+
+The specific clause will only evaluate if the GADT was created by the corresponding constructor. The rule unpacks the existential types held in that constructor and binds them to names $\overrightarrow{\alpha}$. Moreover, it introduces the set of type equations $\overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2}$. These equations are at the very core of GADT reasoning, they stem from the fact that, in the branch corresponding to this pattern, if the constructor $c$ with type parameters $\overrightarrow{\alpha}$ was used to create the instance of the GADT that we are matching, it must have yielded $(\overrightarrow{\tau_1}) T$ as a result. But `externally' we are matching a GADT of type $(\overrightarrow{\tau_2}) T$, so both of these types must be equal, thus introducing the aforementioned equations. Then we continue the nested pattern matching by matching the data argument of the constructor with some further nested pattern. This pattern can be another nested GADT, a tuple or a plain variable name which will just bind the data argument to a name.
+
+The rules for tuple and unit are omitted\footnote{They are available in \cite{XiGRDT}.}.
+
+\begin{prooftree}
+\AxiomC{$\Delta_0 \vdash \tau : *$}
+\RightLabel{\textbf{(pat-var)}}
+\UnaryInfC{$\Delta_0 \vdash x \downarrow \tau \implies \cdot; x : \tau$}
+\end{prooftree}
+
+The \textbf{pat-var} rule is the simplest pattern typing rule, but it is crucial. It will match anything - all that it requires is for the type being matched to be well-formed. The primary use-case for this rule is to bind the data argument of a matched GADT to a local variable.
+
+One more typing rule that should be mentioned is \textbf{ty-eq} which allows to use the equations introduced by pattern matching for replacing types - it is crucial, because without it the pattern matching would introduce the equations, but they would be useless if we could not do anything with them.
+
+\begin{prooftree}
+\AxiomC{$\Delta \vDash \tau_1 \equiv \tau_2$}
+\AxiomC{$\Delta;\Gamma \vdash e : \tau_1$}
+\RightLabel{\textbf{(ty-eq)}}
+\BinaryInfC{$\Delta;\Gamma \vdash e : \tau_2$}
+\end{prooftree}
+
+This rule allows us to replace the type $\tau_1$ with the type $\tau_2$ anywhere in the derivation, as long as the equation $\tau_1 \equiv \tau_2$ is a semantic consequence of the current context $\Delta$. This notion is defined in the following way: An equation $\tau_1 \equiv \tau_2$ is a semantic consequence of $\Delta$, if for every substitution $\Theta$ which maps all free variables from $\Delta$ to some closed types such that both sides of every equation from $\Delta$ are syntactically equal after the substitution is applied, that substitution also equates the equation in question. 
+
+Formally, we define a notion of a substitution `matching' the context: $\vdash \Theta : \Delta$. An empty substitution matches an empty context: $\vdash [] : \cdot$. If we extend the context with a type variable, the substitution must be extended with a corresponding mapping (which maps it to a closed term, i.e. a term that is valid in empty context): $\vdash \Theta[\alpha \mapsto \tau] : \Delta, \alpha$ if $\vdash \Theta : \Delta$ and $\cdot \vdash \tau : *$. If we extend the context with an equation, a matching substitution must ensure that both sides of the equation are syntactically equal after it is applied: $\vdash \Theta : \Delta, \tau_1 \equiv \tau_2$ if $\vdash \Theta : \Delta$ and $\tau_1[\Theta] = \tau_2[\Theta]$.
+
+With that definition at hand, we can say that $\Delta \vDash \tau_1 \equiv \tau_2$ if and only if, $\tau_1[\Theta] = \tau_2[\Theta]$ holds for every $\Theta$ such that $\vdash \Theta : \Delta$. The source paper \cite{XiGRDT} also proposes a sound and complete set of syntactic rules for solving the equality constraints that can be used to create an algorithm checking the semantic consequence of equalities needed in typing.
+
+To illustrate how the pattern matching rules are used in practice, we can create a simple GADT which emulates type equalities - $(a, b) \; \texttt{Eq}$. It will be a GADT with two type parameters which will serve as evidence that $a \equiv b$ and will have exactly one constructor: let's assume that $\Sigma(\texttt{refl}) = \forall a. \mathbf{1} \to (a, a) \; Eq$. The only way to construct an equality is from the reflexivity rule - i.e. we can directly only create evidence that a type is equal to itself - thus if we are pattern matching an arbitrary instance of $(a, b) \; \texttt{Eq}$, we know that the \texttt{refl} constructor must have been used (since it is the only one), so the two types must indeed be equal.
+
+We can use the GADT proving equality of two types to coerce values of one type to another (which if we manage to provide the evidence must actually be the same type):
+\todo{Dać obie szerokie figury na jednej stronie, ewentualnie podzielić drzewka i dać jakieś aliasy}
+\todo{Eval ewentualnie dodać}
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+coerce : $\forall$$\alpha$. $\forall$$\beta$. ($\alpha$, $\beta$) Eq $\to$ $\alpha$ $\to$ $\beta$
+coerce = $\Lambda$$\alpha$. $\Lambda$$\beta$. $\lambda$x: $\alpha$.
+  case eq of
+    refl[$\gamma$](_) => x
+\end{lstlisting}
+
+The typing derivation for \texttt{coerce} can be found in Figure \ref{coerceproof}.
+
+\newgeometry{bottom=0.1cm,top=0.1cm}
+\begin{sidewaysfigure}
+  \caption{The typing derivation for the \texttt{coerce} function.}
+  \label{coerceproof}
+  
+  \tiny
+  %\fontsize{1}{1}\selectfont
+  
+  \begin{prooftree}
+    %\hskip 5cm
+    
+    \AxiomC{}
+    %\RightLabel{\textbf{ty-var}}
+    \UnaryInfC{$
+      \alpha, \beta; eq : (\alpha, \beta) \; \texttt{Eq} \vdash 
+      eq : (\alpha, \beta) \; \texttt{Eq}
+      $}
+    
+    
+    \AxiomC{}
+    %\RightLabel{\textbf{ty-var}}
+    \UnaryInfC{$
+      \alpha, \beta; eq : (\alpha, \beta) \; \texttt{Eq}, x : \alpha \vdash 
+      x : \alpha
+      $}
+    
+    \AxiomC{$ \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta \vdash \mathbf{1} : *$}
+    %\LeftLabel{\textbf{pat-var}}
+    \UnaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta
+      \vdash u \downarrow \mathbf{1} \Rightarrow \cdot ; u : \mathbf{1}
+      $}
+    
+    \AxiomC{$\Sigma(\texttt{refl}) = \forall \gamma. \mathbf{1} \to (\gamma, \gamma) \; \texttt{Eq}$}
+    
+    %\LeftLabel{\textbf{pat-cons}}
+    \BinaryInfC{$
+      \alpha, \beta \vdash
+      \texttt{refl}[\gamma](u) \downarrow (\alpha, \beta) \; \texttt{Eq}
+      \Rightarrow \,
+      \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; u : \mathbf{1}
+      $}
+    
+    \AxiomC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta
+      \vDash
+      \alpha \equiv \beta
+      $}
+    
+    \AxiomC{}
+    \RightLabel{\textbf{ty-var}}
+    \UnaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, x: \alpha, u : \mathbf{1} \vdash
+      x : \alpha
+      $}
+    
+    \RightLabel{\textbf{ty-eq}}
+    \BinaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, x: \alpha, u : \mathbf{1} \vdash
+      x : \beta
+      $}
+    
+    
+    \BinaryInfC{$ 
+      \alpha, \beta; eq : (\alpha, \beta) \; \texttt{Eq}, x: \alpha \vdash 
+      \texttt{refl}[\gamma](u) \Rightarrow
+      x
+      : (\alpha, \beta) \; \texttt{Eq} \Rightarrow \beta
+      $}
+    
+    \RightLabel{\textbf{ty-case}}
+    \BinaryInfC{$ 
+      \alpha, \beta; eq: (\alpha, \beta) \; \texttt{Eq}, x: \alpha \vdash 
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      x : \beta
+      $}
+    \RightLabel{\textbf{ty-lam}}
+    \BinaryInfC{$ 
+      \alpha, \beta; eq: (\alpha, \beta) \; \texttt{Eq} \vdash 
+      \lambda x: \alpha.
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      x
+      : \alpha \to \beta
+      $}
+    \RightLabel{\textbf{ty-lam}}
+    \UnaryInfC{$ 
+      \alpha, \beta; \cdot \vdash 
+      \lambda eq: (\alpha, \beta) \; \texttt{Eq}. \lambda x: \alpha.
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      x
+      : (\alpha, \beta) \; \texttt{Eq} \to \alpha \to \beta
+      $}
+    \RightLabel{\textbf{ty-tlam}}
+    \UnaryInfC{$ 
+      \alpha; \cdot \vdash 
+      \Lambda \beta. \lambda eq: (\alpha, \beta) \; \texttt{Eq}. \lambda x: \alpha.
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      x
+      : \forall \beta. \; (\alpha, \beta) \; \texttt{Eq} \to \alpha \to \beta
+      $}
+    \RightLabel{\textbf{ty-tlam}}
+    \UnaryInfC{$ 
+      \cdot; \cdot \vdash 
+      \Lambda \alpha. \Lambda \beta. \lambda eq: (\alpha, \beta) \; \texttt{Eq}. \lambda x: \alpha.
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      x
+      : \forall \alpha. \; \forall \beta. \; (\alpha, \beta) \; \texttt{Eq} \to \alpha \to \beta
+      $}
+  \end{prooftree}
+\end{sidewaysfigure}
+
+\restoregeometry
+
+\subsection{Semantics}
+
+The semantics of $\lambda_{2,G\mu}$ calculus are given using evaluation contexts:
+
+\begin{figure}
+  \begin{tabular}{lrcl}
+    Evaluation context & $E$ & $::=$ & [] | $\mathbf{fst}(E)$ | $\mathbf{snd}(E)$ | $\left\langle E, e \right\rangle$ | $\left\langle v, E \right\rangle$ | \\
+    & & & $E(e)$ | $v(E)$ | $E[\tau]$ |  \\
+    & & & $\mathbf{let} \, x = E \, \mathbf{in} \, e \, \mathbf{end}$ | $\mathbf{case} \, E \, \mathbf{of} \, ms$
+  \end{tabular}
+\end{figure}
+
+Then, the redexes are following:
+
+\begin{itemize}
+  \item $\mathbf{fst}(\left\langle v_1, v_2 \right\rangle) \longrightarrow v_1$
+  \item $\mathbf{snd}(\left\langle v_1, v_2 \right\rangle) \longrightarrow v_2$
+  \item $(\lambda x : \tau. e)(v) \longrightarrow e[x \mapsto v]$
+  \item $(\Lambda \alpha. v)[\tau] \longrightarrow v[\alpha \mapsto \tau]$
+  \item $\mathbf{let} \, x = v \, \mathbf{in} \, e \, \mathbf{end} \longrightarrow e[x \mapsto v]$
+  \item $\mathbf{fix} f : \tau. v \longrightarrow v[f \mapsto \mathbf{fix} f : \tau. v]$
+  \item $\mathbf{case} \, v \, \mathbf{of} \, ms \longrightarrow e[\Theta][\theta]$ if for some clause $p \implies e$ in $ms$, the pattern $p$ matches the value $v$ yielding substitutions $\Theta$ (on type level) and $\theta$ (on data level).
+\end{itemize}
+
+Formally, we write $v \downarrow p \implies (\Theta; \theta)$ to indicate that a pattern matches a value yielding some substitutions. The variable pattern matches any value: $v \downarrow x \implies ([]; [x \mapsto v])$. A constructor pattern matches a GADT value that was constructed using the corresponding constructor: $c[\overrightarrow{\tau}](v) \downarrow c[\overrightarrow{\alpha}](p) \implies (\overrightarrow{\alpha} \mapsto \overrightarrow{\tau} \cup \Theta; \theta)$ if $v \downarrow p \implies (\Theta; \theta)$. There are also rules for matching tuples and unit, but again, they are omitted here.
+
+The official semantics define the pattern matching operation in a nondeterministic way - it is possible that multiple patterns will match some value and in such case it is not specified which branch is selected. Moreover, there are no requirements that all constructors must be `handled' in a given pattern match, so if no patterns match a given value the evaluation can get stuck\footnote{As described in section \ref{simplifications}, this will be slightly modified in the mechanization, as a deterministic language is more practical as a starting point for further developments. The nondeterminism is not related to the GADT reasoning in any way, so having to simulate it (since most calculi and programming languages are deterministic) would be an additional burden on the translation that is irrelevant to the subject.}.
+
+\section{Example programs}
+\label{lamexamples}
+
+All \todo{TODO are the Vector examples finished???} examples that were presented in this chapter have also been recreated in the mechanized version of th calculus and their typing derivations have been proven in Coq. The files can be found at TODO, among the files attached with the thesis.
+
+Reusing the \texttt{Eq} GADT as defined in section \ref{lamtypes}, we can prove that this notion of type equality admits symmetry and transitivity, by creating functions which take equality evidence and return new evidence.
+
+We will define a \textit{symmetry} function which will take an $(a, b) \; \texttt{Eq}$ instance and construct a $(b, a) \; \texttt{Eq}$ instance. The code is presented below and the typing derivation can be seen in Figure \ref{symmetryproof}.
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+symmetry : $\forall$$\alpha$. $\forall$$\beta$. ($\alpha$, $\beta$) Eq $\to$ ($\beta$, $\alpha$) Eq
+symmetry = $\Lambda$$\alpha$. $\Lambda$$\beta$. $\lambda$eq:($\alpha$, $\beta$) Expr.
+  case eq of
+    refl[$\gamma$](_) $\Rightarrow$ refl[$\alpha$]($\langle \rangle$)
+\end{lstlisting}
+
+Similarly, we can `prove' transitivity:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+transitivity : $\forall$$\alpha$. $\forall$$\beta$. $\forall$$\gamma$. ($\alpha$, $\beta$) Eq $\to$ ($\beta$, $\gamma$) Eq $\to$ ($\alpha$, $\gamma$) Eq
+transitivity = $\Lambda$$\alpha$. $\Lambda$$\beta$. $\Lambda$$\gamma$. $\lambda$eq1:($\alpha$, $\beta$) Expr. $\lambda$eq2:($\beta$, $\gamma$) Expr.
+  case eq1 of
+    refl[$\delta$](_) =>
+      case eq2 of
+        refl[$\varepsilon$](_) =>    
+          refl[$\beta$]($\langle \rangle$)
+\end{lstlisting}
+
+The typing derivation for the code above is completely analogous to the one for \texttt{symmetry}, we just do the pattern match twice which introduces equations $\delta \equiv \alpha$, $\delta \equiv \beta$, $\epsilon \equiv \beta$, $\epsilon \equiv \gamma$ which allow us to deduce that $\alpha \equiv \beta \equiv \gamma$ and thus using the \textbf{ty-eq} rule, we can typecheck the result of the constructor that has type $(\beta, \beta) \; \texttt{Eq}$ as $(\alpha, \gamma) \; \texttt{Eq}$, as needed.
+
+\todo[inline]{Given the symmetry derivation, I don't think eval is feasible, maybe we could show parts of it? But I'm not sure if its worth it, maybe it could be fit onto multiple pages in the appendix? I was also thinking about a separate typing explanation but that would be quite redundant to what is already done in the introduction (it would only be slightly more formal and nothing more).}
+%\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+%eval : $\forall$ a. (a) Expr $\to$ a
+%eval = fix f:($\forall$ a. (a) Expr $\to$ a).
+%  $\Lambda$a. $\lambda$e:(a) Expr.
+%    case e of
+%      lit[](i) => i
+%      plus[](tup) => (f[Int] fst(tup)) + (f[Int] snd(tup))
+%      pair[b,c](tup) => <f[b] fst(tup), f[c] snd(tup)>
+%\end{lstlisting}
+%\todo[inline]{Full derivation for symmetry (bc its simple) and then for eval}
+
+%\todo[inline]{I was thinking about construct+destruct as they are crucial to the pDOT issue, but too many examples seem boring - maybe I should just postpone them until pDOT chapter.}
+
+\newgeometry{bottom=0.5cm,top=0.5cm}
+\begin{sidewaysfigure}
+  \caption{Partial typing derivation for the \texttt{symmetry} function. 
+    The first 2 \textbf{ty-tlam}, the \textbf{ty-lam} and \textbf{ty-var} rules were omitted for conciseness, they would be applied in the same manner as in the case of \texttt{coerce} as shown in Figure \ref{coerceproof}.
+    The equation (\textbf{*}) holds because, if we take any substitution $\Theta$ that satisfies our environment, it must map $\gamma$ onto something, but since the equations from environment must be satisfied, that substitution must map $\alpha$ and $\beta$ onto the same value, thus once the substitution is applied to the equations on the right, their both sides are also equal.
+  }
+  \label{symmetryproof}
+  
+  \tiny
+  %\fontsize{1}{1}\selectfont
+  
+  \begin{prooftree}
+    %\hskip 5cm 
+    
+    \AxiomC{$ \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta \vdash \mathbf{1} : *$}
+    \LeftLabel{\textbf{pat-var}}
+    \UnaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta
+      \vdash u \downarrow \mathbf{1} \Rightarrow \cdot ; u : \mathbf{1}
+      $}
+    
+    \AxiomC{$\Sigma(\texttt{refl}) = \forall \gamma. \mathbf{1} \to (\gamma, \gamma) \; \texttt{Eq}$}
+    
+    \LeftLabel{\textbf{pat-cons}}
+    \BinaryInfC{$
+      \alpha, \beta \vdash
+      \texttt{refl}[\gamma](u) \downarrow (\alpha, \beta) \; \texttt{Eq}
+      \Rightarrow \,
+      \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; u : \mathbf{1}
+      $}
+    
+    \AxiomC{(\textbf{*}) $\,
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta
+      \vDash
+      (\alpha, \alpha) \; \texttt{Eq} \equiv (\beta, \alpha) \; \texttt{Eq} 
+      $}
+    
+    \AxiomC{$\Sigma(\texttt{refl}) = \forall \gamma'. \mathbf{1} \to (\gamma', \gamma') \; \texttt{Eq}$}
+    \noLine
+    \UnaryInfC{(\textbf{ty-unit}) $\;
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, u : \mathbf{1} \vdash
+      \langle\rangle
+      : \mathbf{1} [\gamma' \to \gamma]
+      $}
+    
+    \AxiomC{$\alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta \vdash \alpha : *$}
+    
+    \RightLabel{\textbf{ty-cons}}
+    \BinaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, u : \mathbf{1} \vdash
+      \texttt{refl}[\alpha](\langle\rangle)
+      : (\gamma', \gamma') \; \texttt{Eq} \; [\gamma' \to \alpha]
+      $}
+    \UnaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, u : \mathbf{1} \vdash
+      \texttt{refl}[\alpha](\langle\rangle)
+      : (\alpha, \alpha) \; \texttt{Eq}
+      $}
+    
+    \RightLabel{\textbf{ty-eq}}
+    \BinaryInfC{$
+      \alpha, \beta, \gamma, \gamma \equiv \alpha, \gamma \equiv \beta; eq : (\alpha, \beta) \; \texttt{Eq}, u : \mathbf{1} \vdash
+      \texttt{refl}[\alpha](\langle\rangle)
+      : (\beta, \alpha) \; \texttt{Eq}
+      $}
+    
+    
+    \BinaryInfC{$ 
+      \alpha, \beta; eq : (\alpha, \beta) \; \texttt{Eq} \vdash 
+      \texttt{refl}[\gamma](u) \Rightarrow
+      \texttt{refl}[\alpha](\langle\rangle)
+      : (\alpha, \beta) \; \texttt{Eq} \Rightarrow (\beta, \alpha) \; \texttt{Eq}
+      $}
+    
+    \RightLabel{\textbf{ty-case}}
+    \UnaryInfC{$ 
+      \alpha, \beta; eq : (\alpha, \beta) \; \texttt{Eq} \vdash 
+      \mathbf{case} \; eq \; \mathbf{of} \; \texttt{refl}[\gamma](u) \Rightarrow
+      \texttt{refl}[\alpha](\langle\rangle)
+      : (\beta, \alpha) \; \texttt{Eq}
+      $}
+  \end{prooftree}
+\end{sidewaysfigure}
+
+\restoregeometry
+
+Another interesting example is a \texttt{Vector} type - a list type with length encoded in its type. This allows for some tricks like ensuring in types that two zipped lists have the same length or that head is only called on non-empty lists.
+
+First we must define GADTs that will represent natural numbers:
+
+\[
+\Sigma(\texttt{zero}) = \mathbf{1} \to () \; \texttt{Z}
+\]
+\[
+\Sigma(\texttt{succ}) = \forall \alpha. \mathbf{1} \to (\alpha) \; \texttt{S}
+\]
+
+We encode 0 as $() \; \texttt{Z}$, 1 as $(() \; \texttt{Z}) \; \texttt{S}$, 2 as $((() \; \texttt{Z}) \; \texttt{S}) \; \texttt{S}$ etc.
+
+Then we can define the \texttt{Vector} type which will be parametrized by two types - the type of its elements and the \textit{phantom type}\cite{TODO} representing its length, with the following constructors:
+\[
+\Sigma(\texttt{nil}) = \forall \alpha. \mathbf{1} \to (\alpha, () \; \texttt{Z}) \; \texttt{Vector}
+\]
+\[
+\Sigma(\texttt{cons}) = \forall \alpha, \nu. \; \alpha * (\alpha, \nu) \; \texttt{Vector} \to (\alpha, (\nu) \; \texttt{S}) \; \texttt{Vector}
+\]
+
+The \texttt{nil} constructor creates an empty vector, with the length type label being zero. 
+The \texttt{cons} constructor takes an element and a vector of length $\nu$ and returns a vector of length `$\nu + 1$', which is represented by $(\nu) \; \texttt{S}$ in our natural numbers encoding.
+
+Now, we can write a typesafe \texttt{head} function:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+head : $\forall$$\alpha$. $\forall$$\nu$. ($\alpha$, ($\nu$) S) Vector -> $\alpha$
+head = $\Lambda$$\alpha$. $\Lambda$$\nu$. $\lambda$v: ($\alpha$, ($\nu$) S) Vector.
+  case v of
+    nil[$\beta$] => <>
+    cons[$\beta$, $\nu'$](tup) => fst(tup)
+\end{lstlisting}
+
+For completeness, we are handling cases corresponding to every available constructor, even though the original calculus does not require this. But the simplifications from section \ref{simplifications} will require every pattern match to be exhaustive and the examples are adapted to be compatible with the mechanized version of the calculus. 
+
+However, we know that the \texttt{nil} case is, in practice, impossible - it will never be evaluated, since it is impossible to construct a non-empty list using the \texttt{nil} constructor. Thus we return whatever - for example a unit value. This does, in fact, typecheck, because the pattern match introduces an equation $() \; \texttt{Z} \equiv (\nu) \; \texttt{S}$ to the environment. But this equation can never be satisfied, so we can use the \textbf{ty-eq} rule to type-check $\langle\rangle : \mathbf{1}$ as $\alpha$. That is because, since the environment contains a contradictory equation, no substitution will satisfy the environment, thus such environment entails every equation, in particular, $\alpha, \nu, () \; \texttt{Z} \equiv (\nu) \; \texttt{S} \vDash \alpha \equiv \mathbf{1}$.
+
+The \texttt{cons} case typechecks, because $\texttt{tup} : \beta * (\beta, (\nu') \texttt{S}) \; \texttt{Vector}$ and so, $\texttt{fst(tup)} : \beta$, but we also have $\beta \equiv \alpha$.
+
+Below follows code for the \texttt{zip} example, which takes two vectors of equal length and creates a vector of pairs of corresponding elements. We also know from its type that the result has the same length as both inputs.
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+zip : $\forall$$\alpha$. $\forall$$\beta$. $\forall$n. ($\alpha$, $\nu$) Vector -> ($\beta$, $\nu$) Vector -> ($\alpha$*$\beta$, $\nu$) Vector
+zip = $\Lambda$$\alpha$. $\Lambda$$\beta$. fix self:$\forall$$\nu$. $\alpha$ $\nu$ Vector -> ($\beta$, $\nu$) Vector -> ($\alpha$*$\beta$, $\nu$) Vector.
+  $\Lambda$n. $\lambda$va: ($\alpha$, $\nu$) Vector. $\lambda$vb: ($\beta$, $\nu$) Vector.
+    case va of
+      nil[$\alpha'$] => nil[$\alpha$*$\beta$]
+      cons[$\alpha'$, $\nu'$](da) =>
+        case vb of
+          nil[$\beta'$] => <> // This branch will never happen.
+          cons[$\beta'$, $\nu''$](db) =>
+            let h = <fst(da), fst(db)> in
+            let t = self[$\nu'$] snd(da) snd(db) in
+            cons[a*b, n'](<h,t>)
+\end{lstlisting}
+
+The first branch is simple, since we know that \texttt{va} was \texttt{nil}, we know that $\nu \equiv ()\texttt{Z}$, so both vectors must be empty and we can just return \texttt{nil}.
+
+The first branch of the other alternative is contradictory - \texttt{va} was a \texttt{cons}, but \texttt{vb} was a \texttt{nil}, but we were assuming that both vectors have equal length. Matching \texttt{va} with a \texttt{cons} introduces the equation $(\nu') \texttt{S} \equiv \nu$ to the environment and matching \texttt{vb} with \texttt{nil}, introduces $() \texttt{Z} \equiv \nu$, from these we can infer $(\nu') \texttt{S} \equiv () \texttt{Z}$, which is obviously false. Thus, we can return a unit value and typecheck it as the desired result $(\alpha * \beta, \nu) \; \texttt{Vector}$ using the \textbf{ty-eq} rule, because a contradictory environment entails any equation.
+
+In the last branch we just have $(\nu') \texttt{S} \equiv \nu$ and $(\nu'') \texttt{S} \equiv \nu$, which allows us to deduce that $\nu' \equiv \nu''$ and recursively call ourselves (\texttt{self}). The \texttt{h} that is the head of the vector that we return has type $\alpha' * \beta'$, but we can type it to $\alpha * \beta$, because we also know that $\alpha' \equiv \alpha$ and $\beta' \equiv \beta$.
+
+\section{Simplifications of $\lambda_{2,G\mu}$}
+\label{simplifications}
+
+To make the $\lambda_{2,G\mu}$ calculus more suitable for use as a source language for encoding GADT reasoning into other languages, I decided to introduce some simplifications to the original definitions. In this section I will describe the simplifications and explain why they do not harm the expressivity of the language in comparison to the original form.
+
+\todo[inline]{TODO}
+
+\subsection{Nested pattern matching}
+
+The $\lambda_{2,G\mu}$ allows arbitrarily nested patterns, which allow to write more concise and readable programs.
+
+For example, it allows us to write a function that takes a list of optional values and returns a list of values that were contained in these options:\footnote{For the purposes of this example we define \texttt{List} and \texttt{Option} GADTs analogous to these defined earlier in Scala. The constructors are:\\
+$\texttt{cons} : \forall \alpha. \alpha * (\alpha) \, \texttt{List} \to (\alpha) \, \texttt{List}$
+and
+$\texttt{nil} : \forall \alpha. \mathbf{1} \to (\alpha) \, \texttt{List}$,
+\\
+$\texttt{some} : \forall \alpha. \alpha \to (\alpha) \, \texttt{Option}$
+and
+$\texttt{none} : \forall \alpha. \mathbf{1} \to (\alpha) \, \texttt{Option}$.
+}
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+flattenList : $\forall$$\alpha$. (($\alpha$) Option) List $\to$ ($\alpha$) List
+flattenList = 
+  $\Lambda$$\alpha$. fix self: (($\alpha$) Option) List $\to$ ($\alpha$) List.
+  $\lambda$ list: (($\alpha$) Option) List.
+    case list of
+      cons[$\alpha'$](<some[$\alpha''$](elem), tail>) $\Rightarrow$ cons[$\alpha$](<elem, self (tail)>)
+      cons[$\alpha'$](<none[$\alpha''$](<>), tail>) $\Rightarrow$ self (tail)
+      nil[$\alpha'$](<>) $\Rightarrow$ nil[$\alpha$](<>)
+\end{lstlisting}
+
+However, we can of course rewrite this program to `unnest' the pattern matches:
+
+\begin{lstlisting}[mathescape=true, basicstyle=\ttfamily]
+flattenList' : $\forall$$\alpha$. (($\alpha$) Option) List $\to$ ($\alpha$) List
+flattenList' = 
+  $\Lambda$$\alpha$. fix self: (($\alpha$) Option) List $\to$ ($\alpha$) List.
+  $\lambda$ list: (($\alpha$) Option) List.
+    case list of
+      cons[$\alpha'$](<head, tail>) $\Rightarrow$ 
+        case head of
+          some[$\alpha''$](elem) $\Rightarrow$ cons[$\alpha$](<elem, self (tail)>)
+          none[$\alpha''$](<>) $\Rightarrow$ self (tail)
+    nil[$\alpha'$](<>) $\Rightarrow$ nil[$\alpha$](<>)
+\end{lstlisting}
+
+The above program is equivalent to the earlier one, it may be a bit less concise, but readability is not our main concern with the $\lambda_{2,G\mu}$ calculus, as it is not meant to be used for writing practical programs, but as a formal reference point - so simplicity of the language is much more important than syntactic sugar.
+
+Work by Maranget \cite{DecisionTrees} shows how nested patterns can be efficiently compiled to decision trees which are essentially isomorphic to non-nested pattern matches where each constructor of a given type is handled exactly once. That work focuses on regular ADTs, but it should be able to generalize it to GADTs too.
+
+When typing the pattern match, we want to typecheck all clauses to some common $\tau_{\texttt{input}} \Rightarrow \tau_{\texttt{output}}$ form. So in the beginning we have a set `input' type that we need to match against. We can look at the two rules that allow for nesting patterns (shown below) - in both cases, the `input' type for every nested pattern is designated by the `input' type of the overall pattern - the nested pattern can never influence the outer pattern's type (for example by making it more restricted and so forcing it to not match some cases) - the type information only flows from the outer patterns to the inner patterns\footnote{Of course the resulting bindings on the right side of $\Rightarrow$ flow in the opposite direction, but these do not influence which pattern can be matched, they are only `in scope' already inside of the given branch.}.
+\begin{prooftree}
+  \AxiomC{$\Sigma(c) = \forall \overrightarrow{\alpha}. \tau \to (\overrightarrow{\tau_1}) T$}
+  \AxiomC{$\Delta_0, \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2} \vdash p \downarrow \tau \implies \Delta; \Gamma$}
+  \RightLabel{\textbf{(pat-cons)}}
+  \BinaryInfC{$\Delta_0 \vdash c[\overrightarrow{\alpha}](p) \downarrow (\overrightarrow{\tau_2}) T \implies \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2}, \Delta; \Gamma$}
+\end{prooftree}
+\begin{prooftree}
+  \AxiomC{$\Delta_0 \vdash p_1 \downarrow \tau_1 \Rightarrow \Delta_1; \Gamma_1$}
+  \AxiomC{$\Delta_0 \vdash p_2 \downarrow \tau_2 \Rightarrow \Delta_2; \Gamma_2$}
+  \RightLabel{\textbf{(pat-tup)}}
+  \BinaryInfC{$\Delta_0 \vdash \langle p_1, p_2 \rangle \downarrow \tau_1 * \tau_2 \Rightarrow \Delta_1, \Delta_2; \Gamma_1, \Gamma_2$}
+\end{prooftree}
+Thus, every nested pattern can actually be deconstructed into a non-nested pattern (i.e. a single application of \textbf{pat-cons} or \textbf{pat-tup} directly followed by \textbf{pat-var} which just binds the identifiers) followed by another pattern match inside some branch, using a similar method as described in Maranget's work to gather the common branches (ones referring to the same constructor). So a nested pattern can become a series of nested pattern match expressions whose patterns are not nested anymore.
+
+When we get rid of nesting, every instance of \textbf{pat-cons} must be immediately followed by \textbf{pat-var}, so we can actually merge the two rules:
+
+\begin{prooftree}
+  \AxiomC{$\Sigma(c) = \forall \overrightarrow{\alpha}. \tau \to (\overrightarrow{\tau_1}) T$}
+  \AxiomC{$\Delta_0, \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2} \vdash \tau : *$}
+  \RightLabel{\textbf{(pat-cons')}}
+  \BinaryInfC{$\Delta_0 \vdash c[\overrightarrow{\alpha}](x) \downarrow (\overrightarrow{\tau_2}) T \implies \overrightarrow{\alpha}, \overrightarrow{\tau_1} \equiv \overrightarrow{\tau_2}; x : \tau$}
+\end{prooftree}
+
+\subsection{Tuple and unit patterns}
+
+Since we have gotten rid of nested patterns, matching tuples or units becomes much less useful and can actually be removed from the language without harming its expressivity. In fact, we can introduce very simple rewrite rules which convert matches of unit and tuples into terms that achieve the same result but do not use pattern matching.
+
+Matching a unit value on its own, i.e. $\mathbf{case} \; e_1 \; \mathbf{of} \langle\rangle \Rightarrow e_2$ does not introduce any bindings, all that it does is ensures that the $e_1$ expression is evaluated and for the whole program to typecheck, $e_1$ must have unit type. Thus we can replace that term with $\mathbf{let}\; x = (\lambda y: \mathbf{1}. \; y) (e_1) \; \mathbf{in} \; e_2$ (where $x$ is a fresh variable that is not present in $e_2$). The new term achieves exactly the same purpose - it ensures that $e_1$ is evaluated and that it has unit type. It also introduces $x$ to the scope of $e_2$, but if we choose a fresh identifier, that will not affect the rest of the program.
+
+Similarly, matching a tuple simply introduces bindings for each of its variables: $\mathbf{case} \; e_1 \; \mathbf{of} \langle x_1, x_2 \rangle \Rightarrow e_2$ can be rewritten to $\mathbf{let}\; x' = e_1 \; \mathbf{in} \; \mathbf{let}\; x_1 = \mathbf{fst}(x') \; \mathbf{in} \; \mathbf{let}\; x_2 = \mathbf{snd}(x') \; \mathbf{in} \; e_2$ (where $x'$ is fresh). We use the intermediate $x'$ for two reasons - to avoid having to rename $x_1$ (as a variable with the same name\footnote{In some places we actually assume for simplicity that all variable names are unique in the program (as we can always apply sufficient renaming to achieve that uniqueness), but it is still worth mentioning as in practical developments that possible name clash should be considered.} could be in the outer scope and then in evaluation of $x_2$ it would get shadowed by our redefinition of $x_1$) and more importantly, if we did not use that temporary variable, $e_1$ would be evaluated twice. While our language is referentially transparent and evaluating $e_1$ twice or once would not affect any possible looping behaviour, it is better to keep it evaluated once, for example in the case that the language would be extended with side-effects, or just to avoid the term growing too much\todo{Zastanawiam się czy za dużo tutaj sie nie rozpisuje o tym czemu ten $x'$ jest kiedy to w sumie jest ważny ale totalnie nie zwiazany z tematyką pracy detal - nigdzie później to nie jest tak naprawdę istotne.}.
+
+\subsection{Exhaustive pattern matching}
+
+As there are no more nested patterns, we can take one more simplification that does not change that much in practice but makes the language much easier to work with formally. We decide that every pattern match of a GADT must have exactly one branch for each constructor.
+
+As the patterns cannot be nested, it is impossible for two branches with the same constructor to handle different inputs (as this could be only achieved by the nested patterns) so such duplicate branches are redundant. The original language definition suggested that this should be handled in a nondeterministic way, but nondeterminism is only problematic. It may complicate proofs and definitely complicates any encoding efforts which would try to translate from $\lambda_{2,G\mu}$ to some other calculus (as such calculi are most of the time deterministic and so the nondeterminism would have to be emulated which is obviously doable, but it has nothing to do with the GADT reasoning that we care about). Removing determinism does in some small way reduce expressivity of the language (although of course it can be emulated), but it is actually a desirable change to make the source language easier to work with in formal developments and the change is not affecting the GADT-related expressivity that we here care about.
+
+The original calculus also allowed for some constructors to be missing and now that is not permitted, so these branches must be added somehow. There are two possible causes for a missing branch:
+
+\begin{itemize}
+  \item That branch is contradictory. For example when matching a non-empty \texttt{Vector}, the \texttt{nil} branch can never be selected - we know that a GADT instance with the known type arguments can never be constructed using the \texttt{nil} constructor - and that is clearly indicated by the fact that the type equations introduced inside of that branch are contradictory (see the \texttt{zip} example in section \ref{lamexamples}). In such cases, we can add the branch and simply make it return a unit value. Since the branch introduces contradictory equations to the environment, such environment will entail any arbitrary type equation, so we can infer the equation $\mathbf{1} \equiv \tau_{\texttt{output}}$ for any type that other pattern match branches ought to be returning and use it with the \textbf{ty-eq} rule to treat unit as if it were of that desired type.
+  
+  \item The branch was valid but was simply missing in the original calculus. In the original language it was possible for a branch to simply be missing and the semantics were that in such a case the computation simply gets stuck. In our modified language we do not want stuck terms, but to emulate this case if we ever need to translate programs, we can just introduce an infinite loop\footnote{
+    For example $\texttt{loop} = (\mathbf{fix} f: \mathbf{1} \to \tau. f \, (\langle\rangle)) (\langle\rangle)$ where $\tau$ is the expected return type.
+  }. Of course an infinite loop is not the same thing as a program getting stuck, but it is the closest alternative.
+\end{itemize}
+
+Since the missing patterns were the only place where the program could get stuck, once they are eliminated every program will either reduce to a normal form or form an infinite chain of reductions. So after these changes, we can actually prove a proper \textit{progress} property, which was not possible in the original calculus due to these stuck terms.
+
+\subsection{Variable distinction}
+
+\todo[inline]{Uznałem, że zanim to opiszę może warto spróbować jednak wprowadzić to rozróżnienie, bo w zasadzie nie mam większego powodu za wprowadzeniem go niż uproszczenie, a po analizie mimo że nie psuje ono ekspresywności, to jednak powoduje że niektóre termy z oryginalnego języka są nielegalne i trzeba rzeczy robić `na około', więc może by uniknąć tłumaczenia się warto to jednak zmienić - jeśli nie będzie zbyt trudne.}
+
+\subsection{Equality Wellformedness assumption?}
