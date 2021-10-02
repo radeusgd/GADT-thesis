@@ -39,50 +39,51 @@ Ltac contradictory_constructor_type :=
     inversion Hcontradict
   end.
 
-Lemma CanonicalFormTuple : forall Σ Δ E e T1 T2,
-    value e ->
-    {Σ, Δ, E} ⊢(Treg) e ∈ T1 ** T2 ->
-    exists v1 v2, e = trm_tuple v1 v2.
-  introv Hv Ht.
-  inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+(* Lemma CanonicalFormTuple : forall Σ Δ E e T1 T2, *)
+(*     value e -> *)
+(*     {Σ, Δ, E} ⊢(Treg) e ∈ T1 ** T2 -> *)
+(*     exists v1 v2, e = trm_tuple v1 v2. *)
+(*   introv Hv Ht. *)
+(*   inversion Hv; inversion Ht; subst; eauto; try congruence. *)
+(*   inversions H6. *)
+(*   contradictory_constructor_type. *)
+(* Qed. *)
 
-Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2,
-    value e ->
-    {Σ, Δ, E} ⊢(Treg) e ∈ T1 ==> T2 ->
-    exists v1, e = trm_abs T1 v1.
-  introv Hv Ht.
-  inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+(* Lemma CanonicalFormAbs : forall Σ Δ E e T1 T2, *)
+(*     value e -> *)
+(*     {Σ, Δ, E} ⊢(Treg) e ∈ T1 ==> T2 -> *)
+(*     exists v1, e = trm_abs T1 v1. *)
+(*   introv Hv Ht. *)
+(*   inversion Hv; inversion Ht; subst; eauto; try congruence. *)
+(*   contradictory_constructor_type. *)
+(* Qed. *)
 
-Lemma CanonicalFormTAbs : forall Σ Δ E e T,
-    value e ->
-    {Σ, Δ, E} ⊢(Treg) e ∈ typ_all T ->
-    exists v1, e = trm_tabs v1.
-  introv Hv Ht.
-  inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+(* Lemma CanonicalFormTAbs : forall Σ Δ E e T, *)
+(*     value e -> *)
+(*     {Σ, Δ, E} ⊢(Treg) e ∈ typ_all T -> *)
+(*     exists v1, e = trm_tabs v1. *)
+(*   introv Hv Ht. *)
+(*   inversion Hv; inversion Ht; subst; eauto; try congruence. *)
+(*   contradictory_constructor_type. *)
+(* Qed. *)
 
-Lemma CanonicalFormUnit : forall Σ Δ E e,
-    value e ->
-    {Σ, Δ, E} ⊢(Treg) e ∈ typ_unit ->
-    e = trm_unit.
-  introv Hv Ht.
-  inversion Hv; inversion Ht; subst; eauto; try congruence.
-  contradictory_constructor_type.
-Qed.
+(* Lemma CanonicalFormUnit : forall Σ Δ E e, *)
+(*     value e -> *)
+(*     {Σ, Δ, E} ⊢(Treg) e ∈ typ_unit -> *)
+(*     e = trm_unit. *)
+(*   introv Hv Ht. *)
+(*   inversion Hv; inversion Ht; subst; eauto; try congruence. *)
+(*   contradictory_constructor_type. *)
+(* Qed. *)
 
-Lemma CanonicalFormGadt : forall Σ Δ E e Ts N,
-    value e ->
-    {Σ, Δ, E} ⊢(Treg) e ∈ typ_gadt Ts N ->
-    exists Ts' C v, e = trm_constructor Ts' (N, C) v. (* todo may want to relate Ts' to Ts *)
-  introv Hv Ht.
-  inversion Hv; inversion Ht; subst; eauto; try congruence.
-  rewrite rewrite_open_tt_many_gadt in H8.
-  inversions H8.
-  inversions H13.
-  repeat eexists.
-Qed.
+(* Lemma CanonicalFormGadt : forall Σ Δ E e Ts N, *)
+(*     value e -> *)
+(*     {Σ, Δ, E} ⊢(Treg) e ∈ typ_gadt Ts N -> *)
+(*     exists Ts' C v, e = trm_constructor Ts' (N, C) v. (* todo may want to relate Ts' to Ts *) *)
+(*   introv Hv Ht. *)
+(*   inversion Hv; inversion Ht; subst; eauto; try congruence. *)
+(*   rewrite rewrite_open_tt_many_gadt in H8. *)
+(*   inversions H8. *)
+(*   inversions H13. *)
+(*   repeat eexists. *)
+(* Qed. *)

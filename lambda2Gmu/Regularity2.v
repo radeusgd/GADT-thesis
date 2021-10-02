@@ -160,8 +160,8 @@ Proof.
     + apply List.map_length.
 Qed.
 
-Lemma okt_push_fresh : forall Σ Δ E x T,
-    okt Σ Δ (E & x ~: T) ->
+Lemma okt_push_fresh : forall Σ Δ E x vk T,
+    okt Σ Δ (E & x ~ bind_var vk T) ->
     x # E /\ x \notin domΔ Δ.
   induction E using env_ind; introv OK.
   - split~.
@@ -176,8 +176,8 @@ Lemma okt_push_fresh : forall Σ Δ E x T,
 Qed.
 
 (* TODO maybe merge with the origl one *)
-Lemma okt_is_wft_2 : forall Σ Δ E F x T,
-    okt Σ Δ (E & x ~: T & F) -> wft Σ Δ T.
+Lemma okt_is_wft_2 : forall Σ Δ E F x vk T,
+    okt Σ Δ (E & x ~ bind_var vk T & F) -> wft Σ Δ T.
   induction F using env_ind; introv OK.
   - rewrite concat_empty_r in OK.
     apply* okt_is_wft.
@@ -223,10 +223,10 @@ Lemma okt_through_subst_tdtb : forall Σ D1 D2 E Z P,
       apply~ notin_domDelta_subst_td.
 Qed.
 
-Lemma okt_replace_typ : forall Σ Δ E F x T1 T2,
-  okt Σ Δ (E & x ~: T1 & F) ->
+Lemma okt_replace_typ : forall Σ Δ E F x vk T1 T2,
+  okt Σ Δ (E & x ~ bind_var vk T1 & F) ->
   wft Σ Δ T2 ->
-  okt Σ Δ (E & x ~: T2 & F).
+  okt Σ Δ (E & x ~ bind_var vk T2 & F).
   induction F using env_ind; introv OK WFT.
   - rewrite concat_empty_r.
     rewrite concat_empty_r in OK.
@@ -255,7 +255,7 @@ Lemma okt_strengthen_delta_eq : forall Σ D1 D2 E eq,
     + lets*: empty_push_inv H.
     + lets [? [? ?]]: eq_push_inv H.
       match goal with
-      | H: bind_var ?A = bind_var ?B |- _ => inversions H
+      | H: bind_var ?vk ?A = bind_var ?vk2 ?B |- _ => inversions H
       end.
       constructor; auto.
       * apply* wft_strengthen_equation.

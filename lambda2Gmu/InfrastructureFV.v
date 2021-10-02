@@ -262,8 +262,8 @@ Lemma fv_open_te_many : forall Ts e x,
       apply fv_open_te; eauto with listin.
 Qed.
 
-Lemma fv_env_extend : forall E x T,
-    fv_env (E & x ~: T) = fv_typ T \u fv_env E.
+Lemma fv_env_extend : forall E x vk T,
+    fv_env (E & x ~ bind_var vk T) = fv_typ T \u fv_env E.
   intros.
   rewrite concat_def.
   rewrite single_def.
@@ -272,8 +272,8 @@ Lemma fv_env_extend : forall E x T,
   trivial.
 Qed.
 
-Lemma notin_env_inv : forall E X x T,
-    X \notin fv_env (E & x ~: T) ->
+Lemma notin_env_inv : forall E X x vk T,
+    X \notin fv_env (E & x ~ bind_var vk T) ->
     X \notin fv_env E /\ X \notin fv_typ T.
   introv Fr.
   rewrite fv_env_extend in Fr.
@@ -378,8 +378,8 @@ Lemma notin_dom_tc_vars : forall As x,
 Qed.
 
 Lemma notin_env_binds:
-  forall (Z : var) (E : env bind) (x : var) (T : typ),
-    binds x (bind_var T) E ->
+  forall (Z : var) (E : env bind) (x : var) vk (T : typ),
+    binds x (bind_var vk T) E ->
     Z \notin fv_env E -> Z \notin fv_typ T.
 Proof.
   induction E using env_ind; introv Hbind FE.

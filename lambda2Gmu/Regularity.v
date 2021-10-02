@@ -23,35 +23,36 @@ Qed.
 
 #[export] Hint Resolve type_from_wft.
 
-Lemma values_decidable : forall t,
-    term t ->
-    (value t \/ ~ (value t)).
-  induction t; intro H;
-  inversion H; subst; try solve [
-                     right; intro Hv; inversion Hv
-                   | left; econstructor
-                          ].
-  - match goal with
-    | H: term t |- _ => rename H into Ht end.
-    apply IHt in Ht.
-    destruct Ht as [Hv | Hv].
-    + left; constructor*.
-    + right. intro Hv'. inversion* Hv'.
-  - match goal with
-    | H: term t1 |- _ => rename H into Ht1 end.
-    match goal with
-    | H: term t2 |- _ => rename H into Ht2 end.
-    apply IHt1 in Ht1.
-    apply IHt2 in Ht2.
-    destruct Ht1;
-      destruct Ht2;
-      try solve [ left; econstructor; eauto
-                | right; intro Hv; inversion Hv; congruence ].
-  - left; econstructor.
-    econstructor; eauto.
-  - left; econstructor.
-    econstructor; eauto.
-Qed.
+(* Lemma values_decidable : forall t, *)
+(*     term t -> *)
+(*     (value t \/ ~ (value t)). *)
+(*   induction t; intro H; *)
+(*   inversion H; subst; try solve [ *)
+(*                      right; intro Hv; inversion Hv *)
+(*                    | left; econstructor *)
+(*                           ]. *)
+(*   -  *)
+(*   - match goal with *)
+(*     | H: term t |- _ => rename H into Ht end. *)
+(*     apply IHt in Ht. *)
+(*     destruct Ht as [Hv | Hv]. *)
+(*     + left; constructor*. *)
+(*     + right. intro Hv'. inversion* Hv'. *)
+(*   - match goal with *)
+(*     | H: term t1 |- _ => rename H into Ht1 end. *)
+(*     match goal with *)
+(*     | H: term t2 |- _ => rename H into Ht2 end. *)
+(*     apply IHt1 in Ht1. *)
+(*     apply IHt2 in Ht2. *)
+(*     destruct Ht1; *)
+(*       destruct Ht2; *)
+(*       try solve [ left; econstructor; eauto *)
+(*                 | right; intro Hv; inversion Hv; congruence ]. *)
+(*   - left; econstructor. *)
+(*     econstructor; eauto. *)
+(*   - left; econstructor. *)
+(*     econstructor; eauto. *)
+(* Qed. *)
 
 Ltac IHap IH := eapply IH; eauto;
                 try (unfold open_ee; rewrite <- open_ee_var_preserves_size);
@@ -81,8 +82,8 @@ Qed.
 #[export] Hint Extern 1 (ok _) => apply okt_is_ok.
 
 
-Lemma wft_from_env_has_typ : forall Σ Δ x U E,
-    okt Σ Δ E -> binds x (bind_var U) E -> wft Σ Δ U.
+Lemma wft_from_env_has_typ : forall Σ Δ x vk U E,
+    okt Σ Δ E -> binds x (bind_var vk U) E -> wft Σ Δ U.
 Proof.
   induction E using env_ind; intros Ok B.
   false* binds_empty_inv.
@@ -197,26 +198,26 @@ Ltac find_ctxeq :=
     rename H into Hctx_eq
   end.
 
-Lemma okt_push_var_inv : forall Σ Δ E x T,
-  okt Σ Δ (E & x ~: T) -> okt Σ Δ E /\ wft Σ Δ T /\ x # E.
+Lemma okt_push_var_inv : forall Σ Δ E x vk T,
+  okt Σ Δ (E & x ~ bind_var vk T) -> okt Σ Δ E /\ wft Σ Δ T /\ x # E.
 Proof.
   introv O; inverts O.
   - false* empty_push_inv.
   - find_ctxeq. lets (?&M&?): (eq_push_inv Hctx_eq). subst. inverts~ M.
 Qed.
 
-Lemma okt_is_wft : forall Σ Δ E x T,
-    okt Σ Δ (E & x ~: T) -> wft Σ Δ T.
+Lemma okt_is_wft : forall Σ Δ E x vk T,
+    okt Σ Δ (E & x ~ bind_var vk T) -> wft Σ Δ T.
   introv Hokt.
   inversion Hokt.
   - false* empty_push_inv.
   (* - lets (?&?&?): eq_push_inv H. false*. *)
   - lets (?&?&?): eq_push_inv H. subst.
-    match goal with Heq: bind_var ?T1 = bind_var ?T2 |- _ => inversions* Heq end.
+    match goal with Heq: bind_var ?k1 ?T1 = bind_var ?k2 ?T2 |- _ => inversions* Heq end.
 Qed.
 
-Lemma okt_strengthen : forall Σ Δ E x U F,
-    okt Σ Δ (E & (x ~: U) & F) -> okt Σ Δ (E & F).
+Lemma okt_strengthen : forall Σ Δ E x vk U F,
+    okt Σ Δ (E & (x ~ bind_var vk U) & F) -> okt Σ Δ (E & F).
   introv O. induction F using env_ind.
   - rewrite concat_empty_r in *. lets*: (okt_push_var_inv O).
   - rewrite concat_assoc in *.
@@ -234,7 +235,7 @@ Lemma okt_strengthen : forall Σ Δ E x U F,
     + apply eq_push_inv in H.
       destruct H as [? [? ?]]. subst.
       match goal with
-      | [ H: bind_var ?T = bind_var ?t |- _ ] => inversions H
+      | [ H: bind_var ?vk1 ?T = bind_var ?vk2 ?t |- _ ] => inversions H
       end.
       applys~ okt_typ.
 Qed.
@@ -251,7 +252,7 @@ Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
     + lets*: empty_push_inv H.
     + lets [? [? ?]]: eq_push_inv H.
       match goal with
-      | H: bind_var ?A = bind_var ?B |- _ => inversions H
+      | H: bind_var ?vk1 ?A = bind_var ?vk2 ?B |- _ => inversions H
       end.
       lets [? ?]: notin_env_inv FXTE.
       constructor; auto.
@@ -263,8 +264,8 @@ Lemma okt_strengthen_delta_var : forall Σ D1 D2 E X,
         intuition.
 Qed.
 
-Lemma okt_is_type : forall Σ Δ E x T,
-    okt Σ Δ (E & x ~: T) -> type T.
+Lemma okt_is_type : forall Σ Δ E x vk T,
+    okt Σ Δ (E & x ~ bind_var vk T) -> type T.
   introv Hokt. apply okt_is_wft in Hokt. apply* type_from_wft.
 Qed.
 
@@ -560,14 +561,6 @@ Proof.
               destruct Hin as [[U V] [Heq Hin]]. subst.
               eauto.
         -- introv Ain. lets*: A3 Ain.
-Qed.
-
-(** The value relation is restricted to well-formed objects. *)
-
-Lemma value_regular : forall t,
-  value t -> term t.
-Proof.
-  induction 1; autos*.
 Qed.
 
 (** The reduction relation is restricted to well-formed objects. *)

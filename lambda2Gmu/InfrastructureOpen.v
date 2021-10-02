@@ -7,8 +7,8 @@ Require Import TLC.LibLN.
 
 
 (** ** Preserving size *)
-Lemma open_ee_var_preserves_size : forall e x n,
-    trm_size e = trm_size (open_ee_rec n (trm_fvar x) e).
+Lemma open_ee_var_preserves_size : forall e x n vk,
+    trm_size e = trm_size (open_ee_rec n (trm_fvar vk x) e).
   induction e using trm_ind'; introv; try solve [cbn; try case_if; cbn; eauto].
   cbn.
   - rewrite <- IHe.
@@ -153,7 +153,7 @@ Qed.
 (* this one describes terms being closed in relation to type-variables, not term-varaibles*)
 Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 | closed_trm_bvar : forall i k, te_closed_in_surroundings k (trm_bvar i)
-| closed_trm_fvar : forall x k, te_closed_in_surroundings k (trm_fvar x)
+| closed_trm_fvar : forall x vk k, te_closed_in_surroundings k (trm_fvar vk x)
 | closed_trm_unit : forall k, te_closed_in_surroundings k (trm_unit)
 | closed_trm_fst : forall e k, te_closed_in_surroundings k e -> te_closed_in_surroundings k (trm_fst e)
 | closed_trm_snd : forall e k, te_closed_in_surroundings k e -> te_closed_in_surroundings k (trm_snd e)
@@ -219,17 +219,17 @@ Lemma te_opening_te_adds_one : forall e X k n,
     exists (clause clArity clTerm). eauto.
 Qed.
 
-Lemma te_opening_ee_preserves : forall e x k n,
-    te_closed_in_surroundings n (open_ee_rec k (trm_fvar x) e) ->
+Lemma te_opening_ee_preserves : forall e x vk k n,
+    te_closed_in_surroundings n (open_ee_rec k (trm_fvar vk x) e) ->
     te_closed_in_surroundings n e.
   induction e using trm_ind'; introv Hc; try solve [inversions Hc; constructor*].
   - inversions Hc.
     rewrite List.Forall_forall in *.
     constructor*.
     introv clin.
-    apply H with x (S k); eauto.
+    apply H with x vk (S k); eauto.
     destruct cl as [clA clT].
-    lets* Hcl: H5 (clause clA (open_ee_rec (S k) (trm_fvar x) clT)).
+    lets* Hcl: H5 (clause clA (open_ee_rec (S k) (trm_fvar vk x) clT)).
     cbn in Hcl.
     cbn.
     apply Hcl.
@@ -260,7 +260,7 @@ Lemma term_te_closed : forall e,
                      constructor*
                    | match goal with
                      | H: forall x : var, x \notin ?L ->
-                                     te_closed_in_surroundings 0 (?e1 open_ee_var x)
+                                     te_closed_in_surroundings 0 (open_ee ?e1 (trm_fvar ?vk x))
                                      |- _ =>
                        constructor*; try solve [
                                            pick_fresh X; apply* te_opening_ee_preserves; lets* He: H X
@@ -385,17 +385,17 @@ Proof.
   induction 1; intro k;
     simpl; f_equal*.
   - unfolds open_ee. pick_fresh x.
-    apply* (@open_ee_rec_term_core e1 0 (trm_fvar x)).
+    apply* (@open_ee_rec_term_core e1 0 (trm_fvar lam_var x)).
 
   - unfolds open_te.
     pick_fresh X.
     apply* (@open_ee_rec_type_core e1 0 (typ_fvar X)).
 
   - unfolds open_ee. pick_fresh x.
-    apply* (@open_ee_rec_term_core v1 0 (trm_fvar x)).
+    apply* (@open_ee_rec_term_core v1 0 (trm_fvar fix_var x)).
 
   - unfolds open_ee. pick_fresh x.
-    apply* (@open_ee_rec_term_core e2 0 (trm_fvar x)).
+    apply* (@open_ee_rec_term_core e2 0 (trm_fvar lam_var x)).
   - rewrite <- List.map_id at 1.
     apply List.map_ext_in.
     intros cl clin.

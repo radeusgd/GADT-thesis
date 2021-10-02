@@ -186,7 +186,7 @@ Proof.
     let env := gather_vars in
     instantiate (2:=env).
     introv xfresh.
-    lets IH: H0 x (G & x ~: V) F; auto.
+    lets IH: H0 x (G & x ~l V) F; auto.
     rewrite <- concat_assoc.
     apply IH.
     + auto using concat_assoc.
@@ -203,13 +203,13 @@ Proof.
     + rewrite <- (List.app_nil_l (Δ |,| [tc_var X]*)).
       apply okt_weakening_delta; clean_empty_Δ; cbn; auto.
   - apply_fresh* typing_fix as x.
-    lets IH: H1 x (G & x ~: T) F; auto.
+    lets IH: H1 x (G & x ~f T) F; auto.
     rewrite <- concat_assoc.
     apply IH; repeat rewrite concat_assoc; auto.
     constructor; auto.
     lets [? [? ?]]: typing_regular T; eauto.
   - apply_fresh* typing_let as x.
-    lets IH: H0 x (G & x ~: V) F; auto.
+    lets IH: H0 x (G & x ~l V) F; auto.
     rewrite <- concat_assoc.
     apply IH; repeat rewrite concat_assoc; auto.
     constructor; auto.
@@ -223,7 +223,7 @@ Proof.
       [ introv Ain; lets*: Afresh Ain | idtac ].
     assert (xfreshL: x \notin L); eauto.
     lets* IH1: H4 Inzip Alphas x AlphasArity ADistinct.
-    lets* IH2: IH1 AfreshL xfreshL xfreshA (G & x ~: open_tt_many_var Alphas (Cargtype def)) F.
+    lets* IH2: IH1 AfreshL xfreshL xfreshA (G & x ~l open_tt_many_var Alphas (Cargtype def)) F.
     repeat rewrite concat_assoc in IH2.
     apply~ IH2.
 
@@ -251,15 +251,16 @@ Proof.
       * rewrite equations_have_no_dom; eauto using equations_from_lists_are_equations.
 Qed.
 
-Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
-    {Σ, Δ, E & (x ~: U) & F} ⊢(TT1) e ∈ T ->
+Lemma typing_through_subst_ee : forall Σ Δ E F x vk u U e T TT1 TT2,
+    {Σ, Δ, E & (x ~ bind_var vk U) & F} ⊢(TT1) e ∈ T ->
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
+    value u ->
     {Σ, Δ, E & F} ⊢(Tgen) subst_ee x u e ∈ T.
   Ltac apply_ih :=
     match goal with
-    | H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ =>
+    | H: forall X, X \notin ?L -> forall E0 F0 x0 vk0 U0, ?P1 -> ?P2 |- _ =>
       apply_ih_bind* H end.
-  introv TypT TypU.
+  introv TypT TypU ValU.
   inductions TypT; introv; cbn;
     try solve [eapply Tgen_from_any; eauto using okt_strengthen];
     lets [okU [termU wftU]]: typing_regular TypU.
@@ -268,10 +269,14 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
       lets: okt_strengthen H
     end.
     case_var.
-    + eapply Tgen_from_any. binds_get H. eauto.
-      assert (E & F & empty = E & F) as HEF. apply concat_empty_r.
+    + eapply Tgen_from_any. binds_get H; eauto.
+      assert (E & F & empty = E & F) as HEF by apply concat_empty_r.
       rewrite <- HEF.
       apply typing_weakening; rewrite concat_empty_r; eauto.
+      match goal with
+      | [H: bind_var ?vk ?T = bind_var ?vk2 ?U |- _] =>
+        inversion* H
+      end.
     + eapply Tgen_from_any. binds_cases H; apply* typing_var.
   - eapply Tgen_from_any.
     apply_fresh* typing_abs as y.
@@ -280,7 +285,7 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
   - eapply Tgen_from_any.
     apply_fresh* typing_tabs as Y; rewrite* subst_ee_open_te_var.
     match goal with
-    | [ H: forall X, X \notin ?L -> forall E0 F0 x0 U0, ?P1 -> ?P2 |- _ ] =>
+    | [ H: forall X, X \notin ?L -> forall E0 F0 x0 vk0 U0, ?P1 -> ?P2 |- _ ] =>
       apply* H
     end.
     rewrite <- (List.app_nil_l (Δ |,| [tc_var Y]*)).
@@ -315,14 +320,14 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
       lets* IH: H4 Hzip.
 
       assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)),
-                        E & F & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))}
-                ⊢(Tgen) subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause) ∈ Tc).
+                        E & F & xClause ~l (open_tt_many_var Alphas (Cargtype def))}
+                ⊢(Tgen) subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause) ∈ Tc).
       * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
           [ introv Ain; lets*: Afresh Ain | idtac ].
         assert (xfreshL: xClause \notin L); eauto.
         lets Htmp: IH Alphas xClause Alen Adist AfreshL.
         lets Htmp2: Htmp xfreshL xfreshA.
-        lets Htmp3: Htmp2 E (F & xClause ~ bind_var (open_tt_many_var Alphas (Cargtype def))) x U.
+        lets Htmp3: Htmp2 E (F & xClause ~l (open_tt_many_var Alphas (Cargtype def))) x U.
         cbn in Htmp3.
         rewrite <- concat_assoc.
         apply* Htmp3.
@@ -333,9 +338,9 @@ Lemma typing_through_subst_ee : forall Σ Δ E F x u U e T TT1 TT2,
         apply typing_weakening_delta_many; auto;
           try introv Ain; lets: Afresh Ain; auto.
       * assert (Horder:
-                  subst_ee x u (open_te_many_var Alphas clT' open_ee_var xClause)
+                  subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause)
                   =
-                  open_te_many_var Alphas (subst_ee x u clT') open_ee_var xClause).
+                  open_te_many_var Alphas (subst_ee x u clT') open_ee_varlam xClause).
         -- rewrite* <- subst_ee_open_ee_var.
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
@@ -355,7 +360,7 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     cbn; eauto.
   - constructor. apply~ okt_through_subst_tdtb.
   - cbn. econstructor.
-    + fold (subst_tb Z P (bind_var T)).
+    + fold (subst_tb Z P (bind_var vk T)).
       apply~ binds_map.
     + apply~ okt_through_subst_tdtb.
   - assert (OKS: okGadt Σ).
@@ -386,7 +391,7 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
         intros TR Tin.
         rewrite~ FVret.
   - apply_fresh typing_abs as x.
-    fold (subst_tb Z P (bind_var V)).
+    fold (subst_tb Z P (bind_var lam_var V)).
     rewrite <- map_push.
     rewrite subst_te_open_ee_var.
     apply~ H0.
@@ -420,14 +425,14 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
       rewrite subst_te_open_ee_var.
       apply~ subst_te_value.
       apply* type_from_wft.
-    + fold (subst_tb Z P (bind_var T)).
+    + fold (subst_tb Z P (bind_var fix_var T)).
       rewrite <- map_push.
       rewrite subst_te_open_ee_var.
       apply~ H1.
   - apply_fresh typing_let as x.
     + apply* IHTyp.
     + rewrite subst_te_open_ee_var.
-      fold (subst_tb Z P (bind_var V)).
+      fold (subst_tb Z P (bind_var lam_var V)).
       rewrite <- map_push.
       apply~ H0.
   - econstructor; eauto.
@@ -599,13 +604,13 @@ Ltac generalize_typings :=
     end
   end.
 
-Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
-    {Σ, Δ, E & x ~: T1 & F} ⊢( TT) e ∈ U ->
+Lemma typing_replace_typ_gen : forall Σ Δ E F x vk T1 TT e U T2,
+    {Σ, Δ, E & x ~ bind_var vk T1 & F} ⊢( TT) e ∈ U ->
     wft Σ Δ T2 ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
-    {Σ, Δ, E & x ~: T2 & F} ⊢(Tgen) e ∈ U.
+    {Σ, Δ, E & x ~ bind_var vk T2 & F} ⊢(Tgen) e ∈ U.
   introv Typ.
-  gen_eq K: (E & x~: T1 & F). gen F x T1.
+  gen_eq K: (E & x ~ bind_var vk T1 & F). gen F x T1.
   induction Typ using typing_ind; introv EQ WFT Sem; subst; eauto;
     try solve [apply Tgen_from_any with Treg; eauto].
   - apply Tgen_from_any with Treg;
@@ -632,7 +637,7 @@ Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
   - apply Tgen_from_any with Treg.
     econstructor.
     introv xiL.
-    lets IH: H0 xiL (F & x0 ~: V) x T0.
+    lets IH: H0 xiL (F & x0 ~l V) x T0.
     repeat rewrite concat_assoc in IH.
     apply* IH.
   - apply Tgen_from_any with Treg.
@@ -648,20 +653,20 @@ Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
   - apply Tgen_from_any with Treg.
     econstructor; eauto.
     introv xiL.
-    lets IH: H1 xiL (F & x0 ~: T) x T1.
+    lets IH: H1 xiL (F & x0 ~f T) x T1.
     repeat rewrite concat_assoc in IH.
     apply* IH.
   - apply Tgen_from_any with Treg.
     econstructor; eauto.
     introv xiL.
-    lets IH: H0 xiL (F & x0 ~: V) x T1.
+    lets IH: H0 xiL (F & x0 ~l V) x T1.
     repeat rewrite concat_assoc in IH.
     apply* IH.
   - apply Tgen_from_any with Treg.
     econstructor; eauto.
     introv In Alen Adist Afr xfr xAfr.
     lets Htmp: H4 In Alen Adist Afr xfr.
-    lets IH: Htmp xAfr (F & x0 ~: open_tt_many_var Alphas (Cargtype def)) x T1. clear Htmp.
+    lets IH: Htmp xAfr (F & x0 ~l open_tt_many_var Alphas (Cargtype def)) x T1. clear Htmp.
     repeat rewrite concat_assoc in IH.
     apply* IH.
     + repeat apply* wft_weaken_simple.
@@ -685,13 +690,13 @@ Lemma typing_replace_typ_gen : forall Σ Δ E F x T1 TT e U T2,
       auto.
 Qed.
 
-Lemma typing_replace_typ : forall Σ Δ E x T1 TT e U T2,
-    {Σ, Δ, E & x ~: T1} ⊢( TT) e ∈ U ->
+Lemma typing_replace_typ : forall Σ Δ E x vk T1 TT e U T2,
+    {Σ, Δ, E & x ~ bind_var vk T1} ⊢( TT) e ∈ U ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
     wft Σ Δ T2 ->
-    {Σ, Δ, E & x ~: T2} ⊢( Tgen) e ∈ U.
+    {Σ, Δ, E & x ~ bind_var vk T2} ⊢( Tgen) e ∈ U.
   intros.
-  rewrite <- (concat_empty_r (E & x ~: T2)).
+  rewrite <- (concat_empty_r (E & x ~ bind_var vk T2)).
   apply* typing_replace_typ_gen.
   fold_env_empty.
 Qed.
@@ -795,7 +800,7 @@ Theorem preservation_thm : preservation.
     inversions HT.
     pick_fresh x.
     find_hopen. forwards~ K: (Hopen x).
-    rewrite* (@subst_ee_intro x).
+    rewrite* (@subst_ee_intro lam_var x).
     expand_env_empty E.
     apply* typing_through_subst_ee.
     fold_env_empty.
@@ -839,11 +844,13 @@ Theorem preservation_thm : preservation.
     lets* [? [? WFT]]: typing_regular Htyp.
     inversion~ WFT.
   - (* fix *)
-    pick_fresh x.
-    rewrite* (@subst_ee_intro x).
+    pick_fresh f.
+    rewrite* (@subst_ee_intro fix_var f).
     expand_env_empty E.
+    (* TODO: Problem! *)
     apply* typing_through_subst_ee.
-    fold_env_empty.
+    + fold_env_empty.
+    + eauto.
   - (* let *)
     pick_fresh x.
     rewrite* (@subst_ee_intro x).

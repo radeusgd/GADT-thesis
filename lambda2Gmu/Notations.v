@@ -19,7 +19,7 @@ Notation "'γ()' N" := (typ_gadt nil N) (at level 42) : L2GMu.
 Notation "'γ(' x , .. , z ) N" :=  (typ_gadt (cons z .. (cons x nil) ..) N) (at level 42) : L2GMu.
 
 Notation "# n" := (trm_bvar n) (at level 29) : L2GMu.
-Coercion trm_fvar : var >-> trm.
+(* Coercion trm_fvar : var >-> trm. *)
 Notation "<.>" := trm_unit : L2GMu.
 Notation "< a , b >" := (trm_tuple a b) (at level 42, a at level 30, b at level 30) : L2GMu.
 Notation "fst( a )" := (trm_fst a) : L2GMu.

@@ -628,3 +628,11 @@ Lemma inzip_map_clause_trm : forall A F (Defs : list A) Clauses def cl,
   split~.
   apply* Inzip_from_nth_error.
 Qed.
+
+(** The value relation is restricted to well-formed objects. *)
+Lemma value_regular : forall t,
+  value t -> term t.
+Proof.
+  induction 1; autos*.
+Qed.
+

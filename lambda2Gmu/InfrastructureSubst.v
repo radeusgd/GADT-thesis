@@ -264,8 +264,8 @@ Proof.
 Qed.
 
 (** Substitution and open_var for distinct names commute. *)
-Lemma subst_ee_open_ee_var : forall x y u e, y <> x -> term u ->
-  (subst_ee x u e) open_ee_var y = subst_ee x u (e open_ee_var y).
+Lemma subst_ee_open_ee_var : forall vk x y u e, y <> x -> term u ->
+  open_ee (subst_ee x u e) (trm_fvar vk y) = subst_ee x u (open_ee e (trm_fvar vk y)).
 Proof.
   introv Neq Wu. rewrite* subst_ee_open_ee.
   simpl. case_var*.
@@ -274,9 +274,9 @@ Qed.
 (** Opening up a body t with a type u is the same as opening
   up the abstraction with a fresh name x and then substituting u for x. *)
 
-Lemma subst_ee_intro : forall x u e,
+Lemma subst_ee_intro : forall vk x u e,
   x \notin fv_trm e -> term u ->
-  open_ee e u = subst_ee x u (e open_ee_var x).
+  open_ee e u = subst_ee x u (open_ee e (trm_fvar vk x)).
 Proof.
   introv Fr Wu. rewrite* subst_ee_open_ee.
   rewrite* subst_ee_fresh. simpl. case_var*.
@@ -285,8 +285,8 @@ Qed.
 (** Interactions between type substitutions in terms and opening
   with term variables in terms. *)
 
-Lemma subst_te_open_ee_var : forall Z P x e,
-  (subst_te Z P e) open_ee_var x = subst_te Z P (e open_ee_var x).
+Lemma subst_te_open_ee_var : forall Z P vk x e,
+  open_ee (subst_te Z P e) (trm_fvar vk x) = subst_te Z P (open_ee e (trm_fvar vk x)).
 Proof.
   introv. unfold open_ee. generalize 0.
   induction e using trm_ind'; intros; simpl; f_equal*.
@@ -402,9 +402,9 @@ Proof.
       cbn in IH.
       instantiate (1:=(L \u \{ Z })) in Afresh.
       assert (Hpull:
-          open_te_many_var Alphas (subst_te Z P cl'T) open_ee_var x
+          open_te_many_var Alphas (subst_te Z P cl'T) open_ee_varlam x
           =
-          subst_te Z P (open_te_many_var Alphas cl'T open_ee_var x)
+          subst_te Z P (open_te_many_var Alphas cl'T open_ee_varlam x)
         ).
       * rewrite <- subst_commutes_with_unrelated_opens_te_te.
         rewrite* subst_te_open_ee_var.
@@ -433,17 +433,23 @@ Proof.
         inversion* Hterm.
 Qed.
 
+
+(* this may be problematic as I now require e2 to be value not only term, but maybe it will be enough? *)
 Lemma subst_ee_term : forall e1 Z e2,
-    term e1 -> term e2 -> term (subst_ee Z e2 e1)
+    term e1 -> value e2 -> term (subst_ee Z e2 e1)
 with subst_ee_value : forall e1 Z e2,
-    value e1 -> term e2 -> value (subst_ee Z e2 e1).
+    value e1 -> value e2 -> value (subst_ee Z e2 e1).
 Proof.
   - induction 1; intros; simpl; auto.
-    + case_var*.
+    + case_var*. apply~ value_regular.
     + apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
-    + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
-    + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var.
-    + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var.
+      apply~ value_regular.
+    + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
+        apply~ value_regular.
+    + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var;
+        apply~ value_regular.
+    + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var;
+                                    apply~ value_regular.
     + econstructor; eauto.
       intros cl clinmap Alphas x Hlen Hdist Afresh xfresh xfreshA.
       destruct cl as [clA clT].
@@ -461,6 +467,8 @@ Proof.
         apply* IH.
         intros A AAlpha.
         assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
+        apply~ value_regular.
+      * apply~ value_regular.
   - induction 1; intros; simpl; auto;
       try match goal with
       | H: term (trm_abs _ _) |- _ => rename H into Hterm
@@ -468,8 +476,11 @@ Proof.
       end.
     + apply value_abs. inversions Hterm.
       apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
+      apply~ value_regular.
     + apply value_tabs; inversions Hterm.
-      apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var.
+      apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
+        apply~ value_regular.
+    + case_var~.
     + econstructor.
       * econstructor.
         -- apply* value_is_term.
@@ -696,16 +707,16 @@ Lemma subst_tt_many_free : forall As Ts T,
           auto with listin.
 Qed.
 
-Lemma subst_te_many_commutes_open : forall As Ts e x,
+Lemma subst_te_many_commutes_open : forall As Ts e x vk,
     length As = length Ts ->
     (forall A, List.In A As -> x <> A) ->
-    (subst_te_many As Ts e) open_ee_var x
+    open_ee (subst_te_many As Ts e) (trm_fvar vk x)
     =
-    subst_te_many As Ts (e open_ee_var x).
+    subst_te_many As Ts (open_ee e (trm_fvar vk x)).
   induction As as [| Ah Ats]; introv Hlen Afresh.
   - cbn. auto.
   - destruct Ts as [| Th Tts]; cbn in Hlen; try congruence.
-    cbn. fold (open_ee (subst_te_many Ats Tts (subst_te Ah Th e)) (trm_fvar x)).
+    cbn. fold (open_ee (subst_te_many Ats Tts (subst_te Ah Th e)) (trm_fvar vk x)).
     rewrite IHAts; auto with listin.
     f_equal.
     apply subst_te_open_ee_var.

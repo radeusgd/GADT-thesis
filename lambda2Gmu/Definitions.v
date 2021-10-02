@@ -170,12 +170,17 @@ where ei' := ei[ T1 -> @0, ..., Tm -> @(m-1), xi -> #0 ]
 TODO: or is type translation order in reverse?
  *)
 
+(* kinds of variables *)
+Inductive var_kind : Set :=
+| lam_var (* variables bound by lambda expressions and pattern match clauses *)
+| fix_var. (* variables bound by the fixpoint combinator *)
+
 (* pre-terms *)
 Inductive trm : Set :=
 (* bound variables, identified by De Bruijn indices *)
-| trm_bvar : nat -> trm
+| trm_bvar : nat -> trm (* bound variables do not need their kind stored, because it is implied by what term its De Bruijn index points to (as they always exist in a context of some binder in well formed terms) *)
 (* free variables (should be bound in an enclosing environment), identified by name - var *)
-| trm_fvar : var -> trm
+| trm_fvar : var_kind -> var -> trm
 (* GADT constructor application
    it creates an instance of the GADT type by applying a list of types and a term to the constructor
    C [T1, ..., Tn] e
@@ -285,7 +290,7 @@ Definition clauseTerm (c : Clause) : trm :=
 Section trm_ind'.
   Variable P : trm -> Prop.
   Hypothesis trm_bvar_case : forall (n : nat), P (trm_bvar n).
-  Hypothesis trm_fvar_case : forall (x : var), P (trm_fvar x).
+  Hypothesis trm_fvar_case : forall (k : var_kind) (x : var), P (trm_fvar k x).
   Hypothesis trm_constructor_case : forall (e : trm) (Ts : list typ) (GADTC : GADTConstructor),
       P e -> P (trm_constructor Ts GADTC e).
   Hypothesis trm_unit_case : P (trm_unit).
@@ -324,7 +329,7 @@ Section trm_ind'.
         end in
     match t with
   | trm_bvar i    => trm_bvar_case i
-  | trm_fvar x    => trm_fvar_case x
+  | trm_fvar k x    => trm_fvar_case k x
   | trm_constructor tparams C t => trm_constructor_case tparams C (trm_ind' t)
   | trm_unit => trm_unit_case
   | trm_tuple e1 e2 => trm_tuple_case (trm_ind' e1) (trm_ind' e2)
@@ -381,7 +386,7 @@ Definition map_clause_trm_trm (f : trm -> trm) (cs : list Clause) : list Clause 
 Fixpoint trm_size (e : trm) : nat :=
   match e with
   | trm_bvar i    => 1
-  | trm_fvar x    => 1
+  | trm_fvar _ x    => 1
   | trm_constructor tparams C e1 => 1 + trm_size e1
   | trm_unit => 1
   | trm_tuple e1 e2 => 1 + trm_size e1 + trm_size e2
@@ -441,7 +446,7 @@ Definition open_typlist_rec k u (ts : list typ) : list typ := map (open_tt_rec k
 Fixpoint open_te_rec (k : nat) (u : typ) (t : trm) {struct t} : trm :=
   match t with
   | trm_bvar i    => trm_bvar i
-  | trm_fvar x    => trm_fvar x
+  | trm_fvar vk x    => trm_fvar vk x
   | trm_constructor tparams C e1 => trm_constructor (open_typlist_rec k u tparams) C (open_te_rec k u e1)
   | trm_unit => trm_unit
   | trm_tuple e1 e2 => trm_tuple (open_te_rec k u e1) (open_te_rec k u e2)
@@ -463,7 +468,7 @@ Fixpoint open_ee_rec (k : nat) (u : trm) (e : trm) {struct e} : trm :=
   match e with
   (* | trm_bvar i    => If k = i then u else (trm_bvar i) *)
   | trm_bvar i    => if (k =? i) then u else (trm_bvar i)
-  | trm_fvar x    => trm_fvar x
+  | trm_fvar vk x    => trm_fvar vk x
   | trm_constructor tparams C e1 => trm_constructor tparams C (open_ee_rec k u e1)
   | trm_unit => trm_unit
   | trm_tuple e1 e2 => trm_tuple (open_ee_rec k u e1) (open_ee_rec k u e2)
@@ -511,7 +516,8 @@ Definition open_ee t u := open_ee_rec 0 u t.
 
 Notation "T 'open_tt_var' X" := (open_tt T (typ_fvar X)) (at level 67).
 Notation "t 'open_te_var' X" := (open_te t (typ_fvar X)) (at level 67).
-Notation "t 'open_ee_var' x" := (open_ee t (trm_fvar x)) (at level 67).
+Notation "t 'open_ee_varlam' x" := (open_ee t (trm_fvar lam_var x)) (at level 67).
+Notation "t 'open_ee_varfix' x" := (open_ee t (trm_fvar fix_var x)) (at level 67).
 
 (* Definition open_tt_many (args : list typ) (T : typ) := fold_left open_tt args T. *)
 (* Definition open_tt_many_var (args : list var) (T : typ) := fold_left (fun typ v => open_tt typ (typ_fvar v)) args T. *)
@@ -577,7 +583,7 @@ Qed.
 Fixpoint fv_trm (e : trm) {struct e} : vars :=
   match e with
   | trm_bvar i => \{}
-  | trm_fvar x => \{x}
+  | trm_fvar _ x => \{x}
   | trm_unit   => \{}
   | trm_tuple e1 e2 => fv_trm e1 \u fv_trm e2
   | trm_fst e1 => fv_trm e1
@@ -621,8 +627,8 @@ Inductive type : typ -> Prop :=
 .
 
 Inductive term : trm -> Prop :=
-| term_var : forall x,
-    term (trm_fvar x)
+| term_var : forall vk x,
+    term (trm_fvar vk x)
 | term_constructor : forall Tparams Name e1,
     term e1 ->
     (forall Tparam, In Tparam Tparams -> type Tparam) ->
@@ -640,7 +646,7 @@ Inductive term : trm -> Prop :=
     term (trm_snd e1)
 | term_abs : forall L V e1,
     type V ->
-    (forall x, x \notin L -> term (e1 open_ee_var x)) ->
+    (forall x, x \notin L -> term (e1 open_ee_varlam x)) ->
     term (trm_abs V e1)
 | term_app : forall e1 e2,
     term e1 ->
@@ -656,12 +662,12 @@ Inductive term : trm -> Prop :=
     term (trm_tapp v1 V)
 | term_fix : forall L T v1,
     type T ->
-    (forall x, x \notin L -> term (v1 open_ee_var x)) ->
-    (forall x, x \notin L -> value (v1 open_ee_var x)) -> (* this has be separated to make some induction proofs work. we may consider completely splitting the values requirements to a separate property *)
+    (forall x, x \notin L -> term (v1 open_ee_varfix x)) ->
+    (forall x, x \notin L -> value (v1 open_ee_varfix x)) -> (* this has be separated to make some induction proofs work. we may consider completely splitting the values requirements to a separate property *)
     term (trm_fix T v1)
 | term_let : forall L e1 e2,
     term e1 ->
-    (forall x, x \notin L -> term (e2 open_ee_var x)) ->
+    (forall x, x \notin L -> term (e2 open_ee_varlam x)) ->
     term (trm_let e1 e2)
 | term_matchgadt : forall L e1 G ms,
     term e1 ->
@@ -672,7 +678,7 @@ Inductive term : trm -> Prop :=
              (forall A, In A Alphas -> A \notin L) ->
              x \notin L ->
              x \notin from_list Alphas ->
-           term ((open_te_many_var Alphas (clauseTerm cl)) open_ee_var x)
+           term ((open_te_many_var Alphas (clauseTerm cl)) open_ee_varlam x)
     ) ->
     term (trm_matchgadt e1 G ms)
 with
@@ -682,7 +688,7 @@ value : trm -> Prop :=
 | value_tabs : forall e1, term (trm_tabs e1) ->
                      value (trm_tabs e1)
 | value_unit : value (trm_unit)
-                     (** TODO value_fvar ??? this is problematic as we have x-vars and f-vars, do we need to differentiate them?; it should be carefully analysed how it influences the language design - it seems that it does not change expressivity significantly *)
+| value_lamvar : forall x, value (trm_fvar lam_var x)
 | value_tuple : forall e1 e2,
     value e1 ->
     value e2 ->
@@ -742,9 +748,10 @@ Some raw ideas:
 
 (* TODO we can abandon this left-over middleware type and just use typ in env directly *)
 Inductive bind : Set :=
-| bind_var : typ -> bind.
+| bind_var : var_kind -> typ -> bind.
 
-Notation "x ~: T" := (x ~ bind_var T) (at level 27, left associativity).
+Notation "x ~f T" := (x ~ bind_var fix_var T) (at level 27, left associativity).
+Notation "x ~l T" := (x ~ bind_var lam_var T) (at level 27, left associativity).
 
 Unset Implicit Arguments.
 (* The context Γ mapping variables to their types *)
@@ -767,7 +774,7 @@ Fixpoint subst_tt (Z : var) (U : typ) (T : typ) {struct T} : typ :=
 Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
   match e with
   | trm_bvar i => trm_bvar i
-  | trm_fvar x => trm_fvar x
+  | trm_fvar vk x => trm_fvar vk x
   | trm_unit   => trm_unit
   | trm_tuple e1 e2 => trm_tuple (subst_te Z U e1) (subst_te Z U e2)
   | trm_fst e1 => trm_fst (subst_te Z U e1)
@@ -786,7 +793,7 @@ Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
 Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
   match e with
   | trm_bvar i => trm_bvar i
-  | trm_fvar x => If x = z then u else (trm_fvar x)
+  | trm_fvar vk x => If x = z then u else (trm_fvar vk x)
   | trm_unit   => trm_unit
   | trm_tuple e1 e2 => trm_tuple (subst_ee z u e1) (subst_ee z u e2)
   | trm_fst e1 => trm_fst (subst_ee z u e1)
@@ -805,7 +812,7 @@ Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
 Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=
   match b with
   (* | bind_typ => bind_typ *)
-  | bind_var T => bind_var (subst_tt Z P T)
+  | bind_var vk T => bind_var vk (subst_tt Z P T)
   end.
 
 Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
@@ -822,7 +829,7 @@ Fixpoint subst_tt_many (Xs : list var) (Us : list typ) (T : typ) :=
 (*   end. *)
 Definition subst_tb_many (As : list var) (Ps : list typ) (b : bind) : bind :=
   match b with
-  | bind_var T => bind_var (subst_tt_many As Ps T)
+  | bind_var vk T => bind_var vk (subst_tt_many As Ps T)
   end.
 
 
@@ -867,7 +874,7 @@ Fixpoint fv_delta (Δ : typctx) : fset var :=
   end.
 
 Definition fv_env (E : ctx) : fset var :=
-  List.fold_right (fun p acc => match snd p with bind_var T => fv_typ T \u acc end) \{} E.
+  List.fold_right (fun p acc => match snd p with bind_var _ T => fv_typ T \u acc end) \{} E.
 
 (** * Well-formed types *)
 (* A type is well formed if:
@@ -1038,12 +1045,12 @@ Inductive okt : GADTEnv -> typctx -> ctx -> Prop :=
     okGadt Σ ->
     (* oktypctx Σ Δ -> *)
     okt Σ Δ empty
-| okt_typ : forall Σ Δ E x T,
+| okt_typ : forall Σ Δ E x vk T,
     okt Σ Δ E ->
     wft Σ Δ T ->
     x # E ->
     x \notin domΔ Δ ->
-    okt Σ Δ (E & x ~: T).
+    okt Σ Δ (E & x ~ bind_var vk T).
 
 (** * Typing *)
 
@@ -1064,10 +1071,10 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
 | typing_unit : forall Σ Δ E,
     okt Σ Δ E ->
     {Σ, Δ, E} ⊢(Treg) trm_unit ∈ typ_unit
-| typing_var : forall Σ E Δ x T,
-    binds x (bind_var T) E ->
+| typing_var : forall Σ E Δ x vk T,
+    binds x (bind_var vk T) E ->
     okt Σ Δ E ->
-    {Σ, Δ, E} ⊢(Treg) (trm_fvar x) ∈ T (* x: T ⊢ x: T *)
+    {Σ, Δ, E} ⊢(Treg) (trm_fvar vk x) ∈ T (* x: T ⊢ x: T *)
 | typing_cons : forall Σ E Δ TT1 Ts Name Ctor e1 Tarity Ctors Carity CargType CretTypes Targ Tret,
     (* to typecheck the constructor: *)
     {Σ, Δ, E} ⊢(TT1) e1 ∈ Targ -> (* we need to typecheck its only data parameter - its typ must match the argument type (see below) *)
@@ -1080,7 +1087,7 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
     Tret = open_tt_many Ts (typ_gadt CretTypes Name) -> (* as with the argument, the types that will be in the type of the returned GADT must also be opened with the type parameters *)
     {Σ, Δ, E} ⊢(Treg) trm_constructor Ts (Name, Ctor) e1 ∈ Tret
 | typing_abs : forall L Σ Δ E V e1 T1 TT,
-    (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢(TT) e1 open_ee_var x ∈ T1) ->
+    (forall x, x \notin L -> {Σ, Δ, E & x ~l V} ⊢(TT) e1 open_ee_varlam x ∈ T1) ->
     {Σ, Δ, E} ⊢(Treg) trm_abs V e1 ∈ V ==> T1
 | typing_app : forall Σ Δ E T1 T2 e1 e2 TT1 TT2,
     {Σ, Δ, E} ⊢(TT1) e2 ∈ T1 ->
@@ -1108,12 +1115,12 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
     {Σ, Δ, E} ⊢(TT) e1 ∈ T1 ** T2 ->
     {Σ, Δ, E} ⊢(Treg) trm_snd e1 ∈ T2
 | typing_fix : forall L Σ Δ E T v TT,
-    (forall x, x \notin L -> value (v open_ee_var x)) ->
-    (forall x, x \notin L -> {Σ, Δ, E & x ~: T} ⊢(TT) (v open_ee_var x) ∈ T) ->
+    (forall x, x \notin L -> value (v open_ee_varfix x)) ->
+    (forall x, x \notin L -> {Σ, Δ, E & x ~f T} ⊢(TT) (v open_ee_varfix x) ∈ T) ->
     {Σ, Δ, E} ⊢(Treg) trm_fix T v ∈ T
 | typing_let : forall L Σ Δ E V T2 e1 e2 TT1 TT2,
     {Σ, Δ, E} ⊢(TT1) e1 ∈ V ->
-    (forall x, x \notin L -> {Σ, Δ, E & x ~: V} ⊢(TT2) e2 open_ee_var x ∈ T2) ->
+    (forall x, x \notin L -> {Σ, Δ, E & x ~l V} ⊢(TT2) e2 open_ee_varlam x ∈ T2) ->
     {Σ, Δ, E} ⊢(Treg) trm_let e1 e2 ∈ T2
 (* typing case merges rules ty-case and pat-cons from the original paper *)
 (* for example, let's see we are typing the match as in the eval function defined above; since there are many branches, we will look at the Pair branch in particular *)
@@ -1157,8 +1164,8 @@ Inductive typing : typing_taint -> GADTEnv -> typctx -> ctx -> trm -> typ -> Pro
                    ),
                    (* Ts === Crettypes def; in our example that equation is X ** Y =:= A *)
                    E
-                   & x ~: (open_tt_many_var Alphas (Cargtype def)) (* e: [X]Expr ** [Y]Expr *)
-                 } ⊢(Tgen) (open_te_many_var Alphas (clauseTerm clause)) open_ee_var x ∈ Tc
+                   & x ~l (open_tt_many_var Alphas (Cargtype def)) (* e: [X]Expr ** [Y]Expr *)
+                 } ⊢(Tgen) (open_te_many_var Alphas (clauseTerm clause)) open_ee_varlam x ∈ Tc
             ) ->
     { Σ, Δ, E } ⊢(Treg) trm_matchgadt e Name ms ∈ Tc
 | typing_eq : forall Σ Δ E T1 T2 e TT,
