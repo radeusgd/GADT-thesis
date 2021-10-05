@@ -796,3 +796,54 @@ Proof.
     intros T Tin.
     apply~ H.
 Qed.
+
+Lemma subst_ee_fix_term : forall e1 Z e2,
+    term e1 -> term e2 -> term (subst_ee Z fix_var e2 e1)
+with subst_ee_fix_value : forall e1 Z e2,
+    value e1 -> term e2 -> value (subst_ee Z fix_var e2 e1).
+Proof.
+  - induction 1; intros; simpl; auto.
+    + case_if*.
+    + apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
+    + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
+        apply~ value_regular.
+    + apply_fresh* term_fix as y; rewrite* subst_ee_open_ee_var;
+        apply~ value_regular.
+    + apply_fresh* term_let as y. rewrite* subst_ee_open_ee_var;
+                                    apply~ value_regular.
+    + econstructor; eauto.
+      intros cl clinmap Alphas x Hlen Hdist Afresh xfresh xfreshA.
+      destruct cl as [clA clT].
+      unfold map_clause_trm_trm in clinmap.
+      lets cl2: clinmap.
+      apply List.in_map_iff in cl2.
+      destruct cl2 as [[cl'A cl'T] [cl'eq cl'in]].
+      inversion cl'eq. subst.
+      cbn.
+      lets* IH: H1 cl'in Alphas x Hlen Hdist.
+      cbn in IH.
+      instantiate (1:=(L \u \{ Z })) in Afresh.
+      rewrite* <- subst_commutes_with_unrelated_opens_te_ee.
+      * rewrite* subst_ee_open_ee_var.
+        apply* IH.
+        intros A AAlpha.
+        assert (A \notin L \u \{ Z }); solve [apply* Afresh | eauto].
+  - induction 1; intros; simpl; auto;
+      try match goal with
+      | H: term (trm_abs _ _) |- _ => rename H into Hterm
+      | H: term (trm_tabs _) |- _ => rename H into Hterm
+      end.
+    + apply value_abs. inversions Hterm.
+      apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
+    + apply value_tabs; inversions Hterm.
+      apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
+        apply~ value_regular.
+    + case_if~.
+      inversions C.
+      congruence.
+    + econstructor.
+      * econstructor.
+        -- apply* value_is_term.
+        -- inversion* H.
+      * apply* IHvalue.
+Qed.

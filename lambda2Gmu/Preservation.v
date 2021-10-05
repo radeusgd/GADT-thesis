@@ -347,7 +347,7 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
         -- rewrite* <- Horder.
-Qed.
+               Qed.
 
 Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~f U) & F} ⊢(TT1) e ∈ T ->
@@ -378,7 +378,7 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
     apply_ih.
   - eapply Tgen_from_any.
     apply_fresh* typing_tabs as Y; rewrite* subst_ee_open_te_var.
-    + admit.
+    + apply* subst_ee_fix_value.
     + match goal with
       | [ H: forall X, X \notin ?L -> forall E0 F0 x0 vk0 U0, ?P1 -> ?P2 |- _ ] =>
         apply* H
@@ -387,7 +387,7 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
       apply typing_weakening_delta; clean_empty_Δ; cbn; auto.
   - eapply Tgen_from_any.
     apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
-    + admit.
+    + apply* subst_ee_fix_value.
     + apply_ih.
   - eapply Tgen_from_any.
     apply_fresh* typing_let as y.
@@ -441,7 +441,7 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
         -- rewrite* <- Horder.
-Admitted.
+Qed.
 
 Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     {Σ, Δ1 |,| [tc_var Z]* |,| Δ2, E} ⊢(TT) e ∈ T ->
