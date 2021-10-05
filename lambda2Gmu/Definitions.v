@@ -746,7 +746,6 @@ Some raw ideas:
 
 (** * Context *)
 
-(* TODO we can abandon this left-over middleware type and just use typ in env directly *)
 Inductive bind : Set :=
 | bind_var : var_kind -> typ -> bind.
 
@@ -790,23 +789,23 @@ Fixpoint subst_te (Z : var) (U : typ) (e : trm) {struct e} : trm :=
   | trm_constructor Ts N e1 => trm_constructor (map (subst_tt Z U) Ts) N (subst_te Z U e1)
   end.
 
-Fixpoint subst_ee (z : var) (u : trm) (e : trm) {struct e} : trm :=
+Fixpoint subst_ee (z : var) (k : var_kind) (u : trm) (e : trm) {struct e} : trm :=
   match e with
   | trm_bvar i => trm_bvar i
-  | trm_fvar vk x => If x = z then u else (trm_fvar vk x)
+  | trm_fvar vk x => If x = z /\ vk = k then u else (trm_fvar vk x)
   | trm_unit   => trm_unit
-  | trm_tuple e1 e2 => trm_tuple (subst_ee z u e1) (subst_ee z u e2)
-  | trm_fst e1 => trm_fst (subst_ee z u e1)
-  | trm_snd e1 => trm_snd (subst_ee z u e1)
-  | trm_abs T1 e1 => trm_abs T1 (subst_ee z u e1)
-  | trm_app e1 e2 => trm_app (subst_ee z u e1) (subst_ee z u e2)
-  | trm_tabs e1 => trm_tabs (subst_ee z u e1)
-  | trm_tapp e1 T1 => trm_tapp (subst_ee z u e1) T1
-  | trm_fix T1 e1 => trm_fix T1 (subst_ee z u e1)
-  | trm_let e1 e2 => trm_let (subst_ee z u e1) (subst_ee z u e2)
+  | trm_tuple e1 e2 => trm_tuple (subst_ee z k u e1) (subst_ee z k u e2)
+  | trm_fst e1 => trm_fst (subst_ee z k u e1)
+  | trm_snd e1 => trm_snd (subst_ee z k u e1)
+  | trm_abs T1 e1 => trm_abs T1 (subst_ee z k u e1)
+  | trm_app e1 e2 => trm_app (subst_ee z k u e1) (subst_ee z k u e2)
+  | trm_tabs e1 => trm_tabs (subst_ee z k u e1)
+  | trm_tapp e1 T1 => trm_tapp (subst_ee z k u e1) T1
+  | trm_fix T1 e1 => trm_fix T1 (subst_ee z k u e1)
+  | trm_let e1 e2 => trm_let (subst_ee z k u e1) (subst_ee z k u e2)
   | trm_matchgadt e G cs =>
-    trm_matchgadt (subst_ee z u e) G (map_clause_trm_trm (subst_ee z u) cs)
-  | trm_constructor Ts N e1 => trm_constructor Ts N (subst_ee z u e1)
+    trm_matchgadt (subst_ee z k u e) G (map_clause_trm_trm (subst_ee z k u) cs)
+  | trm_constructor Ts N e1 => trm_constructor Ts N (subst_ee z k u e1)
   end.
 
 Definition subst_tb (Z : var) (P : typ) (b : bind) : bind :=

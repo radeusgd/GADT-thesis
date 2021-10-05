@@ -255,7 +255,7 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~l U) & F} ⊢(TT1) e ∈ T ->
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
     value u ->
-    {Σ, Δ, E & F} ⊢(Tgen) subst_ee x u e ∈ T.
+    {Σ, Δ, E & F} ⊢(Tgen) subst_ee x lam_var u e ∈ T.
   Ltac apply_ih :=
     match goal with
     | H: forall X, X \notin ?L -> forall E0 F0 x0 vk0 U0, ?P1 -> ?P2 |- _ =>
@@ -268,16 +268,18 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
     | [ H: okt ?A ?B ?C |- _ ] =>
       lets: okt_strengthen H
     end.
-    case_var.
-    + eapply Tgen_from_any. binds_get H; eauto.
+    case_if~.
+    + eapply Tgen_from_any.
+      inversions C.
+      binds_get H; eauto.
       assert (E & F & empty = E & F) as HEF by apply concat_empty_r.
       rewrite <- HEF.
       apply typing_weakening; rewrite concat_empty_r; eauto.
+    + eapply Tgen_from_any. binds_cases H; apply* typing_var.
       match goal with
       | [H: bind_var ?vk ?T = bind_var ?vk2 ?U |- _] =>
         inversion* H
       end.
-    + eapply Tgen_from_any. binds_cases H; apply* typing_var.
   - eapply Tgen_from_any.
     apply_fresh* typing_abs as y.
     rewrite* subst_ee_open_ee_var.
@@ -321,7 +323,7 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
 
       assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)),
                         E & F & xClause ~l (open_tt_many_var Alphas (Cargtype def))}
-                ⊢(Tgen) subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause) ∈ Tc).
+                ⊢(Tgen) subst_ee x lam_var u (open_te_many_var Alphas clT' open_ee_varlam xClause) ∈ Tc).
       * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
           [ introv Ain; lets*: Afresh Ain | idtac ].
         assert (xfreshL: xClause \notin L); eauto.
@@ -338,9 +340,9 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
         apply typing_weakening_delta_many; auto;
           try introv Ain; lets: Afresh Ain; auto.
       * assert (Horder:
-                  subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause)
+                  subst_ee x lam_var u (open_te_many_var Alphas clT' open_ee_varlam xClause)
                   =
-                  open_te_many_var Alphas (subst_ee x u clT') open_ee_varlam xClause).
+                  open_te_many_var Alphas (subst_ee x lam_var u clT') open_ee_varlam xClause).
         -- rewrite* <- subst_ee_open_ee_var.
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.
@@ -350,7 +352,7 @@ Qed.
 Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~f U) & F} ⊢(TT1) e ∈ T ->
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
-    {Σ, Δ, E & F} ⊢(Tgen) subst_ee x u e ∈ T.
+    {Σ, Δ, E & F} ⊢(Tgen) subst_ee x fix_var u e ∈ T.
   introv TypT TypU.
   inductions TypT; introv; cbn;
     try solve [eapply Tgen_from_any; eauto using okt_strengthen];
@@ -359,16 +361,17 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
     | [ H: okt ?A ?B ?C |- _ ] =>
       lets: okt_strengthen H
     end.
-    case_var.
-    + eapply Tgen_from_any. binds_get H; eauto.
+    case_if~.
+    + inversions C.
+      eapply Tgen_from_any. binds_get H; eauto.
       assert (E & F & empty = E & F) as HEF by apply concat_empty_r.
       rewrite <- HEF.
       apply typing_weakening; rewrite concat_empty_r; eauto.
+    + eapply Tgen_from_any. binds_cases H; apply* typing_var.
       match goal with
       | [H: bind_var ?vk ?T = bind_var ?vk2 ?U |- _] =>
         inversion* H
       end.
-    + eapply Tgen_from_any. binds_cases H; apply* typing_var.
   - eapply Tgen_from_any.
     apply_fresh* typing_abs as y.
     rewrite* subst_ee_open_ee_var.
@@ -384,7 +387,8 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
       apply typing_weakening_delta; clean_empty_Δ; cbn; auto.
   - eapply Tgen_from_any.
     apply_fresh* typing_fix as y; rewrite* subst_ee_open_ee_var.
-    apply_ih.
+    + admit.
+    + apply_ih.
   - eapply Tgen_from_any.
     apply_fresh* typing_let as y.
     rewrite* subst_ee_open_ee_var.
@@ -413,7 +417,7 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
 
       assert (Htypfin: {Σ, Δ |,| tc_vars Alphas |,| equations_from_lists Ts (List.map (open_tt_many_var Alphas) (Crettypes def)),
                         E & F & xClause ~l (open_tt_many_var Alphas (Cargtype def))}
-                ⊢(Tgen) subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause) ∈ Tc).
+                ⊢(Tgen) subst_ee x fix_var u (open_te_many_var Alphas clT' open_ee_varlam xClause) ∈ Tc).
       * assert (AfreshL: forall A : var, List.In A Alphas -> A \notin L);
           [ introv Ain; lets*: Afresh Ain | idtac ].
         assert (xfreshL: xClause \notin L); eauto.
@@ -430,9 +434,9 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
         apply typing_weakening_delta_many; auto;
           try introv Ain; lets: Afresh Ain; auto.
       * assert (Horder:
-                  subst_ee x u (open_te_many_var Alphas clT' open_ee_varlam xClause)
+                  subst_ee x fix_var u (open_te_many_var Alphas clT' open_ee_varlam xClause)
                   =
-                  open_te_many_var Alphas (subst_ee x u clT') open_ee_varlam xClause).
+                  open_te_many_var Alphas (subst_ee x fix_var u clT') open_ee_varlam xClause).
         -- rewrite* <- subst_ee_open_ee_var.
            f_equal.
            apply* subst_commutes_with_unrelated_opens_te_ee.

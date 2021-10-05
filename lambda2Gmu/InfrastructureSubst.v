@@ -220,11 +220,13 @@ Qed.
 
 
 (** Substitution for a fresh name is identity. *)
-Lemma subst_ee_fresh : forall x u e,
-  x \notin fv_trm e -> subst_ee x u e = e.
+Lemma subst_ee_fresh : forall x k u e,
+  x \notin fv_trm e -> subst_ee x k u e = e.
 Proof.
   induction e using trm_ind'; simpl; intros; f_equal*.
-  - case_var*.
+  - case_if*.
+    inversions C.
+    false* in_singleton_self.
   - apply IHe.
     lets*: fv_fold_base_clause.
   - unfold map_clause_trm_trm.
@@ -244,14 +246,14 @@ Proof.
 Qed.
 
 (** Substitution distributes on the open operation. *)
-Lemma subst_ee_open_ee : forall t1 t2 u x, term u ->
-  subst_ee x u (open_ee t1 t2) =
-  open_ee (subst_ee x u t1) (subst_ee x u t2).
+Lemma subst_ee_open_ee : forall t1 t2 u k x, term u ->
+  subst_ee x k u (open_ee t1 t2) =
+  open_ee (subst_ee x k u t1) (subst_ee x k u t2).
 Proof.
   intros. unfold open_ee. generalize 0.
   induction t1 using trm_ind'; intro n0; simpls; f_equal*.
   - crush_eq.
-  - case_var*. rewrite* <- open_ee_rec_term.
+  - case_if*. rewrite* <- open_ee_rec_term.
   - unfold map_clause_trm_trm.
     repeat rewrite List.map_map.
     apply List.map_ext_in.
@@ -264,11 +266,11 @@ Proof.
 Qed.
 
 (** Substitution and open_var for distinct names commute. *)
-Lemma subst_ee_open_ee_var : forall vk x y u e, y <> x -> term u ->
-  open_ee (subst_ee x u e) (trm_fvar vk y) = subst_ee x u (open_ee e (trm_fvar vk y)).
+Lemma subst_ee_open_ee_var : forall vk x y k u e, y <> x -> term u ->
+  open_ee (subst_ee x k u e) (trm_fvar vk y) = subst_ee x k u (open_ee e (trm_fvar vk y)).
 Proof.
   introv Neq Wu. rewrite* subst_ee_open_ee.
-  simpl. case_var*.
+  simpl. case_if*.
 Qed.
 
 (** Opening up a body t with a type u is the same as opening
@@ -276,10 +278,10 @@ Qed.
 
 Lemma subst_ee_intro : forall vk x u e,
   x \notin fv_trm e -> term u ->
-  open_ee e u = subst_ee x u (open_ee e (trm_fvar vk x)).
+  open_ee e u = subst_ee x vk u (open_ee e (trm_fvar vk x)).
 Proof.
   introv Fr Wu. rewrite* subst_ee_open_ee.
-  rewrite* subst_ee_fresh. simpl. case_var*.
+  rewrite* subst_ee_fresh. simpl. case_if*.
 Qed.
 
 (** Interactions between type substitutions in terms and opening
@@ -305,12 +307,12 @@ Qed.
 (** Interactions between term substitutions in terms and opening
   with type variables in terms. *)
 
-Lemma subst_ee_open_te_var : forall z u e X, term u ->
-  (subst_ee z u e) open_te_var X = subst_ee z u (e open_te_var X).
+Lemma subst_ee_open_te_var : forall z k u e X, term u ->
+  (subst_ee z k u e) open_te_var X = subst_ee z k u (e open_te_var X).
 Proof.
   introv. unfold open_te. generalize 0.
   induction e using trm_ind'; intros; simpl; f_equal*.
-  - case_var*. symmetry. autos* open_te_rec_term.
+  - case_if*. symmetry. autos* open_te_rec_term.
   - unfold map_clause_trm_trm.
     repeat rewrite List.map_map.
     apply List.map_ext_in.
@@ -361,15 +363,15 @@ Lemma subst_commutes_with_unrelated_opens_te_te : forall Xs e V Y,
     rewrite* subst_te_open_te_var; eauto with listin.
 Qed.
 
-Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y,
+Lemma subst_commutes_with_unrelated_opens_te_ee : forall Xs e v y k,
     term v ->
-    subst_ee y v (open_te_many_var Xs e) =
-    (open_te_many_var Xs (subst_ee y v e)).
+    subst_ee y k v (open_te_many_var Xs e) =
+    (open_te_many_var Xs (subst_ee y k v e)).
   induction Xs as [| Xh Xt]; introv Htyp.
   - cbn. eauto.
   - cbn.
     fold (open_te_many_var Xt (e open_te_var Xh)).
-    fold (open_te_many_var Xt (subst_ee y v e open_te_var Xh)).
+    fold (open_te_many_var Xt (subst_ee y k v e open_te_var Xh)).
     rewrite* subst_ee_open_te_var; eauto with listin.
 Qed.
 
@@ -435,13 +437,13 @@ Qed.
 
 
 (* this may be problematic as I now require e2 to be value not only term, but maybe it will be enough? *)
-Lemma subst_ee_term : forall e1 Z e2,
-    term e1 -> value e2 -> term (subst_ee Z e2 e1)
-with subst_ee_value : forall e1 Z e2,
-    value e1 -> value e2 -> value (subst_ee Z e2 e1).
+Lemma subst_ee_term : forall e1 Z e2 k,
+    term e1 -> value e2 -> term (subst_ee Z k e2 e1)
+with subst_ee_value : forall e1 Z e2 k,
+    value e1 -> value e2 -> value (subst_ee Z k e2 e1).
 Proof.
   - induction 1; intros; simpl; auto.
-    + case_var*. apply~ value_regular.
+    + case_if*. apply~ value_regular.
     + apply_fresh* term_abs as y. rewrite* subst_ee_open_ee_var.
       apply~ value_regular.
     + apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
@@ -480,7 +482,7 @@ Proof.
     + apply value_tabs; inversions Hterm.
       apply_fresh* term_tabs as Y; rewrite* subst_ee_open_te_var;
         apply~ value_regular.
-    + case_var~.
+    + case_if~.
     + econstructor.
       * econstructor.
         -- apply* value_is_term.
