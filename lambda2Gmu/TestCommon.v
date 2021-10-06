@@ -161,7 +161,7 @@ Ltac autotyper2 :=
            | [ |- binds ?A ?B ?C ] => solve_bind
            (* TODO try instantiating L in eapply *)
            | [ |- typing ?TT ?A ?B ?C (trm_unit) ?E ] => eapply typing_unit
-           | [ |- typing ?TT ?A ?B ?C (trm_fvar ?X) ?E ] => eapply typing_var
+           | [ |- typing ?TT ?A ?B ?C (trm_fvar ?k ?X) ?E ] => eapply typing_var with (vk:=k)
            | [ |- typing ?TT ?A ?B ?C (trm_constructor ?Ts ?N ?e) ?E ] => eapply typing_cons
            | [ |- typing ?TT ?A ?B ?C (trm_abs ?T ?e) ?E ] => eapply typing_abs with (L:=free)
            | [ |- typing ?TT ?A ?B ?C (trm_tabs ?e) ?E ] => eapply typing_tabs with (L:=free)
