@@ -74,7 +74,18 @@ Ltac crush_eval := repeat (try (apply eval_finish; eauto);
                            simpl_op).
 Lemma const_test_evals : evals const_test one.
   cbv.
-  crush_eval.
+  eapply eval_step.
+  1: {
+    econstructor.
+    econstructor; autotyper1.
+  }
+
+  eapply eval_step.
+  1: {
+    econstructor; autotyper1.
+  }
+
+  apply eval_finish.
 Qed.
 
 Definition plus :=
@@ -155,15 +166,24 @@ Ltac destruct_clauses :=
            destruct H
          end.
 
-Definition two := new (Nat, 1) [| |] (one).
-Lemma plus_evals : evals (plus <| one <| one) two.
-  cbv.
-  crush_eval;
+Ltac stepforward :=
+  apply eval_finish + (eapply eval_step;
+  [
+    do 3 econstructor; autotyper2;
     repeat (
         cbn in *;
         destruct_const_len_list;
-        autotyper1).
+        autotyper1)
+  | idtac
+  ]; cbn).
+
+Definition two := new (Nat, 1) [| |] (one).
+Lemma plus_evals : evals (plus <| one <| one) two.
+  cbv.
+  repeat stepforward.
   Unshelve.
+  fs.
+  fs.
   fs.
   fs.
   fs.
@@ -185,12 +205,11 @@ Qed.
 Definition four := new (Nat, 1) [| |] (new (Nat, 1) [| |] (two)).
 Lemma plus_evals4 : evals (plus <| two <| two) four.
   cbv.
-  crush_eval;
-    repeat (
-        cbn in *;
-        destruct_const_len_list;
-        autotyper1).
+  repeat stepforward.
   Unshelve.
+  fs.
+  fs.
+  fs.
   fs.
   fs.
   fs.
