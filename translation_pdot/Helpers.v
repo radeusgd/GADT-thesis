@@ -189,22 +189,3 @@ Lemma eq_exfalso : forall G X Y,
   constructor;
     apply~ sub_exfalso.
 Qed.
-
-Lemma eq_inv : forall G X1 X2 T1 T2 A,
-    G ⊢ X1 =:= X2 ->
-    X1 ↘ {A >: T1 <: T1} ->
-    X2 ↘ {A >: T2 <: T2} ->
-    G ⊢ T1 =:= T2.
-  introv [S1 S2]; intros.
-  constructor.
-  - lets*: subtyp_rcd_inv1.
-  - lets*: subtyp_rcd_inv2.
-Qed.
-
-Lemma eq_inv_direct : forall G T1 T2 A,
-    G ⊢ typ_rcd { A >: T1 <: T1 } =:= typ_rcd { A >: T2 <: T2 } ->
-    G ⊢ T1 =:= T2.
-  introv EQ; intros.
-  lets*: eq_inv EQ.
-Qed.
-

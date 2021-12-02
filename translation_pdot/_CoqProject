@@ -12,5 +12,4 @@ TestHelpers.v
 Translation.v
 TestEqualityEnv.v
 TestEquality.v
-TestEquality2.v
 TestEquality3.v
