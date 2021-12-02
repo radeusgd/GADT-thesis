@@ -1,0 +1,16 @@
+*.glob
+*.vo
+*.vos
+*.vok
+*.aux
+.coqdeps.d
+.#*
+.lia.cache
+priv/
+papers/
+
+*.dpd
+*.dot
+*.svg
+
+dependencies/

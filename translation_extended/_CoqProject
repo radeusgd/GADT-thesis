@@ -1,0 +1,16 @@
+-R . Top
+-R ../lambda2Gmu GMu
+-R ../lambda2Gmu_annotated GMuAnnot
+
+# The externally modified pDOT
+-R ../dependencies/extended-pdot-calculus/src/ ""
+
+Predefs.v
+Helpers.v
+Library.v
+TestHelpers.v
+Translation.v
+TestEqualityEnv.v
+TestEquality.v
+TestEquality2.v
+TestEquality3.v
