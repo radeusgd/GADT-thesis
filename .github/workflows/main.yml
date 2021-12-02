@@ -36,24 +36,30 @@ jobs:
           opam repo add coq-released http://coq.inria.fr/opam/released
           opam pin add coq 8.13.0
           opam install -j4 coq-tlc
+          eval $(opam env)
+          coqc --version
       - name: Prepare dependencies
-        working-directory: ${{ env.GITHUB_WORKSPACE }}
         run: |
+          eval $(opam env)
           ./refresh_dependencies.sh
       - name: Build Lambda2Gmu soundness proof
         working-directory: ${{ env.GITHUB_WORKSPACE }}/lambda2Gmu
         run: |
+          eval $(opam env)
           make
       - name: Build Annotated Lambda2Gmu soundness proof
         working-directory: ${{ env.GITHUB_WORKSPACE }}/lambda2Gmu_annotated
         run: |
+          eval $(opam env)
           make
       - name: Build translation experiments in pDOT
         working-directory: ${{ env.GITHUB_WORKSPACE }}/translation_pdot
         run: |
+          eval $(opam env)
           make
 
       - name: Build translation experiments in extended pDOT
         working-directory: ${{ env.GITHUB_WORKSPACE }}/translation_extended
         run: |
+          eval $(opam env)
           make

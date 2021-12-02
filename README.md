@@ -10,6 +10,29 @@ This is the repository containing Coq proofs attached to my master's thesis.
   - [CanonicalForms](./lambda2Gmu/CanonicalForms.v) has proofs that allow to deconstruct a value of a given type to its canonical form
   - [Progress](./lambda2Gmu/Progress.v) proves the progress theorem
   - [Preservation](./lambda2Gmu/Preservation.v) proves the preservation theorem
+- [annotated lambda 2Gmu](./lambda2Gmu_annotated/) - formalization of the annotated variant of the calculus (as described in Section 5.3). The soundness proof is a copy of the standard version with minor adaptations in a few lemmas to accommodate for the added annotations.
+- [pDOT translation](./translation_pdot/) - proofs associated with the translation attempts. Includes lemmas characterizing pDOT's subtyping.
+  - [RuleTests][./translation_pdot/RuleTests.v] - contains lemmas showing how some too general rules would break soundness.
+  - [TestEqualityEnv](./translation_pdot/TestEqualityEnv.v) - manually translated environment for the Eq GADT
+  - [TestEquality](./translation_pdot/TestEquality.v) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT
+- [extended pDOT translation](./translation_extended/) - proofs associated with the translation attempts using the extended pDOT calculus
+  - [TestEquality](./translation_extended/TestEquality.v) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT
+  - [TestEquality2](./translation_extended/TestEquality2.v) - typing proof for the `destruct` term which was not typeable in original pDOT, as described in Chapter 6
+
+## Building the proofs
+
+The proofs require Coq 8.13.0 and the TLC library. The easiest way to obtain them is to use OPAM:
+
+```
+opam repo add coq-released http://coq.inria.fr/opam/released
+opam pin add coq 8.13.0
+opam install -j4 coq-tlc
+```
+
+The next step is to prepare the dependencies - the standard and extended formalizations of pDOT. This can be done by running the script `refresh_dependencies.sh`.
+
+Each subproject can be compiled by running `make` in its corresponding subdirectory.
+However, the sub-projects depend on each other, so `lambda2Gmu` should be compiled before `lambda2Gmu_annotated` and both of these subprojects should be compiled before `translation_pdot` or `translation_extended`.
 
 ## Useful links
 
