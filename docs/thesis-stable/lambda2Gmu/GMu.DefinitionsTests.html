@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">GMu.DefinitionsTests</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.Definitions.html#"><span class="id" title="library">Definitions</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">TLC.LibTactics</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_tt_test" class="idref" href="#open_tt_test"><span class="id" title="lemma">open_tt_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_tt"><span class="id" title="definition">open_tt</span></a> (<a class="idref" href="GMu.Definitions.html#typ_all"><span class="id" title="constructor">typ_all</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 1)) (<a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#typ_all"><span class="id" title="constructor">typ_all</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_te_test" class="idref" href="#open_te_test"><span class="id" title="lemma">open_te_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_te"><span class="id" title="definition">open_te</span></a> (<a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> 0)) (<a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a> (<a class="idref" href="GMu.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> 0).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_ee_test" class="idref" href="#open_ee_test"><span class="id" title="lemma">open_ee_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_ee"><span class="id" title="definition">open_ee</span></a> (<a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> 1)) (<a class="idref" href="GMu.Definitions.html#trm_unit"><span class="id" title="constructor">trm_unit</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#trm_unit"><span class="id" title="constructor">trm_unit</span></a>).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_typlist_test" class="idref" href="#open_typlist_test"><span class="id" title="lemma">open_typlist_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_typlist_rec"><span class="id" title="definition">open_typlist_rec</span></a> 0 (<a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a>) <a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">[</span></a><a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0<a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">;</span></a> <a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 1)<a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">]*</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">[</span></a><a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a><a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">;</span></a> <a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> (<a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a>) (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0)<a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">]*</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>; <span class="id" title="tactic">repeat</span> <span class="id" title="var">case_if</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">TLC.LibEnv</span>.<br/>
+<span class="id" title="keyword">Section</span> <a id="ManyTest" class="idref" href="#ManyTest"><span class="id" title="section">ManyTest</span></a>.<br/>
+<span class="id" title="keyword">Hypothesis</span> <a id="ManyTest.T" class="idref" href="#ManyTest.T"><span class="id" title="variable">T</span></a> : <span class="id" title="axiom">var</span>.<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;open_tt_many_test&nbsp;:&nbsp;open_tt_many&nbsp;<span class="inlinecode"><span class="id" title="var">typ_unit</span>;</span> <span class="inlinecode"><span class="id" title="var">typ_fvar</span></span> <span class="inlinecode"><span class="id" title="var">T</span></span>&nbsp;(typ_tuple&nbsp;(typ_bvar&nbsp;0)&nbsp;(typ_bvar&nbsp;1))&nbsp;=&nbsp;typ_tuple&nbsp;typ_unit&nbsp;(typ_fvar&nbsp;T).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;cbv.&nbsp;auto.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Qed.&nbsp;*)</span><br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_tt_many_test" class="idref" href="#open_tt_many_test"><span class="id" title="lemma">open_tt_many_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_tt_many"><span class="id" title="definition">open_tt_many</span></a> <a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">[</span></a><a class="idref" href="GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ_fvar</span></a> <a class="idref" href="GMu.DefinitionsTests.html#ManyTest.T"><span class="id" title="variable">T</span></a><a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">;</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a><a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">]*</span></a> (<a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 1)) <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a> (<a class="idref" href="GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ_fvar</span></a> <a class="idref" href="GMu.DefinitionsTests.html#ManyTest.T"><span class="id" title="variable">T</span></a>).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="open_te_many_test" class="idref" href="#open_te_many_test"><span class="id" title="lemma">open_te_many_test</span></a> : <a class="idref" href="GMu.Definitions.html#open_te_many"><span class="id" title="definition">open_te_many</span></a> <a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">[</span></a><a class="idref" href="GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ_fvar</span></a> <a class="idref" href="GMu.DefinitionsTests.html#ManyTest.T"><span class="id" title="variable">T</span></a><a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">;</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a><a class="idref" href="GMu.Definitions.html#2cfcb9b8e80e27162e0c6dc56f8216c2"><span class="id" title="notation">]*</span></a> (<a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> (<a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 0) (<a class="idref" href="GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> 1)) (<a class="idref" href="GMu.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> 0)) <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">(</span></a><a class="idref" href="GMu.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> (<a class="idref" href="GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> <a class="idref" href="GMu.Definitions.html#typ_unit"><span class="id" title="constructor">typ_unit</span></a> (<a class="idref" href="GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ_fvar</span></a> <a class="idref" href="GMu.DefinitionsTests.html#ManyTest.T"><span class="id" title="variable">T</span></a>)) (<a class="idref" href="GMu.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> 0)<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">)</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">cbv</span>. <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="GMu.DefinitionsTests.html#ManyTest"><span class="id" title="section">ManyTest</span></a>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

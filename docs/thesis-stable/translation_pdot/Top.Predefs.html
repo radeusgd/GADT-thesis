@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Top.Predefs</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#"><span class="id" title="library">GMu.Definitions</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <a class="idref" href="../lambda2Gmu_annotated/GMuAnnot.Definitions.html#"><span class="id" title="library">GMuAnnot.Definitions</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="library">Definitions</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="library">Reduction</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="library">Sequences</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">TLC.LibEnv</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Module</span> <a id="Source" class="idref" href="#Source"><span class="id" title="module">Source</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="var">GMu.Definitions</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Include</span> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#"><span class="id" title="module">GMu.Definitions</span></a>.<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="Top.Predefs.html#Source"><span class="id" title="module">Source</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Module</span> <a id="SourceAnnot" class="idref" href="#SourceAnnot"><span class="id" title="module">SourceAnnot</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="var">GMuAnnot.Definitions</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Include</span> <a class="idref" href="../lambda2Gmu_annotated/GMuAnnot.Definitions.html#"><span class="id" title="module">GMuAnnot.Definitions</span></a>.<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="Top.Predefs.html#SourceAnnot"><span class="id" title="module">SourceAnnot</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Module</span> <a id="Target" class="idref" href="#Target"><span class="id" title="module">Target</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="var">Definitions</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Include</span> <span class="id" title="module">Definitions</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="var">Reduction</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Include</span> <span class="id" title="module">Reduction</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="var">Sequences</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Include</span> <span class="id" title="module">Sequences</span>.<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="Top.Predefs.html#Target"><span class="id" title="module">Target</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a id="typed_target_term" class="idref" href="#typed_target_term"><span class="id" title="inductive">typed_target_term</span></a> : <span class="id" title="keyword">Set</span> :=<br/>
+&nbsp;&nbsp;<a id="typed_target_term_cons" class="idref" href="#typed_target_term_cons"><span class="id" title="constructor">typed_target_term_cons</span></a> : <span class="id" title="keyword">∀</span> (<a id="t:3" class="idref" href="#t:3"><span class="id" title="binder">t</span></a> : <a class="idref" href="Top.Predefs.html#trm"><span class="id" title="inductive">Target.trm</span></a>) (<a id="T:4" class="idref" href="#T:4"><span class="id" title="binder">T</span></a> : <a class="idref" href="Top.Predefs.html#typ"><span class="id" title="inductive">Target.typ</span></a>) (<a id="Htyp:5" class="idref" href="#Htyp:5"><span class="id" title="binder">Htyp</span></a> : <a class="idref" href="Top.Predefs.html#ty_trm"><span class="id" title="inductive">Target.ty_trm</span></a> <span class="id" title="axiom">empty</span> <a class="idref" href="Top.Predefs.html#t:3"><span class="id" title="variable">t</span></a> <a class="idref" href="Top.Predefs.html#T:4"><span class="id" title="variable">T</span></a>), <a class="idref" href="Top.Predefs.html#typed_target_term:1"><span class="id" title="inductive">typed_target_term</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a id="get_term" class="idref" href="#get_term"><span class="id" title="definition">get_term</span></a> (<a id="R:6" class="idref" href="#R:6"><span class="id" title="binder">R</span></a> : <a class="idref" href="Top.Predefs.html#typed_target_term"><span class="id" title="inductive">typed_target_term</span></a>) : <a class="idref" href="Top.Predefs.html#trm"><span class="id" title="inductive">Target.trm</span></a> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Top.Predefs.html#R:6"><span class="id" title="variable">R</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="Top.Predefs.html#typed_target_term_cons"><span class="id" title="constructor">typed_target_term_cons</span></a> <span class="id" title="var">t</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

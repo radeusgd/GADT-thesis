@@ -1,0 +1,172 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">GMu.Progress</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.Prelude.html#"><span class="id" title="library">Prelude</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.Infrastructure.html#"><span class="id" title="library">Infrastructure</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.Regularity.html#"><span class="id" title="library">Regularity</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.CanonicalForms.html#"><span class="id" title="library">CanonicalForms</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMu.Equations.html#"><span class="id" title="library">Equations</span></a>.<br/>
+
+<br/>
+#[<span class="id" title="var">export</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Resolve</span> <span class="id" title="var">binds_empty_inv</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">empty_binding</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">H</span>: <span class="id" title="definition">binds</span> ?<span class="id" title="var">x</span> ?<span class="id" title="var">v</span> <span class="id" title="axiom">empty</span> |- <span class="id" title="var">_</span> ⇒ <span class="id" title="tactic">apply</span> <span class="id" title="lemma">binds_empty_inv</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H</span>; <span class="id" title="var">contradiction</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="tactic">fail</span> "no empty bindings found"<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">IHT</span> <span class="id" title="var">e</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Ht</span>: <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">{</span></a>?<span class="id" title="var">Σ</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> ?<span class="id" title="var">D</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> ?<span class="id" title="var">E</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">}</span></a> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">⊢(</span></a>?<span class="id" title="var">TT</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">)</span></a> <span class="id" title="var">e</span> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">∈</span></a> ?<span class="id" title="var">T</span> |- <span class="id" title="var">_</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">IH</span>: <span class="id" title="keyword">∀</span> <a id="T:2" class="idref" href="#T:2"><span class="id" title="binder">T</span></a>, ?<span class="id" title="var">P0</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">→</span></a> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">{</span></a><span class="id" title="var">Σ</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> <span class="id" title="var">D</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> <span class="id" title="var">E</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">}</span></a> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">⊢(</span></a>?<span class="id" title="var">TT2</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">)</span></a> <span class="id" title="var">e</span> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">∈</span></a> <a class="idref" href="GMu.Progress.html#T:1"><span class="id" title="variable">T</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">→</span></a> ?<span class="id" title="var">P</span> |- <span class="id" title="var">_</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H</span> := <span class="id" title="tactic">fresh</span> "IHt" <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> <span class="id" title="var">P</span> <span class="id" title="keyword">as</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">eauto</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">generalize_typings</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [ <span class="id" title="var">H</span>: <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">{</span></a>?<span class="id" title="var">Σ</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> ?<span class="id" title="var">D</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">,</span></a> ?<span class="id" title="var">E</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">}</span></a> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">⊢(</span></a>?<span class="id" title="var">TT</span><a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">)</span></a> ?<span class="id" title="var">e</span> <a class="idref" href="GMu.Definitions.html#01c16c7ccd254b860cbd58c1da68710e"><span class="id" title="notation">∈</span></a> ?<span class="id" title="var">T</span> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">TT</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="GMu.Definitions.html#Tgen"><span class="id" title="constructor">Tgen</span></a> ⇒ <span class="id" title="tactic">fail</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="GMu.Definitions.html#Treg"><span class="id" title="constructor">Treg</span></a> ⇒ <span class="id" title="tactic">fail</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Regularity.html#Tgen_from_any"><span class="id" title="lemma">Tgen_from_any</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">export</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Constructors</span> <a class="idref" href="GMu.Progress.html#value"><span class="id" title="inductive">value</span></a> <a class="idref" href="GMu.Progress.html#red"><span class="id" title="inductive">red</span></a>.<br/>
+<span class="id" title="keyword">Theorem</span> <a id="progress_thm" class="idref" href="#progress_thm"><span class="id" title="lemma">progress_thm</span></a> : <a class="idref" href="GMu.Definitions.html#progress"><span class="id" title="definition">progress</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="GMu.Definitions.html#progress"><span class="id" title="definition">progress</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">introv</span> <span class="id" title="var">Typ</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="var">Hterm</span>: <a class="idref" href="GMu.Definitions.html#term"><span class="id" title="inductive">term</span></a> <span class="id" title="var">e</span>).<br/>
+&nbsp;&nbsp;1: {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="GMu.Regularity.html#typing_implies_term"><span class="id" title="lemma">typing_implies_term</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Regularity.html#Tgen_from_any"><span class="id" title="lemma">Tgen_from_any</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">Typ</span>. <span class="id" title="tactic">clear</span> <span class="id" title="var">TT</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="var">gen</span> <span class="id" title="var">T</span> <span class="id" title="var">Hterm</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">induction</span> <span class="id" title="var">e</span> <span class="id" title="keyword">using</span> <a class="idref" href="GMu.Definitions.html#trm_ind"><span class="id" title="definition">trm_ind</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">introv</span> <span class="id" title="var">TypGen</span> <span class="id" title="var">Hterm</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T2</span> [<span class="id" title="var">TypReg</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">TypGen</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">inversion</span> <span class="id" title="var">TypReg</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">inversion</span> <span class="id" title="var">Hterm</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">subst</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">solve</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">left</span>×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span>× [<span class="id" title="var">Hv1</span> | [<span class="id" title="var">e1'</span> <span class="id" title="var">Hred1</span>]]: <span class="id" title="var">IHe1</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span>× [<span class="id" title="var">Hv2</span> | [<span class="id" title="var">e2'</span> <span class="id" title="var">Hred2</span>]]: <span class="id" title="var">IHe2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]; <span class="id" title="tactic">clear</span> <span class="id" title="var">TypGen</span> <span class="id" title="var">EQ</span> <span class="id" title="var">T</span>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">rename</span> <span class="id" title="var">T2</span> <span class="id" title="var">into</span> <span class="id" title="var">T</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">empty_binding</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval</span> | [? ?]]: <span class="id" title="var">IHe</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval</span> | [? ?]]: <span class="id" title="var">IHe</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T'</span> [<span class="id" title="var">Typ2</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Equations.html#empty_eq_is_equivalent"><span class="id" title="lemma">empty_eq_is_equivalent</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">EQ</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [<span class="id" title="var">v1</span> [<span class="id" title="var">v2</span> ?]]: <a class="idref" href="GMu.CanonicalForms.html#CanonicalFormTuple"><span class="id" title="lemma">CanonicalFormTuple</span></a> <span class="id" title="var">Typ2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>×.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval</span> | [? ?]]: <span class="id" title="var">IHe</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T'</span> [<span class="id" title="var">Typ2</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Equations.html#empty_eq_is_equivalent"><span class="id" title="lemma">empty_eq_is_equivalent</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">EQ</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [<span class="id" title="var">v1</span> [<span class="id" title="var">v2</span> ?]]: <a class="idref" href="GMu.CanonicalForms.html#CanonicalFormTuple"><span class="id" title="lemma">CanonicalFormTuple</span></a> <span class="id" title="var">Typ2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>×.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval1</span> | [? ?]]: <span class="id" title="var">IHe1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval2</span> | [? ?]]: <span class="id" title="var">IHe2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T'</span> [<span class="id" title="var">Typ2</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Equations.html#empty_eq_is_equivalent"><span class="id" title="lemma">empty_eq_is_equivalent</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">EQ</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [<span class="id" title="var">v1</span> ?]: <a class="idref" href="GMu.CanonicalForms.html#CanonicalFormAbs"><span class="id" title="lemma">CanonicalFormAbs</span></a> <span class="id" title="var">Typ2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eexists</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span>× <a class="idref" href="GMu.Definitions.html#red_beta"><span class="id" title="constructor">red_beta</span></a>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval1</span> | [? ?]]: <span class="id" title="var">IHe</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T'</span> [<span class="id" title="var">Typ2</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Equations.html#empty_eq_is_equivalent"><span class="id" title="lemma">empty_eq_is_equivalent</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">EQ</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [<span class="id" title="var">v1</span> ?]: <a class="idref" href="GMu.CanonicalForms.html#CanonicalFormTAbs"><span class="id" title="lemma">CanonicalFormTAbs</span></a> <span class="id" title="var">Typ2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eexists</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span>× <a class="idref" href="GMu.Definitions.html#red_tbeta"><span class="id" title="constructor">red_tbeta</span></a>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eexists</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rename</span> <span class="id" title="var">l</span> <span class="id" title="var">into</span> <span class="id" title="var">branches</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="var">generalize_typings</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">forwards</span> × [<span class="id" title="var">Hval1</span> | [? ?]]: <span class="id" title="var">IHe</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> [<span class="id" title="var">T'</span> [<span class="id" title="var">Typ2</span> <span class="id" title="var">EQ</span>]]: <a class="idref" href="GMu.Equations.html#inversion_typing_eq"><span class="id" title="lemma">inversion_typing_eq</span></a> <span class="id" title="var">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="GMu.Equations.html#empty_eq_is_equivalent"><span class="id" title="lemma">empty_eq_is_equivalent</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">EQ</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [<span class="id" title="var">GCargs</span> [<span class="id" title="var">cid</span> [<span class="id" title="var">ctor_e</span> ?]]]: <a class="idref" href="GMu.CanonicalForms.html#CanonicalFormGadt"><span class="id" title="lemma">CanonicalFormGadt</span></a> <span class="id" title="var">Typ2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">inversions</span> <span class="id" title="var">Typ2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H1</span>: <span class="id" title="definition">binds</span> ?<span class="id" title="var">g</span> ?<span class="id" title="var">A</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">H2</span>: <span class="id" title="definition">binds</span> ?<span class="id" title="var">g</span> ?<span class="id" title="var">B</span> <span class="id" title="var">Σ</span> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">H</span> := <span class="id" title="tactic">fresh</span> "H" <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span> <span class="id" title="var">H</span>: <a class="idref" href="GMu.Prelude.html#binds_ext"><span class="id" title="lemma">binds_ext</span></a> <span class="id" title="var">H1</span> <span class="id" title="var">H2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">inversions</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">Hnth</span>: <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Lists.List.html#nth_error"><span class="id" title="definition">List.nth_error</span></a> ?<span class="id" title="var">As</span> ?<span class="id" title="var">i</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> ?<span class="id" title="var">A</span> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">Hlen</span>: <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#length"><span class="id" title="definition">length</span></a> <span class="id" title="var">As</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#length"><span class="id" title="definition">length</span></a> ?<span class="id" title="var">Bs</span> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>× [[<span class="id" title="var">clA</span> <span class="id" title="var">clT</span>] [<span class="id" title="var">nth_cl</span> <span class="id" title="var">inzip</span>]]: <a class="idref" href="GMu.Zip.html#nth_error_implies_zip"><span class="id" title="lemma">nth_error_implies_zip</span></a> <span class="id" title="var">Hnth</span> <span class="id" title="var">Hlen</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="var">clA</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#length"><span class="id" title="definition">length</span></a> <span class="id" title="var">GCargs</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| [ <span class="id" title="var">H</span>: <span class="id" title="keyword">∀</span> <a id="def:5" class="idref" href="#def:5"><span class="id" title="binder">def</span></a> <a id="clause:6" class="idref" href="#clause:6"><span class="id" title="binder">clause</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Lists.List.html#In"><span class="id" title="definition">List.In</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#e6756e10c36f149b18b4a8741ed83079"><span class="id" title="notation">(</span></a><a class="idref" href="GMu.Progress.html#def:3"><span class="id" title="variable">def</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#e6756e10c36f149b18b4a8741ed83079"><span class="id" title="notation">,</span></a> <a class="idref" href="GMu.Progress.html#clause:4"><span class="id" title="variable">clause</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#e6756e10c36f149b18b4a8741ed83079"><span class="id" title="notation">)</span></a> ?<span class="id" title="var">A</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">→</span></a> <a class="idref" href="GMu.Definitions.html#clauseArity"><span class="id" title="definition">clauseArity</span></a> <a class="idref" href="GMu.Progress.html#clause:4"><span class="id" title="variable">clause</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="GMu.Definitions.html#Carity"><span class="id" title="projection">Carity</span></a> <a class="idref" href="GMu.Progress.html#def:3"><span class="id" title="variable">def</span></a> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lets</span>*: <span class="id" title="var">H</span> <span class="id" title="var">inzip</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eexists</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> <a class="idref" href="GMu.Progress.html#progress_thm"><span class="id" title="lemma">progress_thm</span></a>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>
