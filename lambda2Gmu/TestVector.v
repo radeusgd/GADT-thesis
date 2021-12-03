@@ -155,6 +155,64 @@ Proof.
 Qed.
 
 (*
+head : ∀a. ∀n. ((a, (n) Succ) Vector) -> a
+head = Λa. Λn. λv: ((a, (n) Succ) Vector).
+        case v of {
+          Nil[a2](unused) => <>
+        | Cons[a2, n2](da) => fst(da)
+        }
+The term below has been generated from the pseudocode above using the converter tool.
+*)
+Definition head_trm :=
+  trm_tabs (trm_tabs (trm_abs (typ_gadt [##1; typ_gadt [##0]* Succ]* Vector) (trm_matchgadt (#0) Vector [clause 2 (trm_fst (#0)); clause 1 (trm_unit)]*)))
+.
+Definition head_typ :=
+  ∀ ∀ (γ(##1, γ(##0) Succ) Vector ==> ##1).
+
+Lemma head_types : {sigma, emptyΔ, empty} ⊢(Treg) head_trm ∈ head_typ.
+cbv.
+lets: oksigma.
+  lets [? [? ?]]: all_distinct.
+autotyper4;
+  try solve[
+    cbn in *;
+    destruct_const_len_list;
+    cbn; autotyper4
+  ].
+  - forwards*: H6 v. cbn in *.
+    eapply typing_eq.
+    + autotyper4.
+    + unfold entails_semantic.
+      intros O OM.
+      exfalso.
+      repeat (
+        match goal with
+        | H: subst_matches_typctx ?A ?B ?C |- _ =>
+          inversions H
+        end
+      ).
+      repeat (
+        match goal with
+        | H: wft ?A ?B ?C |- _ =>
+          clear H
+        end
+      ).
+      cbn in *.
+      congruence.
+    + autotyper4.
+  - forwards*: H6 v.
+    forwards*: H6 v0.
+    cbn in *.
+    eapply typing_eq.
+    + autotyper4.
+    + apply teq_symmetry.
+      apply teq_axiom; listin.
+    + autotyper4.
+  Unshelve.
+  fs. fs. fs.
+Qed.
+
+(*
 zip : ∀a. ∀b. ∀n. ((a,n) Vector -> (b,n) Vector -> (a * b,n) Vector
 zip = fix $self: (∀a. ∀b. ∀n. ((a,n) Vector -> (b,n) Vector -> (a * b,n) Vector)).
         Λa. Λb. Λn. λva: ((a,n) Vector). λvb: ((b,n) Vector). case va of {

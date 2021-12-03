@@ -26,21 +26,18 @@ object VectorExample {
            end
        }
      }
-
   """
-  /*
 
-$self[a][b][n2] (snd(da)) (snd(db))
-         case vb of {
-              Nil[b2](unused) => <>
- Cons[b2, n3](vbdata) =>
-                Cons[a2 * b2, n2](<>)
-            }
+  val headCode: String =
+    """Λa. Λn. λv: ((a,(n) Succ) Vector).
+        case v of {
+          Nil[a2](unused) => <>
+        | Cons[a2, n2](da) => fst(da)
+        }
+  """
 
-<<fst(vadata), fst(vbdata)>, ((($self[a][b][n]) (snd(vadata))) (snd(vbdata))>
-   */
-
-  val zipAST = LamParser.parseExpr(zipCode)
+  lazy val headAST = LamParser.parseExpr(headCode)
+  lazy val zipAST = LamParser.parseExpr(zipCode)
 
   val sigma = Sigma(Seq(
     GADTDef("Zero", Seq(GADTConstructor("zero"))),
@@ -51,13 +48,22 @@ $self[a][b][n2] (snd(da)) (snd(db))
     ))
   ))
 
-  def main(args: Array[String]): Unit = {
-    println(zipAST)
-    val expr = zipAST.right.get
+  def printStages(name: String, ast: Either[String, Expression]): Unit = {
+    println(s"$name:")
+    println("Parsed AST:")
+    println(ast)
+    val expr = ast.right.get
+    println("Identifiers converted to De Bruijn indices:")
     val debruijn = DeBruijnEncoder.encode(expr)
     println(debruijn)
+    println(s"Generated Coq term for $name:")
     val coq = CoqBackend(sigma).renderExpr(debruijn)
     println(coq)
+  }
+
+  def main(args: Array[String]): Unit = {
+    printStages("head", headAST)
+    printStages("zip", zipAST)
   }
 
 }

@@ -166,33 +166,3 @@ object LamParser extends PackratParsers {
     )
   }
 }
-//import parseback._
-
-/*
-object Parse {
-   private val tokens = Seq(":", "*", "->", "(", ")", "1", "∀", ",", ".")
-   def preprocess(str: String): String =
-      tokens.foldLeft(str){(str, tok) => str.replaceAllLiterally(tok, " " + tok + " ")}
-
-   implicit val W = Whitespace("""\s+"""r)
-
-   lazy val ttype: Parser[Type] = tforall | tgadt | ttuple | tfun | ttype2
-
-   lazy val ttype2: Parser[Type] = tunit | tvar | "(" ~ ttype ~ ")" ^^ {(_,_,t,_) => t} | "(" ~> ttype <~ ")"
-   lazy val ttuple: Parser[Type] = ttype2 ~ "*" ~ ttype2 ^^ { (_, fst, _, snd) => Tuple(fst, snd) }
-   lazy val tfun: Parser[Type] = ttype2 ~ "->" ~ ttype2 ^^ { (_, arg, _, res) => Fun(arg, res) }
-   lazy val tvar: Parser[Type] =  identifier ^^ { (_, str) => TVar(str)}
-   lazy val tunit: Parser[Type] = "1" ^^^ TUnit
-   lazy val tgadt: Parser[Type] = {
-      lazy val typelist: Parser[List[Type]] = ttype2 ~ ("," ~ ttype2).*() ^^ {(_, t1, rest) => t1 :: rest.map(_._2)}
-
-      lazy val nonempty = "(" ~ typelist ~ ")" ~ identifier ^^ { (_, _, args, _, name) => GADT(args, name)}
-      lazy val empty = "()" ~ identifier ^^ { (_, _, name) => GADT(List.empty, name)}
-      empty | nonempty
-   }
-   lazy val tforall: Parser[Type] = ("forall" | "∀") ~ identifier ~ ("." ~ ttype | "." ~ ttype) ^^ { (_, _, a, _, t) => Forall(a, t)}
-
-   lazy val identifier: Parser[String] = """[a-zA-Z][a-zA-Z|\d]*""".r
-
-}
- */

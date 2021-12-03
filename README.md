@@ -4,7 +4,9 @@
 
 This is the repository containing Coq proofs attached to my master's thesis.
 
-- [lambda2Gmu](https://radeusgd.github.io/GADT-thesis/lambda2Gmu/toc.html) - my formalization of the source calculus
+## Structure of the repository
+
+- [lambda2Gmu](https://radeusgd.github.io/GADT-thesis/lambda2Gmu/toc.html) - my formalization of the source calculus λ2Gμ
   - [Definitions.v](https://radeusgd.github.io/GADT-thesis/lambda2Gmu/GMu.Definitions.html) define the calculus syntax, typing and semantics and states the desired safety properties
   - [Infrastructure.v](https://radeusgd.github.io/GADT-thesis/lambda2Gmu/GMu.Infrastructure.html) proves syntactic properties of binder handling
   - [Regularity.v](https://radeusgd.github.io/GADT-thesis/lambda2Gmu/GMu.Regularity.html) proves basic properties of the type system, with the most important result - a well typed term has other properties we defined (its type is well formed, it is closed etc.)

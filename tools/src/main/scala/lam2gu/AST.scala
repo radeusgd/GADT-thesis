@@ -163,7 +163,7 @@ object ASTs {
 
   object DeBruijnSyntax extends AST {
     case object Binder {
-      override def toString: String = ""
+      override def toString: String = "#"
     }
 
     case class Ref(index: Int) {
