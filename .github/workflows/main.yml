@@ -40,26 +40,27 @@ jobs:
           coqc --version
       - name: Prepare dependencies
         run: |
+          ls
           eval $(opam env)
           ./refresh_dependencies.sh
       - name: Build Lambda2Gmu soundness proof
-        working-directory: ${{ env.GITHUB_WORKSPACE }}/lambda2Gmu
+        working-directory: lambda2Gmu
         run: |
           eval $(opam env)
           make
       - name: Build Annotated Lambda2Gmu soundness proof
-        working-directory: ${{ env.GITHUB_WORKSPACE }}/lambda2Gmu_annotated
+        working-directory: lambda2Gmu_annotated
         run: |
           eval $(opam env)
           make
       - name: Build translation experiments in pDOT
-        working-directory: ${{ env.GITHUB_WORKSPACE }}/translation_pdot
+        working-directory: translation_pdot
         run: |
           eval $(opam env)
           make
 
       - name: Build translation experiments in extended pDOT
-        working-directory: ${{ env.GITHUB_WORKSPACE }}/translation_extended
+        working-directory: translation_extended
         run: |
           eval $(opam env)
           make
