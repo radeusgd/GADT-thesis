@@ -170,6 +170,7 @@ Definition head_typ :=
   ∀ ∀ (γ(##1, γ(##0) Succ) Vector ==> ##1).
 
 Lemma head_types : {sigma, emptyΔ, empty} ⊢(Treg) head_trm ∈ head_typ.
+Proof.
 cbv.
 lets: oksigma.
   lets [? [? ?]]: all_distinct.
@@ -238,6 +239,7 @@ Definition zip_typ :=
   ∀ ∀ ∀ (γ(##2, ##0) Vector ==> γ(##1, ##0) Vector ==> γ(##2 ** ##1, ##0) Vector).
 
 Lemma zip_types : {sigma, emptyΔ, empty} ⊢(Treg) zip_trm ∈ zip_typ.
+Proof.
 cbv.
 lets: oksigma.
   lets [? [? ?]]: all_distinct.

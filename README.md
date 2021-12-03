@@ -6,21 +6,23 @@ This is the repository containing Coq proofs attached to my master's thesis.
 
 ## Structure of the repository
 
-- [lambda2Gmu](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/toc.html) - my formalization of the source calculus λ2Gμ
-  - [Definitions.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Definitions.html) define the calculus syntax, typing and semantics and states the desired safety properties
-  - [Infrastructure.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Infrastructure.html) proves syntactic properties of binder handling
-  - [Regularity.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Regularity.html) proves basic properties of the type system, with the most important result - a well typed term has other properties we defined (its type is well formed, it is closed etc.)
-  - [CanonicalForms.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.CanonicalForms.html) has proofs that allow to deconstruct a value of a given type to its canonical form
-  - [Progress.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Progress.html) proves the progress theorem
-  - [Preservation.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Preservation.html) proves the preservation theorem
+- [lambda2Gmu](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/toc.html) - my formalization of the source calculus λ2Gμ.
+  - [Definitions.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Definitions.html) define the calculus syntax, typing and semantics and states the desired safety properties.
+  - [Infrastructure.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Infrastructure.html) proves syntactic properties of binder handling.
+  - [Regularity.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Regularity.html) proves basic properties of the type system, with the most important result - a well typed term has other properties we defined (its type is well formed, it is closed etc.).
+  - [CanonicalForms.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.CanonicalForms.html) has proofs that allow to deconstruct a value of a given type to its canonical form.
+  - [Progress.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Progress.html) proves the progress theorem.
+  - [Preservation.v](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu/GMu.Preservation.html) proves the preservation theorem.
 - [lambda2Gmu_annotated](https://radeusgd.github.io/GADT-thesis/latest/lambda2Gmu_annotated/toc.html) - formalization of the annotated variant of the calculus (as described in Section 5.3). The soundness proof is a copy of the standard version with minor adaptations in a few lemmas to accommodate for the added annotations.
 - [translation_pdot](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/toc.html) - proofs associated with the translation attempts. Includes lemmas characterizing pDOT's subtyping.
   - [RuleTests.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.RuleTests.html) - contains lemmas showing how some too general rules would break soundness.
-  - [TestEqualityEnv.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.TestEqualityEnv.html) - manually translated environment for the Eq GADT
-  - [TestEquality.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.TestEquality.html) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT
-- [translation_extended](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/toc.html) - proofs associated with the translation attempts using the extended pDOT calculus
-  - [TestEquality.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality.html) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT
-  - [TestEquality2.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality2.html) - typing proof for the `destruct` term which was not typeable in original pDOT, as described in Chapter 6
+  - [TestEqualityEnv.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.TestEqualityEnv.html) - manually translated environment for the Eq GADT.
+  - [TestEquality.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.TestEquality.html) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT.
+  - [TestEquality3.v](https://radeusgd.github.io/GADT-thesis/latest/translation_pdot/Top.TestEquality3.html) - the typing proof for the `construct` term using the Eq GADT.
+- [translation_extended](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/toc.html) - proofs associated with the translation attempts using the extended pDOT calculus.
+  - [TestEquality.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality.html) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT.
+  - [TestEquality2.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality2.html) - typing proof for the `destruct` term which was not typeable in original pDOT, as described in Chapter 6.
+  - [TestEquality3.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality3.html) - the typing proof for the `construct` term using the Eq GADT.
 - [tools](./tools/) contains tools helping with working with the Lambda2Gmu formalization, written in Scala.
   It features a parser for Lambda2Gmu pseudocode in a human-readable syntax (close to the syntax defined on paper),
   a transpiler which converts name-based binders to De Bruijn indices and allows to convert the human-readable syntax

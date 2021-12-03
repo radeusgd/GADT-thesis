@@ -67,6 +67,38 @@ Proof.
     fs.
 Qed.
 
+Definition symmetry_typ : typ :=
+  ∀ ∀ γ(##1, ##0) Eq ==> γ(##0, ##1) Eq.
+
+Definition symmetry_trm : trm :=
+  Λ (* A *) => Λ (* B *) =>
+  λ (* eq: Eq A B *) γ(##1, ##0) Eq =>
+  case #0 (* eq *) as Eq of {
+    (* α *) 1 (* _: unit *) => new Refl [| ##0 |] ( <.> )
+  }.
+
+Lemma symmetry_types : {sigma, emptyΔ, empty} ⊢(Tgen) symmetry_trm ∈ symmetry_typ.
+Proof.
+cbv.
+lets: oksigma.
+eapply Tgen_from_any.
+autotyper4.
+eapply typing_eq.
+- forwards*: H3 v.
+  cbn in *.
+  autotyper4.
+- apply eq_typ_gadt.
+  apply F2_iff_In_zip.
+  split~.
+  intros T1 T2 In.
+  repeat ininv2;
+    apply teq_symmetry;
+    apply teq_axiom; listin.
+- autotyper4.
+Unshelve.
+fs. fs. fs.
+Qed.
+
 Definition transitivity_typ : typ :=
   ∀ ∀ ∀ γ(##2, ##1) Eq ==> γ(##1, ##0) Eq ==> γ(##2, ##0) Eq.
 
