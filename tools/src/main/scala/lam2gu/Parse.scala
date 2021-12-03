@@ -103,7 +103,7 @@ object LamParser extends PackratParsers {
   def lamvar: Parser[LamVar] = identifier ^^ LamVar
   def fixvar: Parser[FixVar] = fixidentifier ^^ FixVar
   def constructor: Parser[ConstructorApp] =
-    identifier ~ brackets(rep(ttype)) ~ braces(expr) ^^ {
+    identifier ~ brackets(repsep(ttype, $(","))) ~ braces(expr) ^^ {
       case id ~ types ~ ex => ConstructorApp(id, types, ex)
     }
   def unit: Parser[Expression] = $("<>") ^^^ VUnit
@@ -152,7 +152,7 @@ object LamParser extends PackratParsers {
     }
   def patUnit: Parser[Pattern] = $("<>") ^^^ PatUnit
   def patCons: Parser[Pattern] =
-    identifier ~ brackets(rep(identifier)) ~ braces(pattern) ^^ {
+    identifier ~ brackets(repsep(identifier, $(","))) ~ braces(pattern) ^^ {
       case c ~ a ~ p => PatConstructor(c, a, p)
     }
 

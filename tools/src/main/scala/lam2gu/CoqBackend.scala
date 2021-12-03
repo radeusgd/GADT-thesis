@@ -4,10 +4,10 @@ case class CoqBackend(sigma: Sigma) {
   import ASTs.DeBruijnSyntax._
   def renderExpr(expression: Expression): String =
     expression match {
-      case LamVar(name) => s"#$name"
-      case FixVar(name) => s"#$name"
+      case LamVar(ref) => s"#${ref.index}"
+      case FixVar(ref) => s"#${ref.index}"
       case ConstructorApp(name, types, arg) =>
-        val targs = types.map(renderTyp).mkString("[", "; ", "]")
+        val targs = types.map(renderTyp).mkString("[", "; ", "]*")
         val darg = renderExpr(arg)
         val (gadtName, ctorInd) = sigma.resolveCtorId(name)
         s"trm_constructor $targs ($gadtName, $ctorInd) ($darg)"
@@ -18,34 +18,34 @@ case class CoqBackend(sigma: Sigma) {
         s"trm_fst (${renderExpr(e)})"
       case Snd(e) =>
         s"trm_snd (${renderExpr(e)})"
-      case Lambda((), argType, body) =>
+      case Lambda(Binder, argType, body) =>
         s"trm_abs (${renderTyp(argType)}) (${renderExpr(body)})"
       case Application(fun, arg) =>
         s"trm_app (${renderExpr(fun)}) (${renderExpr(arg)})"
-      case TypeLambda((), body) =>
+      case TypeLambda(Binder, body) =>
         s"trm_tabs (${renderExpr(body)})"
       case TypeApplication(e, arg) =>
         s"trm_tapp (${renderExpr(e)}) (${renderTyp(arg)})"
-      case Fix((), selfType, body) =>
+      case Fix(Binder, selfType, body) =>
         s"trm_fix (${renderTyp(selfType)}) (${renderExpr(body)})"
       case CaseOf(e, clauses) =>
         val (gadtName, cls) = renderClauses(clauses)
-        val clsR = cls.mkString("[", "; ", "]")
+        val clsR = cls.mkString("[", "; ", "]*")
         s"trm_matchgadt (${renderExpr(e)}) $gadtName $clsR"
-      case Let((), bound, body) =>
+      case Let(Binder, bound, body) =>
         s"trm_app (${renderExpr(bound)}) (${renderExpr(body)})"
     }
 
   def renderTyp(typ: Type): String =
     typ match {
-      case TVar(name)    => s"@$name"
+      case TVar(ref)    => s"##${ref.index}"
       case TUnit         => "typ_unit"
       case Tuple(t1, t2) => s"(${renderTyp(t1)}) ** (${renderTyp(t2)})"
       case Fun(arg, res) => s"(${renderTyp(arg)}) ==> (${renderTyp(res)})"
       case GADT(args, name) =>
-        val argsR = args.map(renderTyp).mkString("[", "; ", "]")
+        val argsR = args.map(renderTyp).mkString("[", "; ", "]*")
         s"typ_gadt $argsR $name"
-      case Forall((), ttyp) =>
+      case Forall(Binder, ttyp) =>
         s"typ_all (${renderTyp(ttyp)})"
     }
 
@@ -54,7 +54,7 @@ case class CoqBackend(sigma: Sigma) {
     case class PatData(name: String, arity: Int, gadt: GADTDef)
     def unwrapPat(clause: Clause): PatData =
       clause.pattern match {
-        case PatConstructor(name, args, PatVar(())) =>
+        case PatConstructor(name, args, PatVar(Binder)) =>
           PatData(name, args.length, sigma.resolveGadt(name))
         case _ =>
           throw new IllegalArgumentException(

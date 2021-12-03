@@ -38,7 +38,7 @@ object DeBruijnEncoder {
         DS.Snd(encSub(e, exprSubst, typSubst))
       case CS.Lambda(arg, argType, body) =>
         DS.Lambda(
-          (),
+          DS.Binder,
           encSubT(argType, typSubst),
           encSub(body, exprSubst.enterBinder(arg), typSubst)
         )
@@ -48,7 +48,7 @@ object DeBruijnEncoder {
           encSub(arg, exprSubst, typSubst)
         )
       case CS.TypeLambda(arg, body) =>
-        DS.TypeLambda((), encSub(body, exprSubst, typSubst.enterBinder(arg)))
+        DS.TypeLambda(DS.Binder, encSub(body, exprSubst, typSubst.enterBinder(arg)))
       case CS.TypeApplication(e, arg) =>
         DS.TypeApplication(
           encSub(e, exprSubst, typSubst),
@@ -56,7 +56,7 @@ object DeBruijnEncoder {
         )
       case CS.Fix(selfName, selfType, body) =>
         DS.Fix(
-          (),
+          DS.Binder,
           encSubT(selfType, typSubst),
           encSub(body, exprSubst.enterBinder(selfName), typSubst)
         )
@@ -72,7 +72,7 @@ object DeBruijnEncoder {
         )
       case CS.Let(name, bound, body) =>
         DS.Let(
-          (),
+          DS.Binder,
           encSub(bound, exprSubst, typSubst),
           encSub(body, exprSubst.enterBinder(name), typSubst)
         )
@@ -85,7 +85,7 @@ object DeBruijnEncoder {
   ): (DS.Pattern, Subst, Subst) =
     pattern match {
       case CS.PatVar(name) =>
-        (DS.PatVar(()), exprSubst.enterBinder(name), typSubst)
+        (DS.PatVar(DS.Binder), exprSubst.enterBinder(name), typSubst)
       case CS.PatUnit => (DS.PatUnit, exprSubst, typSubst)
       case CS.PatTuple(fst, snd) =>
         val (fstP, eP, tP) = encPat(fst, exprSubst, typSubst)
@@ -97,7 +97,7 @@ object DeBruijnEncoder {
           case (subst, arg) => subst.enterBinder(arg)
         }
         val (bodyPat, eS, tS) = encPat(body, exprSubst, tP)
-        (DS.PatConstructor(name, args.map(_ => ()), bodyPat), eS, tS)
+        (DS.PatConstructor(name, args.map(_ => DS.Binder), bodyPat), eS, tS)
     }
 
   def encSubT(typ: CS.Type, subst: Subst): DS.Type =
@@ -117,7 +117,7 @@ object DeBruijnEncoder {
       case CS.GADT(args, name) =>
         DS.GADT(args.map(encSubT(_, subst)), name)
       case CS.Forall(arg, ttyp) =>
-        DS.Forall((), encSubT(ttyp, subst.enterBinder(arg)))
+        DS.Forall(DS.Binder, encSubT(ttyp, subst.enterBinder(arg)))
     }
 
   implicit class SubstSyntax(substs: Subst) {
@@ -127,7 +127,9 @@ object DeBruijnEncoder {
     def enterBinder(name: String): Subst =
       lift.updated(name, 0)
 
-    def deref(name: String): Int =
-      substs.getOrElse(name, throw UnknownIdentifier(name))
+    def deref(name: String): DS.Ref = {
+      val index = substs.getOrElse(name, throw UnknownIdentifier(name))
+      DS.Ref(index)
+    }
   }
 }

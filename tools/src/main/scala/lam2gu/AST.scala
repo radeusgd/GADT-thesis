@@ -162,7 +162,15 @@ object ASTs {
   }
 
   object DeBruijnSyntax extends AST {
-    override type VarType = Int
-    override type BindVarType = Unit
+    case object Binder {
+      override def toString: String = ""
+    }
+
+    case class Ref(index: Int) {
+      override def toString: String = s"#$index"
+    }
+
+    override type VarType = Ref
+    override type BindVarType = Binder.type
   }
 }
