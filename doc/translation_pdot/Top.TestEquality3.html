@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Top.TestEquality3</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Top.Helpers.html#"><span class="id" title="library">Helpers</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Top.Library.html#"><span class="id" title="library">Library</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Top.TestHelpers.html#"><span class="id" title="library">TestHelpers</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="../lambda2Gmu/GMu.TestEquality.html#"><span class="id" title="library">GMu.TestEquality</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Top.Translation.html#"><span class="id" title="library">Translation</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Top.TestEqualityEnv.html#"><span class="id" title="library">Top.TestEqualityEnv</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a id="construct_tuple_lemma" class="idref" href="#construct_tuple_lemma"><span class="id" title="lemma">construct_tuple_lemma</span></a> : <span class="id" title="keyword">∀</span> <a id="G:1" class="idref" href="#G:1"><span class="id" title="binder">G</span></a> <a id="A:2" class="idref" href="#A:2"><span class="id" title="binder">A</span></a> <a id="B:3" class="idref" href="#B:3"><span class="id" title="binder">B</span></a> <a id="C:4" class="idref" href="#C:4"><span class="id" title="binder">C</span></a> <a id="D:5" class="idref" href="#D:5"><span class="id" title="binder">D</span></a>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Top.TestEquality3.html#G:1"><span class="id" title="variable">G</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">⊢</span></a> <a class="idref" href="Top.TestEquality3.html#A:2"><span class="id" title="variable">A</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">=:=</span></a> <a class="idref" href="Top.TestEquality3.html#C:4"><span class="id" title="variable">C</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Top.TestEquality3.html#G:1"><span class="id" title="variable">G</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">⊢</span></a> <a class="idref" href="Top.TestEquality3.html#B:3"><span class="id" title="variable">B</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">=:=</span></a> <a class="idref" href="Top.TestEquality3.html#D:5"><span class="id" title="variable">D</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Top.TestEquality3.html#G:1"><span class="id" title="variable">G</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">⊢</span></a> <span class="id" title="notation">(</span><span class="id" title="abbreviation">pvar</span> <a class="idref" href="Top.Library.html#lib"><span class="id" title="definition">lib</span></a><span class="id" title="notation">)</span> <span class="id" title="notation">↓</span> <a class="idref" href="Top.Library.html#Tuple"><span class="id" title="axiom">Tuple</span></a> <span class="id" title="notation">∧</span> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">{</span></a><a class="idref" href="Top.Library.html#T1"><span class="id" title="axiom">T1</span></a> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">==</span></a> <a class="idref" href="Top.TestEquality3.html#A:2"><span class="id" title="variable">A</span></a><a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">}</span></a> <span class="id" title="notation">∧</span> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">{</span></a><a class="idref" href="Top.Library.html#T2"><span class="id" title="axiom">T2</span></a> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">==</span></a> <a class="idref" href="Top.TestEquality3.html#B:3"><span class="id" title="variable">B</span></a><a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">}</span></a> <a class="idref" href="Top.Helpers.html#0201f232da155c856ee4102e991fcb21"><span class="id" title="notation">=:=</span></a> <span class="id" title="notation">(</span><span class="id" title="abbreviation">pvar</span> <a class="idref" href="Top.Library.html#lib"><span class="id" title="definition">lib</span></a><span class="id" title="notation">)</span> <span class="id" title="notation">↓</span> <a class="idref" href="Top.Library.html#Tuple"><span class="id" title="axiom">Tuple</span></a> <span class="id" title="notation">∧</span> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">{</span></a><a class="idref" href="Top.Library.html#T1"><span class="id" title="axiom">T1</span></a> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">==</span></a> <a class="idref" href="Top.TestEquality3.html#C:4"><span class="id" title="variable">C</span></a><a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">}</span></a> <span class="id" title="notation">∧</span> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">{</span></a><a class="idref" href="Top.Library.html#T2"><span class="id" title="axiom">T2</span></a> <a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">==</span></a> <a class="idref" href="Top.TestEquality3.html#D:5"><span class="id" title="variable">D</span></a><a class="idref" href="Top.Helpers.html#f65f9d05239b8cb1cc466737b4b58bea"><span class="id" title="notation">}</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">introv</span> [] [].<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="tactic">apply</span>¬ <a class="idref" href="Top.Helpers.html#eq_and_merge"><span class="id" title="lemma">eq_and_merge</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

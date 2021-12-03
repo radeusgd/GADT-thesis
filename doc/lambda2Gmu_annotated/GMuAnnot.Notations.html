@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="../">Project Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">GMuAnnot.Notations</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="GMuAnnot.Definitions.html#"><span class="id" title="library">GMuAnnot.Definitions</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">TLC.LibLN</span>.<br/>
+
+<br/>
+<span class="id" title="var">Declare</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Bind</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">L2GMu</span> <span class="id" title="keyword">with</span> <span class="id" title="var">typ</span>.<br/>
+<span class="id" title="keyword">Bind</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">L2GMu</span> <span class="id" title="keyword">with</span> <span class="id" title="var">trm</span>.<br/>
+
+<br/>
+<span class="comment">(*<br/>
+TODO:&nbsp;test&nbsp;-&gt;<br/>
+otherwise&nbsp;reduction&nbsp;--&gt;<br/>
+*)</span><br/>
+<span class="id" title="keyword">Notation</span> <a id="f0beee6fd3251d567f8ad476095a4ccd" class="idref" href="#f0beee6fd3251d567f8ad476095a4ccd"><span class="id" title="notation">&quot;</span></a>## n" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_bvar"><span class="id" title="constructor">typ_bvar</span></a> <span class="id" title="var">n</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 29) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Coercion</span> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ_fvar</span></a> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">:</span></a> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">var</span></a> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">&gt;-&gt;</span></a> <a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_fvar"><span class="id" title="constructor">typ</span></a>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="7fa3eafe8a8f100113574d83939cb0bf" class="idref" href="#7fa3eafe8a8f100113574d83939cb0bf"><span class="id" title="notation">&quot;</span></a>T1 ** T2" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_tuple"><span class="id" title="constructor">typ_tuple</span></a> <span class="id" title="var">T1</span> <span class="id" title="var">T2</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 49) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="bfdf786d5246974e44c72787e43febf5" class="idref" href="#bfdf786d5246974e44c72787e43febf5"><span class="id" title="notation">&quot;</span></a>T1 ==&gt; T2" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_arrow"><span class="id" title="constructor">typ_arrow</span></a> <span class="id" title="var">T1</span> <span class="id" title="var">T2</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 49, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>) : <span class="id" title="var">L2GMu</span> .<br/>
+<span class="id" title="keyword">Notation</span> <a id="7ca02b35f6cfb4dd5e28a2d14ca43347" class="idref" href="#7ca02b35f6cfb4dd5e28a2d14ca43347"><span class="id" title="notation">&quot;</span></a>∀ T" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_all"><span class="id" title="constructor">typ_all</span></a> <span class="id" title="var">T</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="1e2855e8a84e59ff5a8926a262335084" class="idref" href="#1e2855e8a84e59ff5a8926a262335084"><span class="id" title="notation">&quot;</span></a>'γ()' N" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_gadt"><span class="id" title="constructor">typ_gadt</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <span class="id" title="var">N</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="123d479ffa32a85c90222ce9a0ff8f69" class="idref" href="#123d479ffa32a85c90222ce9a0ff8f69"><span class="id" title="notation">&quot;</span></a>'γ(' x , .. , z ) N" :=  (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#typ_gadt"><span class="id" title="constructor">typ_gadt</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">z</span> .. (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">x</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) ..) <span class="id" title="var">N</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="6d4400c22a7a0ddac89a99d5a5fd78c7" class="idref" href="#6d4400c22a7a0ddac89a99d5a5fd78c7"><span class="id" title="notation">&quot;</span></a># n" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_bvar"><span class="id" title="constructor">trm_bvar</span></a> <span class="id" title="var">n</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 29) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="comment">(*&nbsp;Coercion&nbsp;trm_fvar&nbsp;:&nbsp;var&nbsp;&gt;-&gt;&nbsp;trm.&nbsp;*)</span><br/>
+<span class="id" title="keyword">Notation</span> <a id="::L2GMu:'&lt;.&gt;'" class="idref" href="#::L2GMu:'&lt;.&gt;'"><span class="id" title="notation">&quot;</span></a>&lt;.&gt;" := <a class="idref" href="GMuAnnot.Definitions.html#trm_unit"><span class="id" title="constructor">trm_unit</span></a> : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="0dcfb909d0072609009f0fb684d1c60d" class="idref" href="#0dcfb909d0072609009f0fb684d1c60d"><span class="id" title="notation">&quot;</span></a>&lt; a , b &gt;" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_tuple"><span class="id" title="constructor">trm_tuple</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42, <span class="id" title="var">a</span> <span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 30, <span class="id" title="var">b</span> <span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 30) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="f5c4dc8e28d1459c5c0b94baedc8310a" class="idref" href="#f5c4dc8e28d1459c5c0b94baedc8310a"><span class="id" title="notation">&quot;</span></a>fst( a )" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_fst"><span class="id" title="constructor">trm_fst</span></a> <span class="id" title="var">a</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="4bfe7d7581cbc12083a87bdc7eaedee7" class="idref" href="#4bfe7d7581cbc12083a87bdc7eaedee7"><span class="id" title="notation">&quot;</span></a>snd( a )" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_snd"><span class="id" title="constructor">trm_snd</span></a> <span class="id" title="var">a</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="cf2616d86997b3e3f641130a69ca7a19" class="idref" href="#cf2616d86997b3e3f641130a69ca7a19"><span class="id" title="notation">&quot;</span></a>'new' N [| |] ( e )" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_constructor"><span class="id" title="constructor">trm_constructor</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <span class="id" title="var">N</span> <span class="id" title="var">e</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="0e9dfa86beebabafe372b5d6695d6dd9" class="idref" href="#0e9dfa86beebabafe372b5d6695d6dd9"><span class="id" title="notation">&quot;</span></a>'new' N [| T1 , .. , TN |] ( e )" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_constructor"><span class="id" title="constructor">trm_constructor</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">TN</span> .. (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">T1</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) .. ) <span class="id" title="var">N</span> <span class="id" title="var">e</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="be9fcb22187f793b6a0741423bcffa2b" class="idref" href="#be9fcb22187f793b6a0741423bcffa2b"><span class="id" title="notation">&quot;</span></a>'λ' T =&gt; e" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_abs"><span class="id" title="constructor">trm_abs</span></a> <span class="id" title="var">T</span> <span class="id" title="var">e</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Infix</span> <a id="6ed89d7084ae400a65d99e4cf64862de" class="idref" href="#6ed89d7084ae400a65d99e4cf64862de"><span class="id" title="notation">&quot;</span></a>&lt;|" := <a class="idref" href="GMuAnnot.Definitions.html#trm_app"><span class="id" title="constructor">trm_app</span></a> (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="acd87043b35e3c4c1b738705f683fa15" class="idref" href="#acd87043b35e3c4c1b738705f683fa15"><span class="id" title="notation">&quot;</span></a>'Λ' =&gt; e" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_tabs"><span class="id" title="constructor">trm_tabs</span></a> <span class="id" title="var">e</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="id" title="keyword">Infix</span> <a id="563db3ad5f1b7aebcc7f8a5ff98f00c7" class="idref" href="#563db3ad5f1b7aebcc7f8a5ff98f00c7"><span class="id" title="notation">&quot;</span></a>&lt;||" := <a class="idref" href="GMuAnnot.Definitions.html#trm_tapp"><span class="id" title="constructor">trm_tapp</span></a> (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="4e287941cc8a97f98df115fe77a3bb2f" class="idref" href="#4e287941cc8a97f98df115fe77a3bb2f"><span class="id" title="notation">&quot;</span></a>'fixs' T =&gt; v" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_fix"><span class="id" title="constructor">trm_fix</span></a> <span class="id" title="var">T</span> <span class="id" title="var">v</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 42) : <span class="id" title="var">L2GMu</span>.<br/>
+<span class="comment">(*&nbsp;;;&nbsp;or&nbsp;no&nbsp;ending&nbsp;*)</span><br/>
+<span class="id" title="keyword">Notation</span> <a id="::L2GMu:'lets'_x_'in'_x_'tel'" class="idref" href="#::L2GMu:'lets'_x_'in'_x_'tel'"><span class="id" title="notation">&quot;</span></a>'lets' e1 'in' e2 'tel'" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_let"><span class="id" title="constructor">trm_let</span></a> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="comment">(*&nbsp;https://coq.inria.fr/refman/user-extensions/syntax-extensions.htmlcustom-entries *)</span><br/>
+<span class="id" title="var">Declare</span> <span class="id" title="var">Custom</span> <span class="id" title="var">Entry</span> <span class="id" title="var">case_pattern</span>.<br/>
+<span class="id" title="keyword">Notation</span> <a id="e849ffd35bdd7f2055542f512d1b1f5c" class="idref" href="#e849ffd35bdd7f2055542f512d1b1f5c"><span class="id" title="notation">&quot;</span></a>'case' e 'as' N 'of' { p1 | .. | pN }" := (<a class="idref" href="GMuAnnot.Definitions.html#trm_matchgadt"><span class="id" title="constructor">trm_matchgadt</span></a> <span class="id" title="var">e</span> <span class="id" title="var">N</span> (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">p1</span> (.. (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">pN</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) ..))) (<span class="id" title="var">p1</span> <span class="id" title="var">custom</span> <span class="id" title="var">case_pattern</span>, <span class="id" title="var">pN</span> <span class="id" title="var">custom</span> <span class="id" title="var">case_pattern</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="01cb8a3fd43facf8d2900484803358a0" class="idref" href="#01cb8a3fd43facf8d2900484803358a0"><span class="id" title="notation">&quot;</span></a>n '=&gt;' e" := (<a class="idref" href="GMuAnnot.Definitions.html#clause"><span class="id" title="constructor">clause</span></a> <span class="id" title="var">n</span> <span class="id" title="var">e</span>) (<span class="id" title="tactic">in</span> <span class="id" title="var">custom</span> <span class="id" title="var">case_pattern</span> <span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 10, <span class="id" title="var">n</span> <span class="id" title="keyword">constr</span>, <span class="id" title="var">e</span> <span class="id" title="keyword">constr</span>) : <span class="id" title="var">L2GMu</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a id="be514765b11bdb1e2c3abb537422e6a1" class="idref" href="#be514765b11bdb1e2c3abb537422e6a1"><span class="id" title="notation">&quot;</span></a>'enum' n {{ c1 | .. | cN }}" := (<a class="idref" href="../lambda2Gmu/GMu.Definitions.html#mkGADT"><span class="id" title="constructor">mkGADT</span></a> <span class="id" title="var">n</span> (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">c1</span> (.. (<a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#cons"><span class="id" title="constructor">cons</span></a> <span class="id" title="var">cN</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.13.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) ..))) : <span class="id" title="var">L2GMu</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>
