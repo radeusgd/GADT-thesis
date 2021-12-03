@@ -22,3 +22,6 @@ TestEquality.vos TestEquality.vok TestEquality.required_vos: TestEquality.v Help
 TestEquality3.vo TestEquality3.glob TestEquality3.v.beautified TestEquality3.required_vo: TestEquality3.v Helpers.vo Library.vo TestHelpers.vo ../lambda2Gmu/TestEquality.vo Translation.vo TestEqualityEnv.vo
 TestEquality3.vio: TestEquality3.v Helpers.vio Library.vio TestHelpers.vio ../lambda2Gmu/TestEquality.vio Translation.vio TestEqualityEnv.vio
 TestEquality3.vos TestEquality3.vok TestEquality3.required_vos: TestEquality3.v Helpers.vos Library.vos TestHelpers.vos ../lambda2Gmu/TestEquality.vos Translation.vos TestEqualityEnv.vos
+RuleTests.vo RuleTests.glob RuleTests.v.beautified RuleTests.required_vo: RuleTests.v Helpers.vo TestHelpers.vo
+RuleTests.vio: RuleTests.v Helpers.vio TestHelpers.vio
+RuleTests.vos RuleTests.vok RuleTests.required_vos: RuleTests.v Helpers.vos TestHelpers.vos

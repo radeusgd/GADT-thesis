@@ -13,3 +13,4 @@ Translation.v
 TestEqualityEnv.v
 TestEquality.v
 TestEquality3.v
+RuleTests.v
