@@ -7,28 +7,30 @@ DOCOPTS="-utf8 --toc --toc-depth 0 --html --interpolate \
   --index indexpage --no-lib-name --parse-comments \
   --with-header $EXTRA_DIR/header.html --with-footer $EXTRA_DIR/footer.html"
 
-rm -rf docs
+OUTDIR=$(pwd)/docs/latest
 
-mkdir -p docs/lambda2Gmu
+rm -rf $OUTDIR
+
+mkdir -p $OUTDIR/lambda2Gmu
 pushd lambda2Gmu
-coqdoc $DOCOPTS -R . GMu -d ../docs/lambda2Gmu *.v
-cp $EXTRA_DIR/resources/* ../docs/lambda2Gmu/
+coqdoc $DOCOPTS -R . GMu -d $OUTDIR/lambda2Gmu *.v
+cp $EXTRA_DIR/resources/* $OUTDIR/lambda2Gmu/
 popd
 
-mkdir -p docs/lambda2Gmu_annotated
+mkdir -p $OUTDIR/lambda2Gmu_annotated
 pushd lambda2Gmu_annotated
-coqdoc $DOCOPTS -R . GMuAnnot --external ../lambda2Gmu GMu -d ../docs/lambda2Gmu_annotated *.v
-cp $EXTRA_DIR/resources/* ../docs/lambda2Gmu_annotated/
+coqdoc $DOCOPTS -R . GMuAnnot --external ../lambda2Gmu GMu -d $OUTDIR/lambda2Gmu_annotated *.v
+cp $EXTRA_DIR/resources/* $OUTDIR/lambda2Gmu_annotated/
 popd
 
-mkdir -p docs/translation_pdot
+mkdir -p $OUTDIR/translation_pdot
 pushd translation_pdot
-coqdoc $DOCOPTS -R . Top --external ../lambda2Gmu GMu --external ../lambda2Gmu_annotated GMuAnnot -d ../docs/translation_pdot *.v
-cp $EXTRA_DIR/resources/* ../docs/translation_pdot/
+coqdoc $DOCOPTS -R . Top --external ../lambda2Gmu GMu --external ../lambda2Gmu_annotated GMuAnnot -d $OUTDIR/translation_pdot *.v
+cp $EXTRA_DIR/resources/* $OUTDIR/translation_pdot/
 popd
 
-mkdir -p docs/translation_extended
+mkdir -p $OUTDIR/translation_extended
 pushd translation_extended
-coqdoc $DOCOPTS -R . Top --external ../lambda2Gmu GMu --external ../lambda2Gmu_annotated GMuAnnot -d ../docs/translation_extended *.v
-cp $EXTRA_DIR/resources/* ../docs/translation_extended/
+coqdoc $DOCOPTS -R . Top --external ../lambda2Gmu GMu --external ../lambda2Gmu_annotated GMuAnnot -d $OUTDIR/translation_extended *.v
+cp $EXTRA_DIR/resources/* $OUTDIR/translation_extended/
 popd
