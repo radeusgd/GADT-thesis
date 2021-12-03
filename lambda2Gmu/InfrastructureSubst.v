@@ -122,6 +122,7 @@ Lemma subst_tt_intro_many : forall Xs T Us,
     (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
     (forall U, List.In U Us -> type U) ->
     open_tt_many Us T = subst_tt_many Xs Us (open_tt_many_var Xs T).
+Proof.
   induction Xs as [| Xh Xt]; introv Hleneq Hdistinct HXfv HXUfv XUtyp.
   - destruct Us.
     + cbv. trivial.
@@ -490,52 +491,10 @@ Proof.
       * apply* IHvalue.
 Qed.
 
-(* Lemma adding_free_is_ok : forall A E F, *)
-(*     ok (E & F) -> *)
-(*     A # E -> *)
-(*     A # F -> *)
-(*     ok (E & (withtyp A) & F)%env. *)
-(*   induction F using env_ind; introv Hok HE HF. *)
-(*   - rewrite concat_empty_r. *)
-(*     constructor*. *)
-(*   - rewrite concat_assoc. *)
-(*     rewrite concat_assoc in Hok. *)
-(*     apply ok_push_inv in Hok. *)
-(*     econstructor. *)
-(*     + apply* IHF. *)
-(*     + simpl_dom. *)
-(*       rewrite notin_union. *)
-(*       rewrite notin_union. *)
-(*       split*. *)
-(* Qed. *)
-
-(* Lemma adding_free_is_ok_many : forall As E F, *)
-(*     ok (E & F) -> *)
-(*     DistinctList As -> *)
-(*     (forall A, List.In A As -> A \notin dom E) -> *)
-(*     (forall A, List.In A As -> A \notin dom F) -> *)
-(*     ok (add_types E As & F). *)
-(*   induction As as [| Ah Ats]; introv Hok HD HE HF. *)
-(*   - cbn. eauto. *)
-(*   - cbn. *)
-(*     rewrite <- concat_assoc. *)
-(*     apply IHAts; eauto with listin. *)
-(*     + rewrite concat_assoc. *)
-(*       apply adding_free_is_ok; eauto with listin. *)
-(*     + inversion* HD. *)
-(*     + introv Hin. *)
-(*       simpl_dom. *)
-(*       rewrite notin_union. *)
-(*       split. *)
-(*       * apply* notin_singleton. *)
-(*         inversions HD. *)
-(*         intro; subst. contradiction. *)
-(*       * eauto with listin. *)
-(* Qed. *)
-
 Lemma subst_idempotent : forall U Z P,
     Z \notin fv_typ P ->
     subst_tt Z P U = subst_tt Z P (subst_tt Z P U).
+Proof.
   induction U using typ_ind'; introv FV; try solve [cbn; eauto].
   - cbn.
     case_if.
@@ -589,6 +548,7 @@ Lemma subst_commutes_open_tt_many : forall Ts Z P U,
     Z \notin fv_typ U ->
     subst_tt Z P (open_tt_many Ts U) =
     open_tt_many (List.map (subst_tt Z P) Ts) U.
+Proof.
   induction Ts as [| Th Tts]; introv TP FP FU.
   - cbn. apply* subst_tt_fresh.
   - cbn.
@@ -604,31 +564,6 @@ Lemma subst_commutes_open_tt_many : forall Ts Z P U,
       apply* subst_removes_var.
     + rewrite* FO.
 Qed.
-
-(* Lemma add_types_map_subst_tb : forall As Z P, *)
-(*     map (subst_tb Z P) (add_types empty As) *)
-(*     = *)
-(*     add_types empty As. *)
-(*   induction As as [| Ah Ats]; introv. *)
-(*   - cbn. autorewrite with rew_env_map. trivial. *)
-(*   - cbn. autorewrite with rew_env_map. cbn. rewrite IHAts. trivial. *)
-(* Qed. *)
-
-(* Lemma add_types_through_map : forall Z P E F As, *)
-(*     map (subst_tb Z P) (add_types E As & F) *)
-(*     = *)
-(*     add_types (map (subst_tb Z P) E) As & (map (subst_tb Z P) F). *)
-(*   intros. *)
-(*   autorewrite with rew_env_map. *)
-(*   f_equal. *)
-(*   rewrite <- (concat_empty_r E). *)
-(*   rewrite add_types_assoc. *)
-(*   autorewrite with rew_env_map. *)
-(*   rewrite add_types_assoc. *)
-(*   f_equal. *)
-(*   apply add_types_map_subst_tb. *)
-(* Qed. *)
-
 
 Fixpoint subst_te_many (Xs : list var) (Us : list typ) (e : trm) :=
   match (Xs, Us) with
@@ -676,6 +611,7 @@ Lemma subst_te_intro_many : forall Xs e Us,
     (forall X U, List.In X Xs -> List.In U Us -> X \notin fv_typ U) ->
     (forall U, List.In U Us -> type U) ->
     open_te_many Us e = subst_te_many Xs Us (open_te_many_var Xs e).
+Proof.
   induction Xs as [| Xh Xt]; introv Hleneq Hdistinct HXfv HXUfv XUtyp.
   - destruct Us.
     + cbv. trivial.
@@ -753,6 +689,7 @@ Lemma subst_tb_many_id_on_fresh_env : forall E As Ps,
     length As = length Ps ->
     (forall A, List.In A As -> A \notin fv_env E) ->
     map (subst_tb_many As Ps) E = E.
+Proof.
   intros.
   rewrite map_def.
   rewrite <- LibList_map.

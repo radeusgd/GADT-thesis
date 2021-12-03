@@ -21,6 +21,7 @@ Definition sigma :=
 Definition Refl := (Eq, 0).
 
 Lemma oksigma : okGadt sigma.
+Proof.
   unfold sigma.
   unfold EqDef.
   lets: is_var_defined_split.
@@ -43,6 +44,7 @@ Definition coerce_trm : trm :=
                 }.
 
 Lemma coerce_types : {sigma, emptyΔ, empty} ⊢(Tgen) coerce_trm ∈ coerce_typ.
+Proof.
   cbv.
   lets: oksigma.
   eapply Tgen_from_any.
@@ -79,26 +81,8 @@ Definition transitivity_trm : trm :=
                 }
   .
 
-(*
-  Possible ideas:
-- congruence / custom tactic for solving typing equalities
-- constructing terms of given type usng tactics, example below
-*)
-
-(* Lemma foo : { t:trm | {sigma, emptyΔ, empty} ⊢(Tgen) t ∈ transitivity_typ}. *)
-(*   eapply exist. *)
-(*   cbv. *)
-(*   eapply Tgen_from_any. *)
-(*   eapply typing_tabs. *)
-(*   2: { *)
-(*     cbn. *)
-(*     instantiate (1:= Λ => _); cbn. *)
-(*     intros. *)
-(*     eapply typing_tabs. *)
-
-(*   } *)
-
 Lemma transitivity_types : {sigma, emptyΔ, empty} ⊢(Tgen) transitivity_trm ∈ transitivity_typ.
+Proof.
   cbv.
   lets: oksigma.
   eapply Tgen_from_any.
@@ -183,6 +167,7 @@ Tuple =:= Tuple
 
 
 Lemma construct_types : {sigma, emptyΔ, empty} ⊢(Tgen) construct_trm ∈ construct_typ.
+Proof.
   cbv.
   lets: oksigma.
   eapply Tgen_from_any.
@@ -265,6 +250,7 @@ Definition destruct_trm : trm :=
 .
 
 Lemma destruct_types : {sigma, emptyΔ, empty} ⊢(Tgen) destruct_trm ∈ destruct_typ.
+Proof.
   cbv.
   lets: oksigma.
   eapply Tgen_from_any.

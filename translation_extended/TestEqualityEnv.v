@@ -86,6 +86,7 @@ Definition env_trm : trm :=
 
 Lemma env_types : forall lib,
     empty & lib ~ libType ⊢ open_trm_p (pvar lib) env_trm : open_typ_p (pvar lib) env_typ.
+Proof.
   intros.
   cbv. crush.
   apply_fresh ty_let as env.

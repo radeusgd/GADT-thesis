@@ -9,6 +9,7 @@ Require Import TLC.LibLN.
 Lemma subst_ttΘ_fresh : forall Θ T,
   substitution_sources Θ \n fv_typ T = \{} ->
   subst_tt' T Θ = T.
+Proof.
   induction Θ as [| [A U] Θ].
   - cbn. auto.
   - introv Fr.

@@ -73,6 +73,7 @@ Lemma p_coerce_types :
   & env ~ (open_typ_p (pvar lib) env_typ)
         ⊢
         p_coerce_trm : p_coerce_typ.
+Proof.
   remember lib as lib.
   remember env as env.
   intros.
@@ -258,6 +259,7 @@ Lemma p_transitivity_types :
   & env ~ (open_typ_p (pvar lib) env_typ)
         ⊢
         p_transitivity_trm : p_transitivity_typ.
+Proof.
   remember lib as lib.
   remember env as env.
   intros.

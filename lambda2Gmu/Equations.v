@@ -34,6 +34,7 @@ Section SimpleEquationProperties.
   Lemma subst_has_no_fv : forall Σ Δ Θ,
       subst_matches_typctx Σ Δ Θ ->
       (forall X U, List.In (X, U) Θ -> fv_typ U = \{}).
+  Proof.
     induction 1; introv Hin.
     - false.
     - cbn in Hin.
@@ -49,6 +50,7 @@ Section SimpleEquationProperties.
   Lemma teq_axiom : forall Δ T U,
       List.In (tc_eq (T ≡ U)) Δ ->
       entails_semantic Σ Δ (T ≡ U).
+  Proof.
     unfold entails_semantic.
     induction Δ; introv Hin M.
     - contradiction.
@@ -94,6 +96,7 @@ Qed.
 Lemma spawn_unit_subst : forall Σ As,
     DistinctList As ->
     exists Θ, length Θ = length As /\ subst_matches_typctx Σ (tc_vars As) Θ /\ substitution_sources Θ = from_list As.
+Proof.
   induction As as [| Ah Ats]; introv ADist.
   - cbn.
     exists (@nil (var * typ)).
@@ -122,6 +125,7 @@ Qed.
 Lemma only_vars_is_tc_vars : forall Δ,
     (forall tc, List.In tc Δ -> exists A, tc = tc_var A) ->
     exists As, Δ = tc_vars As.
+Proof.
   induction Δ as [| [A | eq] Δt].
   - cbn. intros. exists (@nil var). cbn. trivial.
   - cbn. intro Hin.
@@ -137,6 +141,7 @@ Qed.
 Lemma contradictory_env_test_0 : forall Σ Δ,
     entails_semantic Σ Δ (typ_unit ≡ (typ_unit ** typ_unit)) ->
     contradictory_bounds Σ Δ.
+Proof.
   introv Heq.
   unfold contradictory_bounds.
   intros.
@@ -169,6 +174,7 @@ Qed.
 Lemma contradictory_env_test : forall Σ Δ A B C D,
     entails_semantic Σ Δ ((A ==> B) ≡ (C ** D)) ->
     contradictory_bounds Σ Δ.
+Proof.
   introv Heq.
   unfold contradictory_bounds.
   intros.
@@ -183,6 +189,7 @@ Qed.
 
 Lemma empty_is_not_contradictory : forall Σ,
     ~ (contradictory_bounds Σ emptyΔ).
+Proof.
   intros.
   intro HF.
   unfold contradictory_bounds in HF.
@@ -206,6 +213,7 @@ Lemma inversion_typing_eq : forall Σ Δ E e T TT,
     {Σ, Δ, E} ⊢(TT) e ∈ T ->
     exists T',
       {Σ, Δ, E} ⊢(Treg) e ∈ T' /\ entails_semantic Σ Δ (T ≡ T').
+Proof.
   introv Htyp.
   lets Htyp2: Htyp.
   induction Htyp;
@@ -222,6 +230,7 @@ Qed.
 Lemma subst_has_no_fv2 : forall Σ Δ Θ Y,
     subst_matches_typctx Σ Δ Θ ->
     (forall A U, List.In (A, U) Θ -> Y \notin fv_typ U).
+Proof.
   introv M Hin.
   lets EQ: subst_has_no_fv M Hin.
   rewrite EQ.
@@ -232,6 +241,7 @@ Lemma inversion_eq_arrow : forall Σ Δ TA1 TB1 TA2 TB2,
     entails_semantic Σ Δ ((TA1 ==> TB1) ≡ (TA2 ==> TB2)) ->
     entails_semantic Σ Δ (TA1 ≡ TA2) /\
     entails_semantic Σ Δ (TB1 ≡ TB2).
+Proof.
   introv Sem; cbn in *.
   split~;
        introv M;
@@ -244,6 +254,7 @@ Lemma inversion_eq_tuple : forall Σ Δ TA1 TB1 TA2 TB2,
     entails_semantic Σ Δ ((TA1 ** TB1) ≡ (TA2 ** TB2)) ->
     entails_semantic Σ Δ (TA1 ≡ TA2) /\
     entails_semantic Σ Δ (TB1 ≡ TB2).
+Proof.
   introv Sem; cbn in *.
   split~;
        introv M;
@@ -255,6 +266,7 @@ Qed.
 Lemma inversion_eq_typ_all : forall Σ Δ T U,
     entails_semantic Σ Δ (typ_all T ≡ typ_all U) ->
     entails_semantic Σ Δ (T ≡ U).
+Proof.
   introv Sem; cbn in *.
   introv M;
     lets EQ: Sem M;
@@ -266,6 +278,7 @@ Lemma inversion_eq_typ_gadt : forall Σ Δ Ts Us N,
     List.length Ts = List.length Us ->
     entails_semantic Σ Δ (typ_gadt Ts N ≡ typ_gadt Us N) ->
     List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us.
+Proof.
   introv Len Sem.
   apply F2_iff_In_zip.
   split~.
@@ -284,6 +297,7 @@ Lemma equations_from_lists_map : forall F F1 F2 Ts Us,
     List.map F (equations_from_lists Ts Us)
     =
     equations_from_lists (List.map F1 Ts) (List.map F2 Us).
+Proof.
   induction Ts as [| T Ts]; destruct Us as [| U Us];
     introv Len;  try solve [inversion~ Len].
   introv EQ.
@@ -300,6 +314,7 @@ Qed.
 Lemma empty_eq_is_equivalent : forall Σ T1 T2,
   entails_semantic Σ emptyΔ (T1 ≡ T2) ->
   T1 = T2.
+Proof.
   introv Sem.
   cbn in *.
   lets M: Sem (@nil (var * typ)).

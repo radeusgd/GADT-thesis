@@ -61,7 +61,6 @@ Fixpoint translateType
           (1, base) in
     snd res
   end.
-Print env.
 
 Definition translateTyp0 (T : Source.typ) : Target.typ := translateType T empty_map.
 

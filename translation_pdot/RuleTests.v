@@ -9,6 +9,7 @@ Lemma simple_eq_and_rule_would_be_unsound :
     forall (A : typ_label),
     forall G X Y,
       G ⊢ X =:= Y.
+Proof.
   introv R.
   intros.
   apply R with ⊥ ⊥ A.
@@ -46,6 +47,7 @@ Lemma obj_only_eq_and_rule_would_be_unsound :
     forall (A : typ_label),
     forall G X Y,
       G ⊢ X =:= Y.
+Proof.
   introv R.
   intros.
   assert (HF: G ⊢ {A == ⊤} ∧ {A == ⊥} =:= {A == ⊥} ∧ {A == ⊤}).
@@ -89,6 +91,7 @@ Lemma weak_uniqueness_eq_and_rule_would_be_unsound :
     (* I will extend the environment, but the term to get such an env is a simple legal let-term, we can always have such a term in the environment, so a valid extension would need to be resilient to it anyway. *)
     forall G X Y,
       G & lib ~ typ_rcd {B == {A == ⊤} } ⊢ X =:= Y.
+Proof.
   introv R.
   intros.
   remember (G & lib ~ typ_rcd {B == {A == ⊤} }) as G1.

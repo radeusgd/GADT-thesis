@@ -190,6 +190,7 @@ Inductive te_closed_in_surroundings : nat -> trm -> Prop :=
 Lemma te_opening_te_adds_one : forall e X k n,
     te_closed_in_surroundings n (open_te_rec k (typ_fvar X) e) ->
     te_closed_in_surroundings (max (S n) (S k)) e.
+Proof.
   induction e using trm_ind'; introv Hc; inversions Hc;
     try solve [
           constructor*
@@ -256,6 +257,7 @@ Qed.
 
 Lemma term_te_closed : forall e,
     term e -> te_closed_in_surroundings 0 e.
+Proof.
   induction 1; try solve [
                      constructor*
                    | match goal with
@@ -296,6 +298,7 @@ Lemma te_closed_id : forall e T n k,
     te_closed_in_surroundings n e ->
     k >= n ->
     e = open_te_rec k T e.
+Proof.
   induction e using trm_ind'; introv Hc Hk; eauto; inversions Hc; cbn; f_equal;
     try (match goal with
          | IH: forall T n k, ?P1 -> ?P2 -> ?e1 = open_te_rec k T ?e1 |- _ => apply* IH

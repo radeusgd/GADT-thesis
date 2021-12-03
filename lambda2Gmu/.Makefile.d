@@ -52,9 +52,6 @@ TestCommon.vos TestCommon.vok TestCommon.required_vos: TestCommon.v Prelude.vos 
 TestEquality.vo TestEquality.glob TestEquality.v.beautified TestEquality.required_vo: TestEquality.v TestCommon.vo Equations.vo
 TestEquality.vio: TestEquality.v TestCommon.vio Equations.vio
 TestEquality.vos TestEquality.vok TestEquality.required_vos: TestEquality.v TestCommon.vos Equations.vos
-TestList.vo TestList.glob TestList.v.beautified TestList.required_vo: TestList.v Definitions.vo
-TestList.vio: TestList.v Definitions.vio
-TestList.vos TestList.vok TestList.required_vos: TestList.v Definitions.vos
 Tests2.vo Tests2.glob Tests2.v.beautified Tests2.required_vo: Tests2.v TestCommon.vo
 Tests2.vio: Tests2.v TestCommon.vio
 Tests2.vos Tests2.vok Tests2.required_vos: Tests2.v TestCommon.vos

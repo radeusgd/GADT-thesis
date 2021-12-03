@@ -569,6 +569,7 @@ Fixpoint fv_typs (Ts : list typ) : fset var :=
 Lemma fv_typs_migration : forall Ts Z,
     fv_typs Ts \u Z =
     fold_left (fun fv T => fv \u fv_typ T) Ts Z.
+Proof.
   induction Ts; introv; cbn.
   - rewrite* union_empty_l.
   - rewrite <- IHTs.

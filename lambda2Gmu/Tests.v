@@ -20,19 +20,11 @@ Lemma well_formed_id :
   destruct* (typing_regular well_typed_id).
 Qed.
 
-(* Ltac tst := *)
-(*   match goal with *)
-(*   | H: ?x \notin ?L |- _ => instantiate (1 := \{}) *)
-(*   end. *)
-(* Ltac tst := *)
-(*   match goal with *)
-(*   | _:_ |- {?Σ, ?E} ⊢ (trm_abs ?T1 ?e1) open_te_var ?x ∈ (?T open_tt_var ?x) => *)
-(*     instantiate (1 := T1 ==> _) *)
-(*   end. *)
 
 
 Definition id_app := (id <|| typ_unit <| trm_unit).
 Lemma id_app_types : {empty, emptyΔ, empty} ⊢(Treg) id_app ∈ typ_unit.
+Proof.
   cbv.
   autotyper1.
   instantiate (1 := (##0 ==> ##0)).
@@ -44,6 +36,7 @@ Qed.
 Ltac crush_eval := repeat (try (apply eval_finish; eauto); econstructor; simpl_op).
 
 Lemma id_app_evals : evals id_app trm_unit.
+Proof.
   crush_eval.
   Unshelve. fs. fs. fs. fs.
 Qed.
@@ -53,6 +46,7 @@ Lemma preservation_evals : forall Σ e T TT e',
     {Σ, emptyΔ, empty} ⊢(TT) e ∈ T ->
     evals e e' ->
     {Σ, emptyΔ, empty} ⊢(Tgen) e' ∈ T.
+Proof.
   introv Typ Ev.
   eapply Tgen_from_any in Typ.
   induction Ev.
@@ -67,6 +61,7 @@ Eval cbn in (preservation_evals _ _ _ _ _ id_app_types id_app_evals).
 
 Definition let_id_app := trm_let (id) (#0 <|| typ_unit <| trm_unit).
 Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_unit.
+Proof.
   cbv.
   autotyper1.
   4: {
@@ -80,6 +75,7 @@ Lemma let_id_app_types : {empty, emptyΔ, empty} ⊢(Treg) let_id_app ∈ typ_un
 Qed.
 
 Lemma let_id_app_evals : evals let_id_app trm_unit.
+Proof.
   crush_eval.
   Unshelve.
   fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
@@ -88,6 +84,7 @@ Qed.
 Definition loop := fixs (typ_unit ==> typ_unit) => λ typ_unit => (#1 <| #0).
 
 Lemma loop_type : {empty, emptyΔ, empty} ⊢(Treg) loop ∈ (typ_unit ==> typ_unit).
+Proof.
   cbv.
   autotyper1.
 Qed.
@@ -95,12 +92,14 @@ Qed.
 Definition divergent := loop <| trm_unit.
 
 Lemma divergent_type : {empty, emptyΔ, empty} ⊢(Treg) divergent ∈ typ_unit.
+Proof.
   cbv. autotyper1.
 Qed.
 
 Compute divergent_type.
 
 Lemma divergent_diverges : evals divergent divergent.
+Proof.
   cbv.
   econstructor.
   - crush_eval.

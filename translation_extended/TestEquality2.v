@@ -51,7 +51,7 @@ Lemma p_destruct_types :
   & env ~ (open_typ_p (pvar lib) env_typ)
         ⊢
         p_destruct_trm : p_destruct_typ.
-  (* TODO pDOT destruct Tuple EQ *)
+Proof.
   remember lib as lib.
   remember env as env.
   intros.
@@ -143,39 +143,6 @@ Lemma p_destruct_types :
              rewrite HeqG;
              auto.
            }
-
-           (*
-             A,B,C,D
-
-             class Eq[X, Y]:
-               type A1 = X
-               type A2 = Y
-             class Tuple[X, Y]:
-               type T1 = X
-               type T2 = Y
-
-             eq1 : Eq[A*B,C*D]
-             eq1_ev : Refl /\ eq1.type
-
-             new Refl[A] : Eq[A,A] : Eq[A,C]
-
-             A = {T:bot..top} ... A.T
-
-             A*B =:= C*D
-
-             Tuple /\ {T1 = A} /\ {T2 = B} =:= eq1.A1
-             Tuple /\ {T1 = C} /\ {T2 = D} =:= eq1.A2
-
-             eq1.A1 =:= eq1_ev.A1 =:= eq1_ev.
-
-             Tuple /\ {T1 = A} /\ {T2 = B} =:= Tuple /\ {T1 = C} /\ {T2 = D}
-             |-
-             {T1 = A} =:= {T1 = C}
-             |- A =:= C
-
-
-             {T1 = A} =:= {T1 = C} |- A =:= C
-            *)
 
            assert (Heqev: G ⊢ pvar eq_ev : (((((pvar env ↓ GN Eq) ∧ {Bi 1 >: ⊥ <: ⊤}) ∧ {Ai 1 == pvar eq_ev ↓ Bi 1}) ∧ {Ai 2 == pvar eq_ev ↓ Bi 1}) ∧ {data ⦂ pvar lib ↓ Unit})).
            1: {

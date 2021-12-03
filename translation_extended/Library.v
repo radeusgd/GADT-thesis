@@ -27,6 +27,7 @@ Definition lib : var := proj1_sig (var_fresh \{}).
 Local Definition envHlp := var_fresh \{lib}.
 Definition env : var := proj1_sig envHlp.
 Lemma neq_lib_env : lib <> env.
+Proof.
   unfold env.
   destruct envHlp.
   cbn.
@@ -110,6 +111,7 @@ Definition libTrm : Target.trm :=
  .
 
 Lemma libTypes : forall G, G ⊢ libTrm : libType.
+Proof.
   intros.
   unfold libTrm. unfold libType.
   let F := gather_vars in

@@ -137,6 +137,7 @@ Lemma typing_weakening_delta_many_eq : forall Σ Δ E Deqs u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
     (forall eq, List.In eq Deqs -> exists ϵ, eq = tc_eq ϵ) ->
     {Σ, Δ |,| Deqs, E} ⊢(TT) u ∈ U.
+Proof.
   induction Deqs; introv Typ EQs.
   - clean_empty_Δ. auto.
   - destruct a;
@@ -160,6 +161,7 @@ Lemma typing_weakening_delta_many : forall Σ Δ E As u U TT,
     {Σ, Δ, E} ⊢(TT) u ∈ U ->
     {Σ, Δ |,| tc_vars As, E} ⊢(TT) u ∈ U.
   induction As as [| Ah Ats]; introv AE AD Adist Typ.
+Proof.
   - cbn. clean_empty_Δ. auto.
   - cbn. fold_delta.
     inversions Adist.
@@ -256,6 +258,7 @@ Lemma typing_through_subst_ee_lam : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
     value u ->
     {Σ, Δ, E & F} ⊢(Tgen) subst_ee x lam_var u e ∈ T.
+Proof.
   Ltac apply_ih :=
     match goal with
     | H: forall X, X \notin ?L -> forall E0 F0 x0 vk0 U0, ?P1 -> ?P2 |- _ =>
@@ -353,6 +356,7 @@ Lemma typing_through_subst_ee_fix : forall Σ Δ E F x u U e T TT1 TT2,
     {Σ, Δ, E & (x ~f U) & F} ⊢(TT1) e ∈ T ->
     {Σ, Δ, E} ⊢(TT2) u ∈ U ->
     {Σ, Δ, E & F} ⊢(Tgen) subst_ee x fix_var u e ∈ T.
+Proof.
   introv TypT TypU.
   inductions TypT; introv; cbn;
     try solve [eapply Tgen_from_any; eauto using okt_strengthen];
@@ -450,6 +454,7 @@ Lemma typing_through_subst_te_gen : forall Σ Δ1 Δ2 E Z e P T TT,
     Z \notin domΔ (Δ1 |,| Δ2) ->
     Z # E ->
     {Σ, Δ1 |,| List.map (subst_td Z P) Δ2, map (subst_tb Z P) E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+Proof.
   introv Typ.
   gen_eq G: (Δ1 |,| [tc_var Z]* |,| Δ2). gen Δ2.
   induction Typ; introv EQ WFT FVZP FVZD FVZE; subst; eapply Tgen_from_any;
@@ -631,6 +636,7 @@ Lemma typing_through_subst_te_3 :
     Z \notin fv_env E ->
     Z \notin domΔ Δ ->
     {Σ, Δ, E} ⊢(Tgen) subst_te Z P e ∈ subst_tt Z P T.
+Proof.
   introv Typ WFT ZP ZE1 ZE2 ZD.
   rewrite <- (List.app_nil_l (Δ |,| [tc_var Z]*)) in Typ.
   lets HT: typing_through_subst_te_gen Typ WFT ZP ZD ZE1.
@@ -650,6 +656,7 @@ Lemma typing_through_subst_te_many : forall As Σ Δ Δ2 E F e T Ps TT,
     (forall A, List.In A As -> A \notin fv_env E) ->
     DistinctList As ->
     {Σ, Δ |,| List.map (subst_td_many As Ps) Δ2, E & map (subst_tb_many As Ps) F} ⊢(Tgen) (subst_te_many As Ps e) ∈  subst_tt_many As Ps T.
+Proof.
   induction As as [| Ah Ats]; introv Htyp Hlen Pwft AE AF AD AD2 AP AEE Adist;
     destruct Ps as [| Ph Pts]; try solve [cbn in *; congruence].
   - cbn. cbn in Htyp.
@@ -705,6 +712,7 @@ Lemma typing_replace_typ_gen : forall Σ Δ E F x vk T1 TT e U T2,
     wft Σ Δ T2 ->
     entails_semantic Σ Δ (T1 ≡ T2) ->
     {Σ, Δ, E & x ~ bind_var vk T2 & F} ⊢(Tgen) e ∈ U.
+Proof.
   introv Typ.
   gen_eq K: (E & x ~ bind_var vk T1 & F). gen F x T1.
   induction Typ using typing_ind; introv EQ WFT Sem; subst; eauto;
@@ -791,6 +799,7 @@ Lemma typing_replace_typ : forall Σ Δ E x vk T1 TT e U T2,
     entails_semantic Σ Δ (T1 ≡ T2) ->
     wft Σ Δ T2 ->
     {Σ, Δ, E & x ~ bind_var vk T2} ⊢( Tgen) e ∈ U.
+Proof.
   intros.
   rewrite <- (concat_empty_r (E & x ~ bind_var vk T2)).
   apply* typing_replace_typ_gen.
@@ -801,6 +810,7 @@ Lemma remove_true_equation : forall Σ Δ1 Δ2 E e TT T U1 U2,
     {Σ, Δ1 |,| [tc_eq (U1 ≡ U2)]* |,| Δ2, E} ⊢(TT) e ∈ T ->
     entails_semantic Σ Δ1 (U1 ≡ U2) ->
     {Σ, Δ1 |,| Δ2, E} ⊢(TT) e ∈ T.
+Proof.
   introv Typ.
   gen_eq D3: (Δ1 |,| [tc_eq (U1 ≡ U2)]* |,| Δ2). gen Δ1 Δ2.
   lets: okt_strengthen_delta_eq.
@@ -826,6 +836,7 @@ Lemma remove_true_equations : forall Σ Δ E e TT V Ts Us,
     {Σ, Δ |,| equations_from_lists Ts Us, E} ⊢(TT) e ∈ V ->
     List.Forall2 (fun T U => entails_semantic Σ Δ (T ≡ U)) Ts Us ->
     {Σ, Δ, E} ⊢(TT) e ∈ V.
+Proof.
   induction 2 as [| T U Ts Us].
   - cbn in *. auto.
   - cbn in H.
@@ -848,6 +859,7 @@ Lemma helper_equations_commute : forall Ts As Us Vs,
     List.map
       (subst_td_many As Us)
       (equations_from_lists Ts (List.map (open_tt_many_var As) Vs)).
+Proof.
   intros.
   rewrite (equations_from_lists_map _ (subst_tt_many As Us) (subst_tt_many As Us)).
   - f_equal.
@@ -876,6 +888,7 @@ Lemma helper_equations_commute : forall Ts As Us Vs,
 Qed.
 
 Theorem preservation_thm : preservation.
+Proof.
   Ltac find_hopen :=
     let Hopen := fresh "Hopen" in
     match goal with

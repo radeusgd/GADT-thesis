@@ -18,7 +18,6 @@ Regularity.v
 SubstMatch.v
 TestCommon.v
 TestEquality.v
-TestList.v
 Tests2.v
 Tests.v
 TestVector.v

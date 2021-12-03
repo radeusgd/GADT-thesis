@@ -79,6 +79,7 @@ Definition sigma :=
   & Vector ~ VectorDef.
 
 Lemma oksigma : okGadt sigma.
+Proof.
   unfold sigma.
   unfold VectorDef.
   lets [? [? ?]]: all_distinct.
@@ -98,6 +99,7 @@ Definition nil A := new Nil [| A |] (trm_unit).
 Definition cons A N h t := new Cons [|A, N|]  (trm_tuple h t).
 
 Lemma nil_type : {sigma, emptyΔ, empty} ⊢(Treg) (Λ => nil (##0)) ∈ typ_all (γ(##0, γ() Zero) Vector).
+Proof.
   cbv.
   lets: oksigma.
   autotyper1.
@@ -119,6 +121,7 @@ Ltac free_abs :=
 
 Lemma notin_eqv : forall A (x : A) L,
     (x \in L -> False) <-> x \notin L.
+Proof.
   introv.
   intuition.
 Qed.
@@ -131,6 +134,7 @@ Lemma cons_type :
                          ))
                          ∈
                          ∀ ∀ (##1 ==> (γ(##1, ##0) Vector) ==> (γ(##1, γ(##0) Succ) Vector)).
+Proof.
   cbv.
   lets: oksigma.
   autotyper1.
@@ -143,6 +147,7 @@ Definition uvec2 := cons typ_unit (GS GZ) trm_unit (cons typ_unit GZ trm_unit (n
 
 Definition two := GS (GS GZ).
 Lemma uvec2_type : {sigma, emptyΔ, empty} ⊢(Treg) uvec2 ∈ γ(typ_unit, two) Vector.
+Proof.
   cbv.
   lets: oksigma.
   lets [? [? ?]]: all_distinct.
@@ -168,6 +173,7 @@ Definition map :=
 
 
 Lemma map_types : {sigma, emptyΔ, empty} ⊢(Treg) map ∈ ∀ ∀ ∀ ((##2 ==> ##1) ==> γ(##2, ##0) Vector ==> γ(##1, ##0) Vector).
+Proof.
   cbv.
   lets: oksigma.
   lets [? [? ?]]: all_distinct.

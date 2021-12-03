@@ -34,6 +34,7 @@ Ltac generalize_typings :=
 
 #[export] Hint Constructors value red.
 Theorem progress_thm : progress.
+Proof.
   unfold progress.
   introv Typ.
   assert (Hterm: term e).

@@ -15,6 +15,7 @@ Lemma all_distinct : True.
 Qed.
 
 Lemma oknat : okGadt natSigma.
+Proof.
   unfold natSigma.
   unfold NatDef.
   econstructor;
@@ -73,6 +74,7 @@ Ltac crush_eval := repeat (try (apply eval_finish; eauto);
                            try econstructor;
                            simpl_op).
 Lemma const_test_evals : evals const_test one.
+Proof.
   cbv.
   eapply eval_step.
   1: {
@@ -130,6 +132,7 @@ Ltac fresh_intros := let free := gather_vars in
     try instantiate (1 := free) in xiL.
 
 Lemma plus_types : {natSigma, emptyΔ, empty} ⊢(Treg) plus ∈ ((γ() Nat) ==> ((γ() Nat) ==> (γ() Nat))).
+Proof.
   cbv.
   lets: oknat.
   econstructor.
@@ -179,6 +182,7 @@ Ltac stepforward :=
 
 Definition two := new (Nat, 1) [| |] (one).
 Lemma plus_evals : evals (plus <| one <| one) two.
+Proof.
   cbv.
   repeat stepforward.
   Unshelve.
@@ -204,6 +208,7 @@ Qed.
 
 Definition four := new (Nat, 1) [| |] (new (Nat, 1) [| |] (two)).
 Lemma plus_evals4 : evals (plus <| two <| two) four.
+Proof.
   cbv.
   repeat stepforward.
   Unshelve.

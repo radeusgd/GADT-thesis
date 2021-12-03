@@ -71,6 +71,7 @@ Qed.
 Lemma fv_open : forall T U k,
     fv_typ (open_tt_rec k U T) = (fv_typ T \u fv_typ U)
     \/ fv_typ (open_tt_rec k U T) = fv_typ T.
+Proof.
   induction T using typ_ind'; introv;
     try solve [
           unfold open_tt_rec; crush_compare; cbn; eauto using union_empty_l
@@ -426,6 +427,7 @@ Qed.
 Lemma wft_gives_fv : forall Σ Δ T,
     wft Σ Δ T ->
     fv_typ T \c domΔ Δ.
+Proof.
   induction 1; cbn; eauto;
     try solve [
           rewrite <- union_same;
@@ -570,6 +572,7 @@ Qed.
 Lemma distinct_split1 : forall O1 O2,
     DistinctList (List.map fst O1 |,| List.map fst O2) ->
     substitution_sources O1 \n substitution_sources O2 = \{}.
+Proof.
   induction O2 as [| [A U]]; cbn; introv D; fold_subst_src.
   - apply inter_empty_r.
   - inversions D.

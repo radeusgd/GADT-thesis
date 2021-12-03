@@ -2,8 +2,6 @@ Require Import Helpers.
 Require Import Library.
 Require Import Coq.Arith.Compare_dec.
 
-Print le_gt_dec.
-
 Definition lift_rec_avar (k: nat) (w: nat) (a: avar) : avar :=
   match a with
   | avar_b i => if le_gt_dec k i then avar_b (w + i) else avar_b i

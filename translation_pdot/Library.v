@@ -27,6 +27,7 @@ Definition lib : var := proj1_sig (var_fresh \{}).
 Local Definition envHlp := var_fresh \{lib}.
 Definition env : var := proj1_sig envHlp.
 Lemma neq_lib_env : lib <> env.
+Proof.
   unfold env.
   destruct envHlp.
   cbn.
@@ -77,10 +78,10 @@ Definition libInternalType (unitRef : path) :=
   typ_rcd { Tuple == tupleTyp } ∧
   typ_rcd { mkUnit ⦂ {{ unitRef }} } ∧
   typ_rcd { mkTuple ⦂
-                    ∀ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
-                        ∀ ((ref 0) ↓ T1)
-                            ∀ ((ref 1) ↓ T2)
-                              ((ref 3) ↓ Tuple ∧ { T1 == (ref 2) ↓ T1 } ∧ { T2 == (ref 2) ↓ T2 })
+              ∀ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
+              ∀ ((ref 0) ↓ T1)
+              ∀ ((ref 1) ↓ T2)
+                  ((ref 3) ↓ Tuple ∧ { T1 == (ref 2) ↓ T1 } ∧ { T2 == (ref 2) ↓ T2 })
           }.
 
 Definition libTrm : Target.trm :=
@@ -88,28 +89,29 @@ Definition libTrm : Target.trm :=
     (let_trm (ν({ Unit == ⊤ }) {( {Unit ⦂= ⊤} )}))
   (let_trm
     (ν(libInternalType (ref 1)) {(
-                           { Unit ⦂= { Unit >: ⊥ <: ⊤ } },
-                           { Tuple ⦂= tupleTyp },
-                           { mkUnit := ref 1 },
-                           { mkTuple :=
-                               λ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
-                                 λ ((ref 0) ↓ T1)
-                                 λ ((ref 1) ↓ T2)
-                                 let_trm (
-                                   ν(internalTupleTyp)
-                                    {(
-                                        {T1 ⦂= (ref 3) ↓ T1},
-                                        {T2 ⦂= (ref 3) ↓ T2},
-                                        { fst_v := (ref 2) },
-                                        { snd_v := (ref 1) }
-                                    )}
-                                 )
-                           }
-                        )}
+          { Unit ⦂= { Unit >: ⊥ <: ⊤ } },
+          { Tuple ⦂= tupleTyp },
+          { mkUnit := ref 1 },
+          { mkTuple :=
+              λ ({ T1 >: ⊥ <: ⊤} ∧ { T2 >: ⊥ <: ⊤ })
+                λ ((ref 0) ↓ T1)
+                λ ((ref 1) ↓ T2)
+                let_trm (
+                  ν(internalTupleTyp)
+                  {(
+                      {T1 ⦂= (ref 3) ↓ T1},
+                      {T2 ⦂= (ref 3) ↓ T2},
+                      { fst_v := (ref 2) },
+                      { snd_v := (ref 1) }
+                  )}
+                )
+          }
+      )}
     ))
  .
 
 Lemma libTypes : forall G, G ⊢ libTrm : libType.
+Proof.
   intros.
   unfold libTrm. unfold libType.
   let F := gather_vars in
