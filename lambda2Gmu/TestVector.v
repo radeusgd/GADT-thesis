@@ -170,9 +170,10 @@ zip = fix $self: (∀a. ∀b. ∀n. ((a,n) Vector -> (b,n) Vector -> (a * b,n) V
                 end
             }
           }
+The term below has been generated from the pseudocode above using the converter tool.
 *)
 Definition zip_trm :=
-  trm_fix (typ_all (typ_all (typ_all ((typ_gadt [##2; ##0]* Vector) ==> ((typ_gadt [##1; ##0]* Vector) ==> (typ_gadt [(##2) ** (##1); ##0]* Vector)))))) (trm_tabs (trm_tabs (trm_tabs (trm_abs (typ_gadt [##2; ##0]* Vector) (trm_abs (typ_gadt [##1; ##0]* Vector) (trm_matchgadt (#1) Vector [clause 2 (trm_matchgadt (#1) Vector [clause 2 (trm_app (trm_tuple (trm_fst (#1)) (trm_fst (#0))) (trm_app (trm_app (trm_app (trm_tapp (trm_tapp (trm_tapp (#5) (##6)) (##5)) (##2)) (trm_snd (#2))) (trm_snd (#1))) (trm_constructor [(##6) ** (##5); ##2]* (Vector, 1) (trm_tuple (#1) (#0))))); clause 1 (trm_unit)]*); clause 1 (trm_constructor [(##3) ** (##2)]* (Vector, 0) (trm_unit))]*))))))
+  trm_fix (typ_all (typ_all (typ_all ((typ_gadt [##2; ##0]* Vector) ==> ((typ_gadt [##1; ##0]* Vector) ==> (typ_gadt [(##2) ** (##1); ##0]* Vector)))))) (trm_tabs (trm_tabs (trm_tabs (trm_abs (typ_gadt [##2; ##0]* Vector) (trm_abs (typ_gadt [##1; ##0]* Vector) (trm_matchgadt (#1) Vector [clause 2 (trm_matchgadt (#1) Vector [clause 2 (trm_let (trm_tuple (trm_fst (#1)) (trm_fst (#0))) (trm_let (trm_app (trm_app (trm_tapp (trm_tapp (trm_tapp (#5) (##6)) (##5)) (##2)) (trm_snd (#2))) (trm_snd (#1))) (trm_constructor [(##6) ** (##5); ##2]* (Vector, 1) (trm_tuple (#1) (#0))))); clause 1 (trm_unit)]*); clause 1 (trm_constructor [(##3) ** (##2)]* (Vector, 0) (trm_unit))]*))))))
 .
 
 Definition zip_typ :=
@@ -180,13 +181,203 @@ Definition zip_typ :=
 
 Lemma zip_types : {sigma, emptyΔ, empty} ⊢(Treg) zip_trm ∈ zip_typ.
 cbv.
+lets: oksigma.
+  lets [? [? ?]]: all_distinct.
 autotyper4;
   try solve[
     cbn in *;
     destruct_const_len_list;
     cbn; autotyper4
   ].
-Admitted.
+  - forwards*: H6 v.
+    eapply typing_eq with (γ( x1 ** x2, (γ() Zero)) Vector) _;
+      try solve[autotyper4].
+      apply eq_typ_gadt.
+      apply F2_iff_In_zip.
+      split~.
+      intros.
+      repeat ininv2.
+      + apply teq_symmetry.
+        apply teq_axiom. listin.
+      + apply teq_reflexivity.
+  - forwards*: H6 v.
+    forwards*: H6 v0.
+    cbn in *.
+    apply Tgen_from_any with Treg.
+    autotyper4.
+    + cbn in *.
+      forwards*: H12 v1.
+      eapply typing_eq.
+      * autotyper4.
+      * unfold entails_semantic.
+        intros O OM.
+        exfalso.
+        repeat (
+          match goal with
+          | H: subst_matches_typctx ?A ?B ?C |- _ =>
+            inversions H
+          end
+        ).
+        repeat (
+          match goal with
+          | H: wft ?A ?B ?C |- _ =>
+            clear H
+          end
+        ).
+        match goal with
+        | H1: subst_tt' (typ_fvar x3) ?S1 = subst_tt' ?A ?S2,
+          H2: subst_tt' (typ_fvar x3) ?S3 = subst_tt' ?B ?S4 |- _ =>
+          assert (subst_tt' (typ_fvar x3) S1 = subst_tt' (typ_fvar x3) S3)
+        end.
+        -- cbn.
+           fold (subst_tt v T0 x3).
+           repeat f_equal.
+           assert (x3 <> v1) by (apply neq_from_notin; notin_solve).
+           case_if*.
+        -- match goal with
+          | H1: subst_tt' (typ_fvar x3) ?S1 = subst_tt' ?A ?S2,
+            H2: subst_tt' (typ_fvar x3) ?S3 = subst_tt' ?B ?S4,
+            H3: subst_tt' (typ_fvar x3) ?S5 = subst_tt' ?C ?S6 |- _ =>
+            assert (HEQ: subst_tt' A S1 = subst_tt' B S3) by congruence
+          end.
+          cbn in HEQ.
+          congruence.
+      * autotyper4.
+    + eapply typing_eq.
+      * forwards*: H12 v1.
+        forwards*: H12 v2.
+        cbn in *.
+        match goal with
+        | |- {?E, ?D, ?G} ⊢( ?TT) ?t ∈ ?T =>
+          assert (okt E D G) by autotyper4
+        end.
+        econstructor.
+        -- econstructor.
+           ++ econstructor. econstructor.
+              ** solve_bind.
+              ** auto.
+           ++ econstructor. econstructor.
+              ** solve_bind.
+              ** auto.
+        -- let FR := gather_vars in
+            introv xFr;
+            instantiate (1:=FR) in xFr.
+           match goal with
+           | |- {?E, ?D, ?G} ⊢( ?TT) ?t ∈ ?T =>
+             assert (okt E D G)
+           end.
+           1: {
+             autotyper4.
+           }
+           econstructor.
+           ++ econstructor.
+              2: {
+                econstructor.
+                2: {
+                  econstructor.
+                  - econstructor.
+                    + econstructor.
+                      * econstructor; solve_bind; auto.
+                      * autotyper4.
+                      * cbn. auto.
+                    + autotyper4.
+                    + cbn. auto.
+                  - autotyper4.
+                  - cbn. auto.
+                }
+
+                match goal with
+                | |- context[x ~l (?A ** ?B)] =>
+                  apply typing_eq with B Treg
+                end.
+                - econstructor.
+                  econstructor; solve_bind; auto.
+                - apply eq_typ_gadt.
+                  apply F2_iff_In_zip.
+                  split~.
+                  intros.
+                  repeat ininv2.
+                  * apply teq_reflexivity.
+                  * apply teq_symmetry.
+                    apply teq_axiom. listin.
+                - autotyper4.
+              }
+
+              match goal with
+              | |- context[x6 ~l (?A ** ?B)] =>
+                apply typing_eq with B Treg
+              end.
+              ** econstructor.
+                 econstructor; solve_bind; auto.
+              ** apply eq_typ_gadt.
+                 apply F2_iff_In_zip.
+                 split~.
+                 intros.
+                 repeat ininv2.
+                 --- forwards* HI: inversion_eq_typ_gadt [typ_fvar v1]* [typ_fvar v]*.
+                     2: {
+                      rewrite F2_iff_In_zip in HI.
+                      destruct HI as [? HI].
+                      lets* HI2: HI v1 v.
+                      apply HI2.
+                      cbn; auto.
+                     }
+                     apply teq_transitivity with (typ_fvar x3).
+                     +++ apply teq_symmetry.
+                         apply teq_axiom; listin.
+                     +++ apply teq_axiom; listin.
+                 --- apply teq_symmetry. apply teq_axiom. listin.
+              ** autotyper4.
+            ++ cbn.
+               let FR := gather_vars in
+                 introv xFr2;instantiate (1:=FR) in xFr2.
+               match goal with
+               | |- {?E, ?D, ?G} ⊢( ?TT) ?t ∈ ?T =>
+                 assert (okt E D G) by autotyper4
+               end.
+               econstructor.
+               2: {
+                 solve_bind.
+               }
+               2: {
+                 cbn. auto.
+               }
+               2: {
+                 cbn. auto.
+               }
+               2: {
+                 cbn. auto.
+               }
+               1: {
+                 eapply typing_eq.
+                 - econstructor.
+                   + econstructor; solve_bind; auto.
+                   + econstructor; solve_bind; auto.
+                 - apply eq_typ_tuple.
+                   + apply eq_typ_tuple;
+                      apply teq_symmetry;
+                      apply teq_axiom; listin.
+                   + apply teq_reflexivity.
+                 - autotyper4.
+               }
+               2: {
+                 cbn.
+                 auto.
+               }
+               autotyper4.
+      * apply eq_typ_gadt.
+        apply F2_iff_In_zip.
+        split~.
+        intros.
+        repeat ininv2.
+        -- apply teq_symmetry.
+           apply teq_axiom; listin.
+        -- apply teq_reflexivity.
+      * autotyper4.
+Unshelve.
+fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
+fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs. fs.
+Qed.
 
 (*
   map : forall a b n, (a -> b) -> Vector a n -> Vector b n

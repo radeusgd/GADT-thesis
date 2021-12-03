@@ -33,7 +33,7 @@ case class CoqBackend(sigma: Sigma) {
         val clsR = cls.reverse.mkString("[", "; ", "]*")
         s"trm_matchgadt (${renderExpr(e)}) $gadtName $clsR"
       case Let(Binder, bound, body) =>
-        s"trm_app (${renderExpr(bound)}) (${renderExpr(body)})"
+        s"trm_let (${renderExpr(bound)}) (${renderExpr(body)})"
     }
 
   def renderTyp(typ: Type): String =
