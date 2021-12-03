@@ -1,5 +1,7 @@
 # GADT-thesis
 
+[![Compile the Proofs](https://github.com/radeusgd/GADT-thesis/actions/workflows/main.yml/badge.svg)](https://github.com/radeusgd/GADT-thesis/actions/workflows/main.yml)
+
 This is the repository containing Coq proofs attached to my master's thesis.
 
 - [lambda 2Gmu](./lambda2Gmu/) - my formalization of the source calculus
