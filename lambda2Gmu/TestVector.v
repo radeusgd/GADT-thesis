@@ -156,14 +156,36 @@ Qed.
 
 (*
 zip : ∀a. ∀b. ∀n. ((a,n) Vector -> (b,n) Vector -> (a * b,n) Vector
+zip = fix $self: (∀a. ∀b. ∀n. ((a,n) Vector -> (b,n) Vector -> (a * b,n) Vector)).
+        Λa. Λb. Λn. λva: ((a,n) Vector). λvb: ((b,n) Vector). case va of {
+            Nil[a2](unused) => Nil[a * b](<>)
+          | Cons[a2, n2](da) =>
+            case vb of {
+              Nil[b2](unused) => <>
+            | Cons[b2, n3](db) =>
+                let h = <fst(da), fst(db)> in
+                  let t = (((($self[a])[b])[n2]) (snd(da))) (snd(db)) in
+                    Cons[(a*b),n2](<h, t>)
+                  end
+                end
+            }
+          }
 *)
 Definition zip_trm :=
-  trm_fix (typ_all (typ_all (typ_all ((typ_gadt [##2; ##0]* Vector) ==> ((typ_gadt [##1; ##0]* Vector) ==> (typ_gadt [(##2) ** (##1); ##0]* Vector)))))) (trm_tabs (trm_tabs (trm_tabs (trm_abs (typ_gadt [##2; ##0]* Vector) (trm_abs (typ_gadt [##1; ##0]* Vector) (trm_matchgadt (#1) Vector [clause 1 (trm_constructor [(##3) ** (##2)]* (Vector, 0) (trm_unit)); clause 2 (trm_matchgadt (#1) Vector [clause 1 (trm_unit); clause 2 (trm_app (trm_tuple (trm_fst (#1)) (trm_fst (#0))) (trm_app (trm_app (trm_app (trm_tapp (trm_tapp (trm_tapp (#5) (##6)) (##5)) (##2)) (trm_snd (#2))) (trm_snd (#1))) (trm_constructor [(##6) ** (##5); ##2]* (Vector, 1) (trm_tuple (#1) (#0)))))]*)]*)))))).
+  trm_fix (typ_all (typ_all (typ_all ((typ_gadt [##2; ##0]* Vector) ==> ((typ_gadt [##1; ##0]* Vector) ==> (typ_gadt [(##2) ** (##1); ##0]* Vector)))))) (trm_tabs (trm_tabs (trm_tabs (trm_abs (typ_gadt [##2; ##0]* Vector) (trm_abs (typ_gadt [##1; ##0]* Vector) (trm_matchgadt (#1) Vector [clause 2 (trm_matchgadt (#1) Vector [clause 2 (trm_app (trm_tuple (trm_fst (#1)) (trm_fst (#0))) (trm_app (trm_app (trm_app (trm_tapp (trm_tapp (trm_tapp (#5) (##6)) (##5)) (##2)) (trm_snd (#2))) (trm_snd (#1))) (trm_constructor [(##6) ** (##5); ##2]* (Vector, 1) (trm_tuple (#1) (#0))))); clause 1 (trm_unit)]*); clause 1 (trm_constructor [(##3) ** (##2)]* (Vector, 0) (trm_unit))]*))))))
+.
 
 Definition zip_typ :=
   ∀ ∀ ∀ (γ(##2, ##0) Vector ==> γ(##1, ##0) Vector ==> γ(##2 ** ##1, ##0) Vector).
 
 Lemma zip_types : {sigma, emptyΔ, empty} ⊢(Treg) zip_trm ∈ zip_typ.
+cbv.
+autotyper4;
+  try solve[
+    cbn in *;
+    destruct_const_len_list;
+    cbn; autotyper4
+  ].
 Admitted.
 
 (*

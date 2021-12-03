@@ -30,7 +30,7 @@ case class CoqBackend(sigma: Sigma) {
         s"trm_fix (${renderTyp(selfType)}) (${renderExpr(body)})"
       case CaseOf(e, clauses) =>
         val (gadtName, cls) = renderClauses(clauses)
-        val clsR = cls.mkString("[", "; ", "]*")
+        val clsR = cls.reverse.mkString("[", "; ", "]*")
         s"trm_matchgadt (${renderExpr(e)}) $gadtName $clsR"
       case Let(Binder, bound, body) =>
         s"trm_app (${renderExpr(bound)}) (${renderExpr(body)})"
