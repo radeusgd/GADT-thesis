@@ -6,21 +6,18 @@ class AST {
   type TermLabelType
   type TypeLabelType
 
-  case class Path(receiver: VarType, fields: Seq[TermLabelType])
+  case class Path(receiver: VarType, fields: Seq[TermLabelType] = Seq.empty)
 
   sealed trait Typ
   case object Top extends Typ
   case object Bot extends Typ
-  case class Record(dec: Declaration) extends Typ
+  case class RecTyp(A: TypeLabelType, lowerBound: Typ, upperBound: Typ) extends Typ
+  case class RecTrm(a: TermLabelType, typ: Typ) extends Typ
   case class And(t1: Typ, t2: Typ) extends Typ
   case class PathTyp(path: Path, label: TypeLabelType) extends Typ
   case class RecursiveTyp(x: BindVarType, t: Typ) extends Typ
-  case class AllTyp(x: BindVarType, t: Typ) extends Typ
+  case class AllTyp(x: BindVarType, arg: Typ, ret: Typ) extends Typ
   case class SingletonTyp(path: Path) extends Typ
-
-  sealed trait Declaration
-  case class DecTyp(A: TypeLabelType, lowerBound: Typ, upperBound: Typ) extends Declaration
-  case class DecTrm(a: TermLabelType, typ: Typ) extends Declaration
 
   sealed trait Term
   case class ValTrm(v: Value) extends Term

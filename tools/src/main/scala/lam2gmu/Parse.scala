@@ -1,4 +1,4 @@
-package lam2gu
+package lam2gmu
 
 import ASTs.ConcreteSyntax._
 import scala.util.matching.Regex
@@ -17,11 +17,11 @@ object Lexer extends RegexParsers {
   override val whiteSpace: Regex = "[ \t\r\f\n]+".r
 
   def fixidentifier: Parser[FixIdentifier] = {
-    """\$[a-zA-Z_][a-zA-Z0-9_]*""".r ^^ { str => FixIdentifier(str.drop(1)) }
+    """\$[a-zA-Z][a-zA-Z0-9_]*""".r ^^ { str => FixIdentifier(str.drop(1)) }
   }
 
   def identifier: Parser[Identifier] = {
-    "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ Identifier
+    "[a-zA-Z][a-zA-Z0-9_]*".r ^^ Identifier
   }
 
   def special: Parser[Special] = {

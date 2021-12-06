@@ -1,7 +1,7 @@
-package lam2gu.testing
+package lam2gmu.testing
 
-import lam2gu.ASTs.ConcreteSyntax.{ConstructorApp, Expression, VUnit}
-import lam2gu.{
+import lam2gmu.ASTs.ConcreteSyntax.{ConstructorApp, Expression, VUnit}
+import lam2gmu.{
   CoqBackend,
   DeBruijnEncoder,
   GADTConstructor,

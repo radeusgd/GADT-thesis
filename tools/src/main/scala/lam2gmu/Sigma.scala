@@ -1,4 +1,4 @@
-package lam2gu
+package lam2gmu
 
 case class GADTConstructor(name: String) // TODO more info coming soon
 case class GADTDef(name: String, ctors: Seq[GADTConstructor])

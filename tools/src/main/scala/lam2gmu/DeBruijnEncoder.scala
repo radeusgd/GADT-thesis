@@ -1,6 +1,6 @@
-package lam2gu
+package lam2gmu
 
-import lam2gu.ASTs.{ConcreteSyntax => CS, DeBruijnSyntax => DS}
+import lam2gmu.ASTs.{ConcreteSyntax => CS, DeBruijnSyntax => DS}
 
 object DeBruijnEncoder {
   def encode(expression: CS.Expression): DS.Expression =

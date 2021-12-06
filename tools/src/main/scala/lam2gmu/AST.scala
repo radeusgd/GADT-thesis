@@ -1,4 +1,4 @@
-package lam2gu
+package lam2gmu
 
 class AST {
   type VarType
