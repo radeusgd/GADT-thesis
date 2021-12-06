@@ -1,6 +1,7 @@
-package lam2gmu.testing
+package lam2gmu_annot.testing
 
-import lam2gmu.LamParser
+import encoding.Encoder
+import lam2gmu_annot.{LamParser, Lexer}
 
 import scala.io.StdIn
 
@@ -8,9 +9,6 @@ object TestType {
    def main(args: Array[String]): Unit = {
       while(true) {
          val ts = StdIn.readLine("Type:\n")
-         if (ts == null || ts == "") {
-           return
-         }
          val res = LamParser.parseType(ts)
 
          res match {
@@ -18,6 +16,9 @@ object TestType {
              println(error)
            case Right(typ) =>
              println(typ)
+             val encoder = new Encoder
+             val pdot = encoder.translateType(typ, Map.empty)
+             println(pdot)
          }
       }
    }

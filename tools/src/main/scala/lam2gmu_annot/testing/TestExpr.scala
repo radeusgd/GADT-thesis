@@ -1,7 +1,7 @@
-package lam2gmu.testing
+package lam2gmu_annot.testing
 
 import encoding.Encoder
-import lam2gmu.{LamParser, Lexer}
+import lam2gmu_annot.{LamParser, Lexer}
 
 import scala.io.StdIn
 
@@ -9,7 +9,7 @@ object TestExpr {
   def main(args: Array[String]): Unit = {
     while (true) {
       val ts = StdIn.readLine("Expr:\n")
-      if (ts == null) return
+      if (ts == null || ts == "") return
       println(Lexer(ts))
       val ex = LamParser.parseExpr(ts)
 
@@ -18,6 +18,9 @@ object TestExpr {
           println(error)
         case Right(expr) =>
           println(expr)
+          val encoder = new Encoder
+          val pdot = encoder.translateExpr(expr)
+          println(pdot)
       }
     }
   }
