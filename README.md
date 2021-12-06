@@ -23,10 +23,13 @@ This is the repository containing Coq proofs attached to my master's thesis.
   - [TestEquality.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality.html) - typing proofs for `coerce` and `transitivity` terms using the Eq GADT.
   - [TestEquality2.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality2.html) - typing proof for the `destruct` term which was not typeable in original pDOT, as described in Chapter 6.
   - [TestEquality3.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality3.html) - the typing proof for the `construct` term using the Eq GADT.
-- [tools](./tools/) contains tools helping with working with the Lambda2Gmu formalization, written in Scala.
-  It features a parser for Lambda2Gmu pseudocode in a human-readable syntax (close to the syntax defined on paper),
-  a transpiler which converts name-based binders to De Bruijn indices and allows to convert the human-readable syntax
-  to Coq terms compatible with the formalization.
+- [tools/](./tools/) contains tools helping with working with the Lambda2Gmu formalization, written in Scala.
+  - It features a parser for Lambda2Gmu pseudocode in a human-readable syntax (close to the syntax defined on paper),
+    a transpiler which converts name-based binders to De Bruijn indices and allows to convert the human-readable syntax
+    to Coq terms compatible with the formalization.
+  - It also contains a parser for the annotated variant of the Lambda2Gmu calculus and an Encoder allowing to encode 
+    the terms into pDOT as described in the thesis. Encoding of the Σ signature as described in the thesis is not implemented yet.
+    An example showing the encodings of `head` and `zip` on a `Vector` type can be found in [tools/README.md](tools/README.md).
 
 ## Building the proofs
 
