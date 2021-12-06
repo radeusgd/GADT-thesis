@@ -2,6 +2,7 @@ package utils
 
 class FreshNameGenerator {
   private val ix = new java.util.concurrent.atomic.AtomicLong()
-  def generateFreshName(): String =
-    s"_${ix.getAndIncrement()}"
+  def fresh(prefix: String = ""): String =
+    if (prefix == "") s"_${ix.getAndIncrement()}"
+    else s"_${prefix}_${ix.getAndIncrement()}"
 }

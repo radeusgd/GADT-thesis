@@ -24,9 +24,11 @@ This is the repository containing Coq proofs attached to my master's thesis.
   - [TestEquality2.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality2.html) - typing proof for the `destruct` term which was not typeable in original pDOT, as described in Chapter 6.
   - [TestEquality3.v](https://radeusgd.github.io/GADT-thesis/latest/translation_extended/Top.TestEquality3.html) - the typing proof for the `construct` term using the Eq GADT.
 - [tools](./tools/) contains tools helping with working with the Lambda2Gmu formalization, written in Scala.
-  It features a parser for Lambda2Gmu pseudocode in a human-readable syntax (close to the syntax defined on paper),
+  - It features a parser for Lambda2Gmu pseudocode in a human-readable syntax (close to the syntax defined on paper),
   a transpiler which converts name-based binders to De Bruijn indices and allows to convert the human-readable syntax
   to Coq terms compatible with the formalization.
+  - It features a prototype of the λ2Gμ encoding into pDOT. It parses terms in the annotated variant of λ2Gμ and generates pDOT-pseudocode.
+    An example showing encoded head and zip terms is available in [tools/README.md](tools/README.md). Encoding of the Σ signature is not implemented yet.
 
 ## Building the proofs
 
