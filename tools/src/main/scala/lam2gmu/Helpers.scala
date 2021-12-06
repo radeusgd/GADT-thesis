@@ -1,4 +1,4 @@
-package lam2gu
+package lam2gmu
 
 import scala.annotation.tailrec
 import ASTs.ConcreteSyntax._

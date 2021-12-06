@@ -1,4 +1,4 @@
-package lam2gu
+package lam2gmu
 
 case class CoqBackend(sigma: Sigma) {
   import ASTs.DeBruijnSyntax._
